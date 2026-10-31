@@ -494,19 +494,7 @@ def register_routes():
             payload = await request.json()
         except (ValueError, json.JSONDecodeError):
             payload = {}
-        before = load_settings().get("ffmpegPath", "")
-        saved = save_settings(payload)
-        # A new ffmpeg location takes effect now — no ComfyUI restart. (The startup
-        # sync re-sends the same value on every page load; that doesn't re-detect.)
-        if saved.get("ffmpegPath", "") != before:
-            return web.json_response({"settings": saved, "capability": await krc_video.redetect()})
-        return web.json_response({"settings": saved})
-
-    @routes.post("/krc/lora-loadout/ffmpeg/detect")
-    async def ffmpeg_detect(_request):
-        # "Detect again": look for ffmpeg afresh (e.g. just installed, PATH changed
-        # for a new launch, imageio-ffmpeg added) without restarting ComfyUI.
-        return web.json_response({"capability": await krc_video.redetect()})
+        return web.json_response({"settings": save_settings(payload)})
 
     @routes.post("/krc/lora-loadout/thumbnail/{sha256}/from-source")
     @notify_card_write("model")

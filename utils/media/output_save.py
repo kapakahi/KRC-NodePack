@@ -2,7 +2,8 @@
 publication, private thumbnails only. Stills are written here (PNG or lossless WebP, one file
 per image). KRC never encodes video: a VIDEO is written by its own ``save_to`` (ComfyUI core,
 as Save Video does; a file-backed video is remuxed, not re-encoded), then probed and given a
-WebP card thumbnail."""
+WebP card thumbnail through PyAV (ComfyUI's own video library), so saving a video never
+needs ffmpeg."""
 import json
 import os
 import re
@@ -13,7 +14,7 @@ import tempfile
 from PIL import Image, PngImagePlugin, features
 from . import media_store as store, media_paths
 from .process_image import THUMB_MAX, THUMB_QUALITY
-from .process_video import ffmpeg, probe, thumbnail
+from .process_video import probe, thumbnail
 
 FORMATS = {"png": ".png", "webp": ".webp"}
 
@@ -98,7 +99,7 @@ def _video_extension(video):
 
 
 def _save_video(video, scratch, metadata):
-    """Write ``video`` into scratch with core's save; -> (path, probed facts)."""
+    """Write ``video`` into scratch with core's save; -> its path."""
     if not hasattr(video, "save_to"):
         raise ValueError("The video input isn't a ComfyUI VIDEO.")
     temp = scratch / ("output" + _video_extension(video))
@@ -108,7 +109,14 @@ def _save_video(video, scratch, metadata):
         raise ValueError(f"Couldn't save the video: {err}") from err
     if not temp.is_file() or not temp.stat().st_size:
         raise ValueError("Couldn't save the video: nothing was written.")
-    return temp, probe(temp)
+    return temp
+
+
+def _video_facts(temp, thumb):
+    """The saved video's probe() facts, and its card thumbnail at ``thumb`` (PyAV)."""
+    info = probe(temp)
+    thumbnail(temp, thumb, min(1.0, (info["duration"] or 0) / 2))
+    return info
 
 
 def _publish(temp, folder, prefix, width, height, batch, storage_root):
@@ -204,10 +212,10 @@ def save_outputs(output_data, images=None, video=None, prompt=None, extra_pnginf
             if video is not None:
                 _interrupt()
                 item_id = store.new_id()
-                temp, info = _save_video(video, scratch, metadata)
+                temp = _save_video(video, scratch, metadata)
                 _interrupt()
                 thumb = scratch / f"{item_id}.webp"
-                thumbnail(ffmpeg(require_vp9=False)[0], temp, thumb, min(1.0, (info["duration"] or 0) / 2))
+                info = _video_facts(temp, thumb)
                 pending_thumbs.append((thumb, store.thumb_path(item_id)))
                 relative, dest = _publish(temp, folder, state["prefix"], info["width"], info["height"],
                                           len(images) if has_images else 0, storage_root)

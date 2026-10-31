@@ -36,16 +36,14 @@ def prepare_thumbnail(image, size=THUMBNAIL_SIZE):
     return thumb
 
 
-def thumbnail_scale_filter():
-    """Fit the full display aspect ratio inside the limit; even sizes for VP9.
-
-    Account for non-square source pixels before resetting SAR. The only rounding
-    is down to encoder-compatible even dimensions; no crop or pad filter is used.
-    """
-    width, height = THUMBNAIL_SIZE
-    factor = f"min(1,min({width}/(iw*sar),{height}/ih))"
-    return (f"scale=w='max(2,trunc({factor}*iw*sar/2)*2)':"
-            f"h='max(2,trunc({factor}*ih/2)*2)',setsar=1")
+def thumbnail_video_size(width, height, sar=1.0, size=THUMBNAIL_SIZE):
+    """A video thumbnail's (width, height): the full display aspect ratio (non-square source
+    pixels counted) fit inside ``size``, never enlarged, both rounded down to even (VP9).
+    No crop or pad."""
+    box_w, box_h = size
+    display_w = width * (sar or 1.0)
+    factor = min(1.0, box_w / display_w, box_h / height) if display_w and height else 1.0
+    return max(2, int(factor * display_w / 2) * 2), max(2, int(factor * height / 2) * 2)
 
 
 def crop_to_ratio(image, ratio):

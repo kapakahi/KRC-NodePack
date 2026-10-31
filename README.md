@@ -105,12 +105,8 @@ git clone https://github.com/kapakahi/KRC-NodePack.git
 
 Restart ComfyUI. The nodes are under the **KRC NodePack** category.
 
-### Optional: ffmpeg for video
-
-Everything works out of the box, with nothing to `pip install`. With
-[ffmpeg](https://ffmpeg.org) on your system, KRC also makes animated video thumbnails
-and handles video in Media. KRC finds ffmpeg by itself. If it doesn't, set its location
-in **KRC Portal ▸ Options ▸ Media**.
+Everything works out of the box, video included, with nothing to `pip install` and no
+ffmpeg to set up: KRC uses ComfyUI's own video library.
 
 ## License
 

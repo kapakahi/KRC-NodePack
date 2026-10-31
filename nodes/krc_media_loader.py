@@ -7,14 +7,13 @@ optional ``preset`` input (a STRING: an id, a name or "group/name") overrides th
 ("Follow": feed one preset string to several Loaders and they switch together, each keeping
 its own slot). A still is a batch of 1 (MASK from alpha, else empty; AUDIO silent); a video
 is its frames (MASK from alpha, else empty; AUDIO its track, else silent), decoded from the
-stored WebM with NodePack's ffmpeg. The run reads the preset file, so it always loads what
+stored WebM with PyAV (ComfyUI's own video library). The run reads the preset file, so it always loads what
 the Media shows.
 """
 
 import hashlib
 import json
 import os
-import subprocess
 
 import numpy as np
 import torch
@@ -22,7 +21,7 @@ from PIL import Image, ImageSequence
 
 from ..utils.media import media_store as store
 from ..utils.media import preset_store as presets
-from ..utils.media.process_video import VideoProcessError, ffmpeg
+from ..utils.media.process_video import VideoProcessError, decoded_frames, frame_time, open_video, pyav, timeline_origin
 
 CATEGORY = "KRC NodePack"
 SLOTS = presets.SLOT_COUNT
@@ -48,49 +47,62 @@ def load_still(path):
     return torch.from_numpy(rgb)[None], torch.from_numpy(mask)[None]
 
 
-def _decode(command, what):
-    try:
-        done = subprocess.run(command, capture_output=True, timeout=3600)
-    except (OSError, subprocess.SubprocessError) as err:
-        raise ValueError(f"Couldn't decode the {what} ({err}).") from err
-    if done.returncode != 0:
-        reason = (done.stderr.decode("utf-8", "replace").strip().splitlines() or ["unknown error"])[-1]
-        raise ValueError(f"Couldn't decode the {what} ({reason[:200]}).")
-    return done.stdout
+def _video_frames(path, alpha):
+    """Every frame as a uint8 array (RGBA when the stored WebM has alpha, else RGB)."""
+    with open_video(path) as container:
+        frames, alpha = decoded_frames(container, container.streams.video[0], alpha)
+        return [frame.to_ndarray(format="rgba" if alpha else "rgb24") for frame in frames], alpha
+
+
+def _audio_track(path):
+    """The first audio track as float32 [2, samples] at SILENT_RATE, or None. It's placed on
+    the video's timeline: audio that starts after the first frame gets leading silence
+    (sample 0 = the first frame), audio that starts before it is cut there."""
+    av = pyav()
+    with open_video(path) as container:
+        stream = next((stream for stream in container.streams if stream.type == "audio"), None)
+        if stream is None:
+            return None
+        origin = timeline_origin(container.streams.video[0])
+        resampler = av.AudioResampler(format="fltp", layout="stereo", rate=SILENT_RATE)
+        chunks, lead = [], None
+        for frame in container.decode(stream):
+            if lead is None:
+                when = frame_time(frame, stream, origin)
+                lead = round(when * SILENT_RATE) if when is not None else 0
+            chunks += [out.to_ndarray() for out in resampler.resample(frame)]
+        chunks += [out.to_ndarray() for out in resampler.resample(None)]
+    if not chunks:
+        return None
+    samples = np.concatenate(chunks, axis=1).astype(np.float32)
+    if lead and lead > 0:
+        samples = np.concatenate([np.zeros((samples.shape[0], lead), dtype=np.float32), samples], axis=1)
+    elif lead and lead < 0:
+        samples = samples[:, -lead:]
+    return samples
 
 
 def load_video(record, path):
-    """(IMAGE [N,H,W,3], MASK [N,H,W], AUDIO) from a stored WebM. VP9 alpha needs the libvpx
-    decoder (ffmpeg's own drops it); audio is 44.1 kHz stereo float."""
+    """(IMAGE [N,H,W,3], MASK [N,H,W], AUDIO) from a stored WebM, decoded with PyAV
+    (ComfyUI's own video library); audio is 44.1 kHz stereo float."""
     try:
-        ffmpeg_bin, _ = ffmpeg(require_vp9=False)
+        decoded, alpha = _video_frames(path, bool(record.get("alpha")))
+        pcm = _audio_track(path) if record.get("audio") else None
     except VideoProcessError as err:
         raise ValueError(str(err)) from err
-    width, height = int(record.get("width") or 0), int(record.get("height") or 0)
-    if not width or not height:
-        raise ValueError("The stored video has no size recorded.")
-    alpha = bool(record.get("alpha"))
-    base = [ffmpeg_bin, "-nostdin", "-loglevel", "error", "-protocol_whitelist", "file"]
-    raw = _decode(base + (["-c:v", "libvpx-vp9"] if alpha else []) + ["-i", str(path), "-an", "-f", "rawvideo",
-                                                                     "-pix_fmt", "rgba" if alpha else "rgb24", "pipe:1"], "video")
-    channels = 4 if alpha else 3
-    frame_bytes = width * height * channels
-    count = len(raw) // frame_bytes
-    if not count:
+    except Exception as err:  # noqa: BLE001 - PyAV's errors vary by version
+        raise ValueError(f"Couldn't decode the video ({err}).") from err
+    if not decoded:
         raise ValueError("The stored video has no frames.")
-    frames = np.frombuffer(raw[: count * frame_bytes], dtype=np.uint8).reshape(count, height, width, channels)
+    frames = np.stack(decoded)
     image = frames[..., :3].astype(np.float32) / 255.0
     if alpha:
         mask = 1.0 - frames[..., 3].astype(np.float32) / 255.0
     else:
-        mask = np.zeros((count, height, width), dtype=np.float32)
+        mask = np.zeros(frames.shape[:3], dtype=np.float32)
     audio = _silent_audio()
-    if record.get("audio"):
-        pcm = _decode(base + ["-i", str(path), "-vn", "-f", "f32le", "-ac", "2", "-ar", str(SILENT_RATE), "pipe:1"], "audio")
-        samples = np.frombuffer(pcm, dtype=np.float32)
-        if samples.size >= 2:
-            stereo = samples[: samples.size - samples.size % 2].reshape(-1, 2).T.copy()
-            audio = {"waveform": torch.from_numpy(stereo)[None], "sample_rate": SILENT_RATE}
+    if pcm is not None and pcm.shape[1]:
+        audio = {"waveform": torch.from_numpy(np.ascontiguousarray(pcm))[None], "sample_rate": SILENT_RATE}
     return torch.from_numpy(np.ascontiguousarray(image)), torch.from_numpy(np.ascontiguousarray(mask)), audio
 
 

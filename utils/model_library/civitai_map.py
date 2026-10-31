@@ -249,7 +249,7 @@ async def apply_civitai_model_thumbnail(library_id, model_type, response, *, ove
 
     video_ext = preview_video_ext(preview)
     if video_ext:
-        # No poster / loop possible on this server (no ffmpeg or webp encoder, animated
+        # No poster / loop possible on this server (no PyAV or Pillow, animated
         # off or no VP9) → a still from Civitai instead, same as LoRAs
         # (library/civitai_still.py). Final; falls through to the video path if none.
         from .. import krc_video

@@ -81,7 +81,7 @@ export const thumbnailMethods = {
       if (response.ok && apiSucceeded(resp)) {
         this._setThumbState(true, resp.id, resp.hasAnimation ? "video" : "image", resp);
         if (!resp.hasAnimation) {
-          this.toast("Saved a static poster (server ffmpeg has no VP9 encoder)");
+          this.toast("Saved a static poster (this ComfyUI's PyAV has no VP9 encoder)");
         }
       } else {
         toastApiError((msg) => this.toast(msg), resp, "Video upload failed (restart ComfyUI for the new routes?)");

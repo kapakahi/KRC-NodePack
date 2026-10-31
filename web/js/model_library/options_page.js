@@ -1,7 +1,7 @@
 /*
  * Options — the KRC Portal's global Options page (GLOBAL_OPTIONS_PAGE_GAMEPLAN.md), an
  * Info Panel page (info_page.js) opened from the Portal's home menu. One section per
- * group in shared/global_settings.js, one row per setting, plus the ffmpeg status under
+ * group in shared/global_settings.js, one row per setting, plus the video status under
  * Media and, first, the Portal's own behavior settings. A panel's own Options (palette override,
  * list thumbnails, …) stay behind its gear.
  *
@@ -12,7 +12,7 @@
  */
 import { el } from "../shared/dom.js";
 import { menuSelect, switchToggle } from "../shared/browser_controls.js";
-import { ffmpegStatusSection } from "../shared/ffmpeg_status.js";
+import { videoStatusSection } from "../shared/video_status.js";
 import { dbStatusSection } from "../shared/db_status.js";
 import { externalApiRow } from "../shared/external_api_options.js";
 import { networkHostsRow } from "../shared/network_hosts.js";
@@ -112,8 +112,8 @@ export const optionsPageMethods = {
     body.append(portalOptionsSection(pageSection), profileOptionsSection());
     for (const group of GLOBAL_SETTING_SECTIONS) {
       const rows = group.rows.map(settingRow);
-      // The ffmpeg status sits with the media settings, under ffmpeg location.
-      if (group.title === "Media") rows.push(ffmpegStatusSection(({ body: status }) => status));
+      // The video status sits with the media settings.
+      if (group.title === "Media") rows.push(videoStatusSection(({ body: status }) => status));
       // Where KRC (and its packs) may connect, then the external API's switch and access key.
       if (group.title === "Network") rows.push(networkHostsRow(), externalApiRow());
       // Where KRC keeps its data (krc.db), with the support tools.

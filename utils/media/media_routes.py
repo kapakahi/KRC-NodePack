@@ -47,7 +47,7 @@ from .input_storage import prepare_upload
 from .media_store import public_item as _public
 from .krc import api
 from .process_image import ImageProcessError, heif_available, png_bytes, process, valid_megapixels
-from .process_video import VideoProcessError, ffmpeg, is_animated_image
+from .process_video import VideoProcessError, is_animated_image, require_encoder
 
 MEDIA_EVENT = "krc-media-media-changed"
 PRESETS_EVENT = "krc-media-presets-changed"
@@ -184,7 +184,7 @@ def register_routes():
                         return refused("HEIC / AVIF needs pillow-heif on the server (pip install pillow-heif).", 415)
                     if ext in VIDEO_EXTENSIONS:
                         try:
-                            ffmpeg()
+                            require_encoder()
                         except VideoProcessError as err:
                             return refused(err, 503)
                     size = await _save_part(part, temp, VIDEO_UPLOAD_MAX if ext in VIDEO_EXTENSIONS else IMAGE_UPLOAD_MAX)
@@ -199,7 +199,7 @@ def register_routes():
             if ext in VIDEO_EXTENSIONS or (ext == ".gif" and await asyncio.to_thread(is_animated_image, temp)):
                 if ext == ".gif":
                     try:
-                        ffmpeg()
+                        require_encoder()
                     except VideoProcessError as err:
                         return refused(err, 503)
                 # A video (or an animated GIF): convert in the background; the page polls the job.

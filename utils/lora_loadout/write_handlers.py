@@ -224,9 +224,9 @@ async def lora_thumbnail_upload_video(request, sha256):
     record = index.get(sha256)
     if not record:
         return web.json_response({"error": "Unknown LoRA SHA256"}, status=404)
-    if not krc_video.FFMPEG_SUPPORT:
+    if not krc_video.VIDEO_SUPPORT:
         return web.json_response(
-            {"error": krc_video.NOT_FOUND_MESSAGE}, status=503)
+            {"error": krc_video.NO_VIDEO_MESSAGE}, status=503)
 
     try:
         # A fixed suffix: the container is read from the file's bytes, never its name.

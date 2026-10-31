@@ -6,7 +6,7 @@ import { showToast } from "../shared/toast.js";
 import { armConfirmButton } from "../shared/confirm_action.js";
 import { deleteLoraJson, fetchLora, postLoraForm, postLoraJson } from "./api.js";
 import { setWidgetValue } from "./helpers.js";
-import { FFMPEG_NOT_FOUND_MESSAGE } from "../shared/ffmpeg_status.js";
+import { NO_VIDEO_MESSAGE } from "../shared/video_status.js";
 
 export const transferMethods = {
   selectThumbnailFile(selected) {
@@ -120,7 +120,7 @@ export const transferMethods = {
     if (!body.hasAnimation) {
       // Poster written but no loop — server has no VP9 encoder. Tell the user why
       // their video became a still instead of silently degrading.
-      showToast("Saved a static poster: this server's ffmpeg has no VP9 (libvpx-vp9) encoder, so no animated WebM was generated.", { duration: 6000 });
+      showToast("Saved a static poster: this ComfyUI's PyAV has no VP9 (libvpx-vp9) encoder, so no animated WebM was generated.", { duration: 6000 });
     }
     const version = Number(body.thumbnailVersion) || Date.now();
     this.selectedSha = selected.sha256;
@@ -202,9 +202,9 @@ export const transferMethods = {
         no_source: "No local thumbnail source was recorded for this LoRA.",
         unsupported_source: "This thumbnail source type is not supported yet.",
         pillow_unavailable: "Pillow is not available, so still-image thumbnail refresh cannot run.",
-        no_ffmpeg: FFMPEG_NOT_FOUND_MESSAGE,
-        no_webp_encoder: "ffmpeg cannot write WebP posters on this system.",
-        webm_unavailable: "ffmpeg cannot write animated WebM thumbnails on this system.",
+        no_pyav: NO_VIDEO_MESSAGE,
+        no_pillow: "Pillow is not available, so posters can't be written on this system.",
+        webm_unavailable: "This ComfyUI's PyAV can't write animated WebM thumbnails (no VP9 encoder).",
         convert_failed: "The thumbnail source could not be converted.",
       };
       krcAlert(messages[reason] || `Could not refresh thumbnail: ${reason}`, this.node);

@@ -613,9 +613,9 @@ def register_routes():
         if await _is_lora_read_through(library_id):
             from ..lora_loadout.write_handlers import lora_thumbnail_upload_video
             return await lora_thumbnail_upload_video(request, library_id)
-        if not krc_video.FFMPEG_SUPPORT:
+        if not krc_video.VIDEO_SUPPORT:
             return _json(
-                {"error": krc_video.NOT_FOUND_MESSAGE}, status=503)
+                {"error": krc_video.NO_VIDEO_MESSAGE}, status=503)
 
         try:
             # A fixed suffix: the container is read from the file's bytes, never its name.

@@ -2,11 +2,11 @@
 KRC NodePack startup banner.
 
 A short, greppable readout printed once when ComfyUI loads the pack. Its real job
-is to answer, before a user files a bug, *why an optional capability is off* — the
-animated-thumbnail path depends on a system ffmpeg the pack deliberately does not
-install (dependencies = []). Everything here is cheap and safe at import time: a
-few import probes plus the already-cached ffmpeg capability check. It never scans
-the LoRA library (that stays lazy) so it can't cause a startup spike.
+is to answer, before a user files a bug, *why an optional capability is off* — video
+thumbnails run on ComfyUI's own PyAV, and animated loops need its VP9 encoder.
+Everything here is cheap and safe at import time: a few import probes plus the
+capability check krc_video already made. It never scans the LoRA library (that stays
+lazy) so it can't cause a startup spike.
 
 Two verbosity levels:
   * default  — two lines: identity + hard requirements, then optional capabilities.
@@ -49,18 +49,10 @@ def _python_version():
 def _animated_state(cap):
     """(summary_word, line2_fragment) for the animated-thumbnail capability."""
     if cap["webm"]:
-        ver = kv.ffmpeg_version()
-        # posters are guaranteed here (Pillow fallback if not libwebp), so only
-        # advertise +webp when ffmpeg itself has the encoder; don't clutter otherwise.
-        webp = "+webp" if kv.have_libwebp() else ""
-        # Name where ffmpeg came from, except plain PATH (the unsurprising case).
-        source = (cap.get("detection") or {}).get("source") or ""
-        via = f"via {source}" if source and source != kv.SOURCE_PATH else ""
-        detail = " ".join(x for x in (f"ffmpeg {ver}" if ver else "ffmpeg", via, "+vp9", webp) if x)
-        return "on", f"animated thumbnails: ON ({detail})"
-    if cap["webmReason"] == "no_ffmpeg":
-        return "off", "animated thumbnails: OFF - ffmpeg not found (set it in KRC Portal > Options > Media)"
-    return "off", "animated thumbnails: OFF - ffmpeg lacks libvpx-vp9"
+        return "on", f"animated thumbnails: ON (PyAV {cap['pyav']} +vp9)"
+    if cap["webmReason"] == "no_pyav":
+        return "off", "animated thumbnails: OFF - no PyAV (av) in this ComfyUI"
+    return "off", f"animated thumbnails: OFF - PyAV {cap['pyav']} lacks libvpx-vp9"
 
 
 def format_lines(node_count, version):
@@ -82,7 +74,7 @@ def format_lines(node_count, version):
     _, animated_frag = _animated_state(cap)
     parts = [animated_frag]
     if not cap["webm"] and cap["poster"]:
-        parts.append(f"posters ON ({'libwebp' if kv.have_libwebp() else 'Pillow'})")
+        parts.append("posters ON (Pillow)")
     store = _store_state()
     if store:
         parts.append(f"store {store}{' [!]' if store != 'ok' else ''}")

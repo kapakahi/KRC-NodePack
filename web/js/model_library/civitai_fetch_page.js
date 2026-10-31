@@ -20,7 +20,7 @@ import { createBatchProgress } from "../shared/batch_progress.js";
 import { infoPageSection as fetchSection } from "./info_page.js";
 import { isNetworkAllowed } from "../shared/network_consent.js";
 import { readGlobalSetting, writeGlobalSetting } from "../shared/global_settings.js";
-import { FFMPEG_NOT_FOUND_MESSAGE, ffmpegSourceLabel } from "../shared/ffmpeg_status.js";
+import { NO_VIDEO_MESSAGE } from "../shared/video_status.js";
 import { modelFolderMatch } from "./pure_helpers.js";
 import {
   attachCivitaiBatch,
@@ -162,26 +162,24 @@ function settingRow(label, control, hint = "") {
 // so a missing animated thumbnail is never mistaken for a bug.
 function capabilityLine(capability, videoImportMode) {
   if (!capability) return null;
-  if (!capability.ffmpeg) {
-    return callout("warn", `${FFMPEG_NOT_FOUND_MESSAGE} Until then, video previews get a still from Civitai (Force Refresh upgrades one later).`);
+  if (!capability.video) {
+    return callout("warn", `${NO_VIDEO_MESSAGE} Until then, video previews get a still from Civitai (Force Refresh upgrades one later).`);
   }
-  // ffmpeg, but no webp encoder for posters (and no loop to fall back on) — the same
-  // Civitai still the server uses when there's no ffmpeg at all.
+  // PyAV, but no Pillow for posters (and no loop to fall back on) — the same Civitai
+  // still the server uses when there's no PyAV at all.
   if (!capability.poster && !(videoImportMode === "animated" && capability.webm)) {
-    return callout("warn", "No webp encoder for posters: video previews get a still from Civitai instead. Install Pillow, or an ffmpeg with libwebp, for posters made from the video.");
+    return callout("warn", "No Pillow for posters: video previews get a still from Civitai instead.");
   }
   if (videoImportMode !== "animated") {
     return callout("info", "Static thumbnails only — animated is off (Video import mode above).");
   }
   if (!capability.webm) {
-    const via = ffmpegSourceLabel(capability);
-    return callout("warn", `Static thumbnails only — this server's ffmpeg${via ? ` (${via})` : ""} has no VP9 encoder.`);
+    return callout("warn", `Static thumbnails only — this ComfyUI's PyAV ${capability.pyav || ""} has no VP9 encoder.`);
   }
   if (!capability.poster) {
-    return callout("warn", "Animated thumbnails on, but no webp encoder for the static poster fallback.");
+    return callout("warn", "Animated thumbnails on, but no Pillow for the static poster fallback.");
   }
-  const via = ffmpegSourceLabel(capability);
-  return callout("ok", `Animated thumbnails: on${via ? ` (ffmpeg ${via})` : ""}.`);
+  return callout("ok", `Animated thumbnails: on (PyAV ${capability.pyav || ""}).`);
 }
 
 function previewKey(ui) {
@@ -204,7 +202,7 @@ function runSummary(run, { onIssue, thumbAction = null, onClearIssues = null } =
   ];
   if (counts.notFound) children.push(statRow(counts.notFound, "not found on Civitai", "", "warn"));
   if (counts.thumbPending) {
-    children.push(statRow(counts.thumbPending, "thumbnail pending", "saved preview videos, no ffmpeg", "warn"));
+    children.push(statRow(counts.thumbPending, "thumbnail pending", "saved preview videos, no PyAV", "warn"));
     const action = thumbAction?.();
     if (action) children.push(action);
   }
@@ -304,11 +302,11 @@ export const civitaiFetchPageMethods = {
   },
 
   // "Generate missing thumbnails" for a run that left video previews without one.
-  // Offered only when the server has ffmpeg (installed since the run, or the run's
-  // failures were transient); without it the route could schedule nothing.
+  // Offered only when the server can read video (PyAV); without it the route could
+  // schedule nothing.
   civitaiThumbAction(capability) {
-    if (!capability?.ffmpeg) {
-      return el("div", "krc-fetch-note", { textContent: `${FFMPEG_NOT_FOUND_MESSAGE} Then use Options ▸ Media ▸ Detect again (no restart needed) and generate the missing thumbnails here.` });
+    if (!capability?.video) {
+      return el("div", "krc-fetch-note", { textContent: `${NO_VIDEO_MESSAGE} Then restart ComfyUI and generate the missing thumbnails here.` });
     }
     const button = el("button", "krc-modal-btn krc-fetch-thumbs", { type: "button", textContent: "Generate missing thumbnails" });
     button.addEventListener("click", async () => {

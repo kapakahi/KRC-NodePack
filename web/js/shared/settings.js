@@ -52,11 +52,6 @@ export const VIDEO_WEBM_CRF_OPTIONS = [
   [36, "High (CRF 36)"],
 ];
 
-// Where ffmpeg lives, for the rare case KRC can't find one by itself (PATH or an
-// installed imageio-ffmpeg). Empty = automatic. Mirrored to the server's video settings in krc.db
-// (`ffmpegPath`) like the settings above; see FFMPEG_DETECTION_GAMEPLAN.md.
-export const FFMPEG_PATH_SETTING_ID = "KRC.FfmpegPath";
-export const FFMPEG_PATH_DEFAULT = "";
 
 // Model Library auto-stabilize: one global switch (GLOBAL_OPTIONS_PAGE_GAMEPLAN.md §1.2)
 // instead of a per-node property. Off = IDs are created only on demand.

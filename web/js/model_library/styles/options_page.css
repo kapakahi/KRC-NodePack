@@ -80,8 +80,8 @@
   min-width: 80px;
 }
 
-/* The ffmpeg status block under the Media rows, and the database status under Support. */
-.krc-model-library .krc-options-page .krc-ffmpeg-status,
+/* The video status block under the Media rows, and the database status under Support. */
+.krc-model-library .krc-options-page .krc-video-status,
 .krc-model-library .krc-options-page .krc-db-status {
   margin-top: 6px;
 }

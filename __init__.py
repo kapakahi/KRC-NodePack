@@ -149,7 +149,7 @@ WEB_DIRECTORY = "./web/js"
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY", "__version__"]
 
 # Startup banner: identity + node count, then an optional-capability readout
-# (animated thumbnails / posters) so a missing system ffmpeg is visible up front.
+# (animated thumbnails / posters) so missing video support (PyAV) is visible up front.
 # Guarded so a banner failure can never block the pack from loading.
 try:
     from .utils.krc_startup import print_banner as _krc_print_banner

@@ -196,7 +196,7 @@ async def _apply_civitai_thumbnail(record, library_id, sidecar, response, overwr
     "none" (no preview) · "kept" (a thumbnail exists, not overwritten) ·
     "download_failed" · "image" (static webp written) · "convert_failed" ·
     "video" (poster/animated generation queued or regenerated) · "video_still" (no
-    ffmpeg: a still from Civitai instead — the video's first frame, else the first still
+    PyAV: a still from Civitai instead — the video's first frame, else the first still
     preview; civitai_still.py) · "video_pending" (video saved, but this server can't make
     a poster and no still was available).
 
@@ -229,13 +229,13 @@ async def _apply_civitai_thumbnail(record, library_id, sidecar, response, overwr
 
     if video_ext:
         settings = load_settings()
-        # Can this server make anything from the video? (a poster needs ffmpeg + a webp
-        # encoder; an animated loop needs animated mode + VP9.)
+        # Can this server make anything from the video? (a poster needs PyAV + Pillow;
+        # an animated loop needs animated mode + VP9.)
         animated_possible = settings.get("videoImportMode") == "animated" and krc_video.WEBM_SUPPORT
         if not krc_video.POSTER_SUPPORT and not animated_possible:
             # No: take a still from Civitai instead — its first-frame JPEG, else the
             # first still image in the preview list. Final (Force Refresh on a server
-            # with ffmpeg makes the real poster). Neither → save the video, pending.
+            # with PyAV makes the real poster). Neither → save the video, pending.
             from ..library.civitai_still import fetch_video_still
 
             still = await fetch_video_still(preview, response, library_id)

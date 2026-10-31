@@ -281,12 +281,12 @@ async def run_job(job, *, fetch=_default_fetch, refresh=_default_refresh, not_fo
                 if body.get("merged"):
                     job._pending_records.append(final_id)
                 if thumb == "video_pending":
-                    job.add_log("warn", "◐", name, "fetched · video preview, thumbnail pending (no ffmpeg)", "thumbPending")
-                    job.add_issue("warning", final_id, name, "video preview saved — thumbnail pending (no ffmpeg)")
+                    job.add_log("warn", "◐", name, "fetched · video preview, thumbnail pending (no PyAV)", "thumbPending")
+                    job.add_issue("warning", final_id, name, "video preview saved — thumbnail pending (no PyAV)")
                 else:
                     text = "fetched" + (" (cached)" if body.get("cached") else "")
                     if thumb == "video_still":
-                        text += " · still from Civitai (no ffmpeg)"
+                        text += " · still from Civitai (no PyAV)"
                     job.add_log("ok", "✓", name, text, "fetched")
                     if body.get("previewWithheld"):
                         job.add_issue("warning", final_id, name, "preview withheld on public fetch")

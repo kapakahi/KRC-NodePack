@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-10-31 · 1.0.2 · Video no longer needs ffmpeg: ComfyUI's own video library (PyAV) now does all of it (Media uploads, Media Loader and Output, card thumbnails), with exact trims, frame rates and audio sync.
 - 2026-10-31 · README: a note while the Registry review is pending.
 - 2026-10-30 · 1.0.1 · Everything below since 1.0.0, plus README updates (screenshots, ComfyUI Manager install).
 - 2026-10-30 · Dropdowns no longer clip letters like g, p and q; README screenshots.

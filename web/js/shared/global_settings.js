@@ -11,7 +11,7 @@
  *   defaultValue the value when nothing is stored
  *
  * The Portal section (info panel default, click outside) is the Portal's own UI store
- * (shared/library_modal.js), and the ffmpeg status sits under the Media rows; the page
+ * (shared/library_modal.js), and the video status sits under the Media rows; the page
  * adds both.
  *
  * krc_theme.js registers every non-action row as a hidden ComfyUI setting (so ComfyUI's
@@ -49,8 +49,6 @@ import {
   VIDEO_WEBM_CRF_SETTING_ID,
   VIDEO_WEBM_CRF_DEFAULT,
   VIDEO_WEBM_CRF_OPTIONS,
-  FFMPEG_PATH_SETTING_ID,
-  FFMPEG_PATH_DEFAULT,
   AUTO_STABILIZE_SETTING_ID,
   AUTO_STABILIZE_DEFAULT,
   SIDEBAR_BUTTON_SETTING_ID,
@@ -156,7 +154,7 @@ export const GLOBAL_SETTING_SECTIONS = Object.freeze([
         id: VIDEO_IMPORT_MODE_SETTING_ID,
         kind: "combo",
         label: "Video import mode",
-        desc: "How an imported video becomes a thumbnail: a static poster, or an animated WebM plus poster (needs ffmpeg with VP9).",
+        desc: "How an imported video becomes a thumbnail: a static poster, or an animated WebM plus poster.",
         options: VIDEO_IMPORT_MODE_OPTIONS,
         defaultValue: VIDEO_IMPORT_MODE_DEFAULT,
       },
@@ -175,14 +173,6 @@ export const GLOBAL_SETTING_SECTIONS = Object.freeze([
         desc: "Quality of generated WebM thumbnails. Higher quality means larger files.",
         options: VIDEO_WEBM_CRF_OPTIONS,
         defaultValue: VIDEO_WEBM_CRF_DEFAULT,
-      },
-      {
-        id: FFMPEG_PATH_SETTING_ID,
-        kind: "text",
-        label: "ffmpeg location",
-        desc: "Leave empty: KRC finds ffmpeg by itself. Only set this if it can't, with the path to ffmpeg or its folder.",
-        placeholder: "Automatic",
-        defaultValue: FFMPEG_PATH_DEFAULT,
       },
     ],
   },

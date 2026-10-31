@@ -77,7 +77,7 @@ def video_still_url(url):
 
 def first_still_image(response):
     """The first preview in a Civitai response that is a still image (not a video), or
-    None. The no-ffmpeg fallback when the lead preview is a video."""
+    None. The no-PyAV fallback when the lead preview is a video."""
     images = response.get("images") if isinstance(response, dict) else None
     if isinstance(images, list):
         for img in images:

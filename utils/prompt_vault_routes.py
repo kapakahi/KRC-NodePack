@@ -761,9 +761,9 @@ def register_prompt_vault_routes(prompt_store):
         VP9 webm loop) keyed by the prompt's record id. The upload is transient: it is
         transcoded and discarded, no original is stored. Category/name/file arrive as
         multipart parts (binary, so a multi-MB clip isn't base64-inflated)."""
-        if not krc_video.FFMPEG_SUPPORT:
+        if not krc_video.VIDEO_SUPPORT:
             return server.web.json_response(
-                {"success": False, "error": krc_video.NOT_FOUND_MESSAGE},
+                {"success": False, "error": krc_video.NO_VIDEO_MESSAGE},
                 status=503)
         tmp_path = None
         try:

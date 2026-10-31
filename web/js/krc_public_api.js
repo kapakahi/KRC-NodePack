@@ -11,7 +11,7 @@
  * so the sync bus, open-menu tracking and palettes stay shared. See Extras' krc_nodepack.js.
  */
 
-export const KRC_API_VERSION = Object.freeze({ major: 2, minor: 7 });
+export const KRC_API_VERSION = Object.freeze({ major: 2, minor: 8 });
 
 // ---- Node plumbing: widgets, sizing, DOM, stylesheets ----------------------------
 export {

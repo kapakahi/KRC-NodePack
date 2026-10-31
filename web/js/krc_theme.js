@@ -46,8 +46,6 @@ import {
   VIDEO_POSTER_FRAME_DEFAULT,
   VIDEO_WEBM_CRF_SETTING_ID,
   VIDEO_WEBM_CRF_DEFAULT,
-  FFMPEG_PATH_SETTING_ID,
-  FFMPEG_PATH_DEFAULT,
   AUTO_STABILIZE_SETTING_ID,
   SIDEBAR_BUTTON_SETTING_ID,
   SIDEBAR_BUTTON_CHANGED_EVENT,
@@ -55,7 +53,6 @@ import {
 import { applyThumbnailFraming } from "./shared/thumbnail_presentation.js";
 import { GLOBAL_SETTING_SECTIONS } from "./shared/global_settings.js";
 import { installKrcStatsAggregator } from "./shared/memory_stats.js";
-import { publishFfmpegCapability } from "./shared/ffmpeg_status.js";
 
 const SETTING_ID = THEME_SETTING_ID;
 const NSFW_SETTING_ID = SHOW_NSFW_SETTING_ID;
@@ -94,19 +91,6 @@ function postNetworkConsent(value) {
       body: JSON.stringify({ allowInternet: !!value }),
     });
   } catch (_err) { /* ignore */ }
-}
-
-let ffmpegPathTimer = 0;
-
-// A changed ffmpeg location makes the server look for ffmpeg again
-// (FFMPEG_DETECTION_GAMEPLAN.md) and comes back with the fresh capability, which open
-// Media cells show. Debounced: each re-detect runs ffmpeg.
-function applyFfmpegPath(value) {
-  clearTimeout(ffmpegPathTimer);
-  ffmpegPathTimer = setTimeout(() => {
-    postVideoSettings({ ffmpegPath: String(value || "").trim() })
-      .then((payload) => publishFfmpegCapability(payload?.capability));
-  }, 800);
 }
 
 function injectThemeStyles() {
@@ -249,7 +233,6 @@ const SETTING_HANDLERS = {
   [VIDEO_IMPORT_MODE_SETTING_ID]: (value) => postVideoSettings({ videoImportMode: value }),
   [VIDEO_POSTER_FRAME_SETTING_ID]: (value) => postVideoSettings({ posterFrame: value }),
   [VIDEO_WEBM_CRF_SETTING_ID]: (value) => postVideoSettings({ webmCrf: Number(value) }),
-  [FFMPEG_PATH_SETTING_ID]: (value) => applyFfmpegPath(value),
   [AUTO_STABILIZE_SETTING_ID]: (value, previous) => applyAutoStabilize(value, previous),
   [SIDEBAR_BUTTON_SETTING_ID]: (value) => applySidebarButton(value),
 };
@@ -293,7 +276,6 @@ app.registerExtension({
       videoImportMode: getSettingValue(VIDEO_IMPORT_MODE_SETTING_ID, VIDEO_IMPORT_MODE_DEFAULT),
       posterFrame: getSettingValue(VIDEO_POSTER_FRAME_SETTING_ID, VIDEO_POSTER_FRAME_DEFAULT),
       webmCrf: Number(getSettingValue(VIDEO_WEBM_CRF_SETTING_ID, VIDEO_WEBM_CRF_DEFAULT)),
-      ffmpegPath: String(getSettingValue(FFMPEG_PATH_SETTING_ID, FFMPEG_PATH_DEFAULT) || "").trim(),
     });
     // Sync the network-consent master switch too, so the server guard matches the UI
     // even if it was toggled while no node was mounted.

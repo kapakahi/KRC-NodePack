@@ -9,11 +9,9 @@ POSTs changes here so the server stays in sync for headless/lazy generation.
 
 Only GENERATION knobs live here:
   videoImportMode : 'animated' (DEFAULT) webm + poster | 'static' webp poster only.
-                    Animated falls back to the poster when ffmpeg lacks VP9.
+                    Animated falls back to the poster when PyAV lacks VP9.
   posterFrame     : 'first' (DEFAULT) | 'middle' | 'last' — the poster still.
   webmCrf         : VP9 quality, default 42.
-  ffmpegPath      : where ffmpeg lives, "" = automatic (krc_video.detect(); see
-                    FFMPEG_DETECTION_GAMEPLAN.md). Stored as typed, trimmed.
 
 DISPLAY prefs (enable animated thumbnails, autoplay-once) are separate client-side
 ComfyUI settings (KRC.EnableWebMThumbnails / KRC.AutoplayWebMThumbnailsOnce) and are
@@ -33,9 +31,7 @@ DEFAULTS = {
     "videoImportMode": "animated",
     "posterFrame": "first",
     "webmCrf": 42,
-    "ffmpegPath": "",
 }
-_FFMPEG_PATH_MAX = 1024
 
 _ENUMS = {
     "videoImportMode": ("static", "animated"),
@@ -57,8 +53,6 @@ def _coerce(settings):
         for key, allowed in _ENUMS.items():
             if settings.get(key) in allowed:
                 out[key] = settings[key]
-        if isinstance(settings.get("ffmpegPath"), str):
-            out["ffmpegPath"] = settings["ffmpegPath"].strip()[:_FFMPEG_PATH_MAX]
         if "webmCrf" in settings:
             try:
                 lo, hi = _WEBM_CRF_CLAMP
@@ -81,10 +75,7 @@ def save_settings(updates):
     result. Partial updates are fine — unspecified keys keep their value."""
     merged = load_settings()
     if isinstance(updates, dict):
-        merged.update({
-            k: v for k, v in updates.items()
-            if k in DEFAULTS and not (k == "ffmpegPath" and not isinstance(v, str))  # junk never wipes a location
-        })
+        merged.update({k: v for k, v in updates.items() if k in DEFAULTS})
     clean = _coerce(merged)
     library_db.document_put(SETTINGS_KEY, clean)
     return clean

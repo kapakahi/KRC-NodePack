@@ -26,7 +26,7 @@ export function pickThumbnailFile() {
   });
 }
 
-// True when a picked file should go through the video (ffmpeg) path rather than
+// True when a picked file should go through the video (PyAV) path rather than
 // the image (PIL) path. Falls back to the extension when the browser gives no MIME.
 export function isVideoFile(file) {
   if (!file) return false;

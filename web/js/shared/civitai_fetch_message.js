@@ -15,7 +15,7 @@ const FIELD_LABELS = {
 };
 
 // Thumbnail outcomes that put a new thumbnail on the card.
-// "video_still" = no ffmpeg, so a still from Civitai stood in for the video poster.
+// "video_still" = no PyAV, so a still from Civitai stood in for the video poster.
 const THUMBNAIL_ADDED = new Set(["image", "video", "video_still"]);
 
 function listText(items) {

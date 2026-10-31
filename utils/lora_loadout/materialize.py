@@ -8,8 +8,8 @@ trigger a transcode spike. So:
   - Generation happens here, LAZILY — the serve layer (routes get_missing_thumbnail)
     calls enqueue() only for cards the browser is actually rendering, so work is
     naturally viewport-bounded.
-  - A ThreadPoolExecutor with MAX_WORKERS keeps at most that many ffmpeg processes
-    alive at once; extra requests queue. An inflight set dedupes, and MAX_PENDING
+  - A ThreadPoolExecutor with MAX_WORKERS keeps at most that many thumbnail jobs
+    running at once; extra requests queue. An inflight set dedupes, and MAX_PENDING
     caps the backlog so a fast scroll can't spawn unbounded work (dropped requests
     simply retry on the next scroll/refresh).
 
@@ -197,13 +197,13 @@ async def regenerate(owner_record, kind, frame=None, crf=None):
     if kind == "animated":
         if not kv.WEBM_SUPPORT:
             return {"ok": False, "kind": kind,
-                    "reason": "webm_unavailable" if kv.FFMPEG_SUPPORT else "no_ffmpeg"}
+                    "reason": "webm_unavailable" if kv.VIDEO_SUPPORT else "no_pyav"}
         ok = await loop.run_in_executor(_executor, _regen_animated, source_path, owner_id, frame, crf)
     else:
         kind = "poster"
         if not kv.POSTER_SUPPORT:
             return {"ok": False, "kind": kind,
-                    "reason": "no_webp_encoder" if kv.FFMPEG_SUPPORT else "no_ffmpeg"}
+                    "reason": "no_pillow" if kv.VIDEO_SUPPORT else "no_pyav"}
         ok = await loop.run_in_executor(_executor, _regen_poster, source_path, owner_id, frame)
 
     if ok:

@@ -33,7 +33,7 @@ from .utils.pack_network import krc_fetch, network_enabled
 from .utils.bundle.pack_sections import register_bundle_section
 from .utils import krc_video as _krc_video
 
-KRC_API_VERSION = (2, 7)
+KRC_API_VERSION = (2, 8)
 
 __all__ = [
     "validate_card_ids",
@@ -49,7 +49,6 @@ __all__ = [
     "canonical_ids",
     "canonical_label",
     "compose_trigger",
-    "ffmpeg_info",
     "get_krc_node_dir",
     "kit_field",
     "krc_fetch",
@@ -63,6 +62,7 @@ __all__ = [
     "resolve_models_async",
     "resolve_prompts",
     "resolve_prompts_async",
+    "video_info",
 ]
 
 
@@ -79,19 +79,23 @@ def loadout_kit(kit_id, *, source, slots, fields=(), label="", short_label="", p
                       label=label, short_label=short_label, prompt_vault=prompt_vault)
 
 
-def ffmpeg_info():
-    """(1.14) The ffmpeg KRC NodePack detected (it never searches for or downloads one): the
-    one a pack's server code should run. Read live, so a re-detect (Portal ▸ Options ▸
-    ffmpeg ▸ Detect again) is seen. -> {"available", "path", "ffprobe", "version", "vp9",
-    "webp", "source"}: ``available`` False means no usable ffmpeg (``path`` is ""); ``vp9``
-    / ``webp`` say whether its build can encode WebM (VP9) / WebP."""
-    detection = _krc_video.DETECTION or {}
+def video_info():
+    """(2.8) What video work this ComfyUI can do. KRC NodePack runs no ffmpeg program: video
+    is PyAV (``av``), the library ComfyUI itself requires; a pack's server code uses it the
+    same way. -> {"available", "version", "vp9", "opus", "vorbis"}: ``available`` False
+    means no PyAV (``version`` is ""); ``vp9`` / ``opus`` / ``vorbis`` say whether its build
+    can encode WebM video (VP9) and audio (Opus / Vorbis)."""
+    available = _krc_video.VIDEO_SUPPORT
+    codecs = set()
+    if available:
+        try:
+            codecs = set(_krc_video.pyav_module().codecs_available)
+        except Exception:  # noqa: BLE001 - answer what we know
+            codecs = set()
     return {
-        "available": bool(_krc_video.FFMPEG_SUPPORT),
-        "path": _krc_video.FFMPEG_BIN or "",
-        "ffprobe": _krc_video.FFPROBE_BIN or "",
-        "version": detection.get("version"),
-        "vp9": bool(_krc_video.WEBM_SUPPORT),
-        "webp": bool(_krc_video.LIBWEBP_SUPPORT),
-        "source": detection.get("source") or "",
+        "available": bool(available),
+        "version": _krc_video.PYAV_VERSION,
+        "vp9": "libvpx-vp9" in codecs,
+        "opus": "libopus" in codecs,
+        "vorbis": "libvorbis" in codecs,
     }
