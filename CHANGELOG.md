@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-10-30 · 1.0.1 · Everything below since 1.0.0, plus README updates (screenshots, ComfyUI Manager install).
 - 2026-10-30 · Dropdowns no longer clip letters like g, p and q; README screenshots.
 - 2026-10-30 · Fix: bundle imports failed with "HTTP 500" when ComfyUI's temp folder is on another drive.
 - 2026-10-30 · Bundle import: choose which Prompt Vault categories to import.

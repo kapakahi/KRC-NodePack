@@ -3,9 +3,15 @@
 ComfyUI nodes for your LoRAs, models, prompts, media and configs: visual card browsers,
 saved presets, and one shared library behind them, the **KRC Portal**.
 
-## The nodes
+## KRC Config Switcher
 
-### KRC LoRA Loadout
+<a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/config_switcher.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/config_switcher.webp" width="420" alt="KRC Config Switcher"></a>
+
+Group the settings you tweak most (numbers, dropdowns, seeds, models, prompts, notes) in
+one node, save them as named configs, and flip between configs without rewiring. Pair it
+with **KRC Config Switcher Link** to send each value where it goes.
+
+## KRC LoRA Loadout
 
 <a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/lora_loadout.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/lora_loadout.webp" width="800" alt="KRC LoRA Loadout and KRC LoRA Loadout EX"></a>
 
@@ -13,12 +19,7 @@ Build two LoRA stacks (A and B) with per-LoRA toggles and strengths, and save th
 presets. **Browse** opens your LoRAs in the Portal; drag a card into a slot. Want the
 browser inside the node? Use **KRC LoRA Loadout EX**.
 
-### KRC Model Library
-
-The same card browser for every other model folder: checkpoints, diffusion models, VAEs,
-text encoders, upscalers and more.
-
-### KRC Prompt Vault
+## KRC Prompt Vault
 
 <a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/prompt_vault.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/prompt_vault.webp" width="600" alt="KRC Prompt Vault"></a>
 
@@ -26,18 +27,7 @@ Save, organise and browse your prompts in categories, with thumbnails. Each prom
 carry a linked LoRA Loadout preset, so picking a prompt switches your LoRAs too. Keep
 separate prompt libraries with **profiles**.
 
-### KRC Word Bank
-
-Write `<placeholders>` in your text and Word Bank fills each one with a random word from
-a matching list. Two outputs, for two independent prompts.
-
-### KRC Config Switcher
-
-Group the settings you tweak most (numbers, dropdowns, seeds, models, prompts, notes) in
-one node, save them as named configs, and flip between configs without rewiring. Pair it
-with **KRC Config Switcher Link** to send each value where it goes.
-
-### KRC Media Loader and KRC Media Output
+## KRC Media Loader and KRC Media Output
 
 <a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/media.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/media.webp" width="520" alt="KRC Media Loader and KRC Media Output"></a>
 
@@ -48,7 +38,19 @@ A home for your images and videos, in the Portal's **Media** tab.
 - **KRC Media Output** saves your results to Media and shows the last six on the node.
   They also appear in ComfyUI's queue and Assets.
 
-### And also
+## KRC Word Bank
+
+<a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/word_bank.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/word_bank.webp" width="520" alt="KRC Word Bank"></a>
+
+Write `<placeholders>` in your text and Word Bank fills each one with a random word from
+a matching list. Two outputs, for two independent prompts.
+
+## KRC Model Library
+
+LoRA Loadout's card browser for every other model folder: checkpoints, diffusion models,
+VAEs, text encoders, upscalers and more.
+
+## And also
 
 - **KRC LoRA Loadout Loader** applies a LoRA Loadout stack to a `MODEL`.
 - **KRC Config Switcher Link** turns Config Switcher's values into separate outputs.
@@ -88,7 +90,8 @@ Get it at [KRC NodePack Extras](https://github.com/kapakahi/KRC-NodePack-Extras)
 
 ### ComfyUI Manager
 
-Coming soon.
+Open **Manager ▸ Custom Nodes Manager**, search for **KRC NodePack**, click **Install**,
+and restart ComfyUI.
 
 ### Manual install
 
