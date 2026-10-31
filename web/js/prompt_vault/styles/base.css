@@ -1,0 +1,62 @@
+/*
+ * KRC Prompt Vault styles. Shared controls come from ../../shared/components.css
+ * under .krc-node; these split files own Prompt Vault layout and domain-specific
+ * variants, scoped under .krc-pm. The --krc-* palette lives in shared tokens.
+ */
+/* height: prefer the JS-set definite height (--krc-dom-h) so the chain resolves
+   even when the frontend doesn't give the DOM-widget root a definite height
+   (Chrome's Node 2.0 build); falls back to 100% (old canvas frontend). */
+.lg-node.krc-pm-shell,
+.lg-node:has(.krc-pm) {
+  --min-node-width: 882px !important;
+  width: clamp(882px, var(--node-width), 3528px) !important;
+  min-width: 882px !important;
+  max-width: 3528px !important;
+  max-height: 1771px !important;
+}
+
+.lg-node.krc-pm-shell > [class*="bg-node-component-header-surface"],
+.lg-node:has(.krc-pm) > [class*="bg-node-component-header-surface"] {
+  width: clamp(882px, var(--node-width), 3528px) !important;
+  min-width: 882px !important;
+  max-width: 3528px !important;
+}
+
+.lg-node:has(.krc-pm) .lg-node-widgets > .lg-node-widget:not(:has(.krc-pm)) {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.lg-node:has(.krc-pm) .lg-node-widget:has(.krc-pm),
+.lg-node:has(.krc-pm) .lg-node-widget:has(.krc-pm) > .flex.flex-col,
+.lg-node:has(.krc-pm) .krc-node.krc-pm {
+  min-height: 668px !important;
+}
+
+.lg-node:has(.krc-pm) .lg-node-widget:has(.krc-pm) > .flex.flex-col,
+.lg-node:has(.krc-pm) .krc-node.krc-pm {
+  height: var(--krc-dom-h, 668px) !important;
+  flex: 0 0 var(--krc-dom-h, 668px) !important;
+}
+
+.krc-pm-grid { position:absolute; inset:0; display:grid; grid-template-columns:340px minmax(0,1fr); gap:8px; padding:0; min-height:0; }
+.krc-node.krc-pm { position:relative; contain:layout paint; width:calc(100% + 2px); height:100%; margin-left:-1px; overflow:hidden; }
+
+.krc-pm .krc-panel { display:flex; flex-direction:column; }
+.krc-pm .krc-panel-header { justify-content:flex-start; flex:0 0 31px; margin-bottom:7px; }
+.krc-pm .krc-panel-header.align-left { justify-content:flex-start; }
+.krc-pm .krc-header-controls { display:flex; align-items:center; justify-content:flex-start; gap:3px; min-width:0; }
+.krc-pm .krc-header-actions { display:flex; align-items:center; justify-content:flex-end; gap:3px; margin-left:auto; }
+.krc-pm .krc-info-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.krc-pm .krc-date-meta { margin:2px 0 0 2px; color:var(--krc-text-muted); opacity:var(--krc-text-faint-opacity);
+  display:flex; justify-content:space-between; gap:6px; min-width:0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:var(--krc-font-3xs); line-height:1.05; text-align:right; }
+.krc-pm .krc-date-meta span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.krc-pm .krc-date-meta span:first-child { text-align:left; }
+.krc-pm .krc-field-label { margin:0 0 3px 2px; }
+.krc-pm .krc-field-header { display:flex; align-items:center; justify-content:space-between; gap:7px; min-width:0; margin:0 0 3px 2px; }
+.krc-pm .krc-field-header .krc-field-label { margin:0; min-width:0; }

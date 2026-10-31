@@ -1,0 +1,94 @@
+/*
+ * KRC WordBank styles. Uses shared --krc-* tokens and the same compact
+ * component grammar as Prompt Vault / LoRA Loadout.
+ */
+.wb-wrap {
+  contain: layout paint;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  border-radius: var(--krc-radius-2xl);
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--krc-bg-col);
+  color: var(--krc-text-secondary);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--krc-font-base);
+  font-weight: 500;
+}
+
+.lg-node:has(.wb-wrap) {
+  --min-node-width: 592px !important;
+  width: max(var(--node-width), 592px) !important;
+  min-width: 592px !important;
+}
+
+.lg-node:has(.wb-wrap) > [class*="bg-node-component-header-surface"] {
+  width: max(var(--node-width), 592px) !important;
+  min-width: 592px !important;
+}
+
+.wb-wrap * {
+  box-sizing: border-box;
+}
+
+.wb-val {
+  border: 1px solid var(--krc-border-edit);
+  border-radius: var(--krc-radius-lg);
+  font: inherit;
+  outline: none;
+}
+
+.wb-auto-btn {
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  transition: background var(--krc-dur-base) ease, color var(--krc-dur-base) ease, transform var(--krc-dur-instant) ease, filter var(--krc-dur-base) ease;
+}
+
+.wb-auto-btn {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0;
+}
+
+.wb-auto-btn:hover:not(:disabled),
+.wb-btn:hover:not(:disabled),
+.wb-rall:hover:not(:disabled) {
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+}
+
+.wb-auto-btn.active {
+  background: rgba(var(--krc-accent-green-rgb), 0.62);
+  color: var(--krc-text-primary);
+  box-shadow: var(--krc-on-ring);
+}
+
+.wb-auto-btn:active:not(:disabled),
+.wb-btn:active:not(:disabled),
+.wb-rall:active:not(:disabled) {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  transform: translateY(1px);
+}
+
+.wb-loading {
+  padding: 12px 8px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+}
+
+svg.wi {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}

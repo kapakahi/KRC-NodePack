@@ -1,0 +1,121 @@
+/* KRC Loadout Kit. Everything else comes from LoRA Loadout's sheet (the preset panel and
+   slot card are LL mini's); this sets the slot rows and the field strip under each card
+   (RefMod Loadout's layout, generic). Width: LL mini's (356 node / 340 column). The card
+   height (--krc-kit-card-h) and strip sizes are set on the root from constants.js. */
+.krc-lora-stacker.krc-loadout-kit {
+  --krc-kit-strip-pad: 6px;
+}
+
+/* Heights: the node's DOM height, the stack column and the stack rows are set from the
+   kit's slot count (stack_view.js / kit_context.js inject them); cards and strips are
+   fixed sizes, never stretched (project rule). */
+
+/* ---- Slot row: [LL slot card] over [field strip] ----------------------------- */
+.krc-lora-stacker.krc-loadout-kit .krc-kit-slot-row {
+  display: grid;
+  grid-template-rows: var(--krc-kit-card-h);
+  min-height: 0;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-slot-row.has-strip {
+  grid-template-rows: var(--krc-kit-card-h) var(--krc-kit-strip-h);
+  row-gap: var(--krc-kit-strip-gap);
+}
+
+/* Reads as an extension of the slot without being part of the card: a shade lighter
+   than the empty slot (bg-deep), same radius as the card. */
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0 var(--krc-kit-strip-pad);
+  border-radius: var(--krc-browser-card-radius);
+  background: var(--krc-strip-wash), var(--krc-bg-deep);
+}
+
+/* Empty slot: the cell stays but dims a bit (0.6), and its default fields dim further
+   than an unchecked slot (0.6 x 0.35 = 0.21 vs 0.45 on the whole strip). */
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field-strip.is-empty {
+  opacity: 0.6;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field-strip.is-empty > .krc-kit-field {
+  opacity: 0.35;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-slot-row:has(.krc-enabled:not(:checked)) .krc-kit-field-strip {
+  opacity: 0.45;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field.is-dimmed {
+  opacity: 0.35;
+}
+
+/* The short "S:" label. Also used by header extensions (e.g. RefMod's "T:" meter). */
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field-label {
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: var(--krc-field-label-opacity);
+}
+
+/* LL's .krc-strength pill, 2px shorter to fit the 21px strip. Width by field type. */
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-sizing: border-box;
+  width: 36px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--krc-hairline);
+  border-radius: var(--krc-radius-sm);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.krc-lora-stacker.krc-loadout-kit button.krc-kit-field-value {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.krc-lora-stacker.krc-loadout-kit button.krc-kit-field-value:hover,
+.krc-lora-stacker.krc-loadout-kit button.krc-kit-field-value:focus-visible {
+  color: var(--krc-text-primary);
+  background: var(--krc-hover-wash);
+  outline: none;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field.is-int .krc-kit-field-value {
+  width: 22px;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field.is-bool .krc-kit-field-value {
+  width: 26px;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-field.is-enum .krc-kit-field-value {
+  justify-content: space-between;
+  width: 54px;
+  padding: 0 5px 0 6px;
+}
+
+.krc-lora-stacker.krc-loadout-kit .krc-kit-caret {
+  font-size: var(--krc-font-3xs);
+  opacity: 0.7;
+}

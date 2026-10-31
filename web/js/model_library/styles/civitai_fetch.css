@@ -1,0 +1,251 @@
+/* Fetch (Civitai batch fetch) — the Portal home-menu page on the Info Panel side
+   (model_library/civitai_fetch_page.js). The page shell is styles/info_page.css. Token-only. */
+
+.krc-model-library .krc-fetch-subtitle {
+  color: var(--krc-text-muted);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  font-size: var(--krc-font-2xs);
+}
+
+/* Scope segmented control */
+.krc-model-library .krc-fetch-seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deeper);
+}
+
+.krc-model-library .krc-fetch-seg-btn {
+  flex: 1;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  background: transparent;
+  color: var(--krc-text-secondary);
+  font: 600 var(--krc-font-sm) Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.krc-model-library .krc-fetch-seg-btn.is-active {
+  background: var(--krc-bg-element);
+  color: var(--krc-text-primary);
+}
+
+.krc-model-library .krc-fetch-seg-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Label | control rows */
+.krc-model-library .krc-fetch-setting {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: center;
+  gap: 3px 8px;
+}
+
+/* Dropdowns: one fixed width for every row (the shared compact select caps at
+   60px), right-aligned against the section edge; shrinks only on a narrow panel. */
+.krc-model-library .krc-fetch-setting .krc-menu-select {
+  justify-self: end;
+  width: 180px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.krc-model-library .krc-fetch-setting-label {
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-model-library .krc-fetch-setting-hint {
+  grid-column: 2;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-model-library .krc-fetch-check-label {
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-model-library .krc-fetch-check.is-danger .krc-fetch-check-label {
+  color: var(--krc-accent-red);
+}
+
+/* Preview / summary stats */
+.krc-model-library .krc-fetch-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+  font-size: var(--krc-font-sm);
+}
+
+.krc-model-library .krc-fetch-stat-value {
+  flex: none;
+  min-width: 26px;
+  color: var(--krc-text-primary);
+  font-weight: 700;
+  text-align: right;
+}
+
+.krc-model-library .krc-fetch-stat-label {
+  color: var(--krc-text-secondary);
+}
+
+.krc-model-library .krc-fetch-stat-detail {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-fetch-stat.is-lead {
+  font-size: var(--krc-font-md);
+}
+
+.krc-model-library .krc-fetch-stat.is-lead .krc-fetch-stat-value {
+  color: var(--krc-accent-green);
+}
+
+.krc-model-library .krc-fetch-stat.is-dim .krc-fetch-stat-value,
+.krc-model-library .krc-fetch-stat.is-dim .krc-fetch-stat-label {
+  color: var(--krc-text-muted);
+  font-weight: 500;
+}
+
+.krc-model-library .krc-fetch-stat.is-ok .krc-fetch-stat-value { color: var(--krc-accent-green); }
+.krc-model-library .krc-fetch-stat.is-warn .krc-fetch-stat-value { color: var(--krc-accent-orange); }
+.krc-model-library .krc-fetch-stat.is-fail .krc-fetch-stat-value { color: var(--krc-accent-red); }
+
+/* Callouts: info / ok / warn / fail */
+.krc-model-library .krc-fetch-callout {
+  padding: 6px 8px;
+  border-left: 3px solid var(--krc-text-muted);
+  border-radius: var(--krc-radius-sm);
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs-plus);
+  line-height: 1.4;
+}
+
+.krc-model-library .krc-fetch-callout.is-ok { border-left-color: var(--krc-accent-green); }
+.krc-model-library .krc-fetch-callout.is-warn { border-left-color: var(--krc-accent-orange); }
+.krc-model-library .krc-fetch-callout.is-fail {
+  border-left-color: var(--krc-accent-red);
+  color: var(--krc-accent-red);
+}
+
+.krc-model-library .krc-fetch-note {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  font-style: italic;
+}
+
+/* Internet access: read-only pill + settings pointer */
+.krc-model-library .krc-fetch-internet {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-fetch-pill {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: var(--krc-radius-pill);
+  font-size: var(--krc-font-xs);
+  font-weight: 700;
+}
+
+.krc-model-library .krc-fetch-pill.is-on {
+  background: rgba(var(--krc-accent-green-rgb), 0.22);
+  color: var(--krc-accent-green);
+}
+
+.krc-model-library .krc-fetch-pill.is-off {
+  background: rgba(var(--krc-accent-red-rgb), 0.22);
+  color: var(--krc-accent-red);
+}
+
+.krc-model-library .krc-fetch-link {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs-plus);
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.krc-model-library .krc-fetch-start {
+  align-self: stretch;
+  margin-top: 2px;
+}
+
+/* Last-run issues (click-through to the card) */
+.krc-model-library .krc-fetch-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.krc-model-library .krc-fetch-issue {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 5px;
+  border: 0;
+  border-radius: var(--krc-radius-xs);
+  background: transparent;
+  color: var(--krc-text-secondary);
+  font: 500 var(--krc-font-xs-plus) Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.krc-model-library .krc-fetch-issue:hover:not(:disabled) {
+  background: var(--krc-bg-deeper);
+}
+
+.krc-model-library .krc-fetch-issue:disabled {
+  cursor: default;
+}
+
+.krc-model-library :is(.krc-fetch-thumbs, .krc-fetch-clear-issues) {
+  align-self: flex-start;
+  margin: 2px 0 4px;
+}
+
+.krc-model-library .krc-fetch-issue-sym { flex: none; }
+.krc-model-library .krc-fetch-issue.is-warn .krc-fetch-issue-sym { color: var(--krc-accent-orange); }
+.krc-model-library .krc-fetch-issue.is-fail .krc-fetch-issue-sym { color: var(--krc-accent-red); }
+
+.krc-model-library .krc-fetch-issue-name {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-fetch-issue-text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

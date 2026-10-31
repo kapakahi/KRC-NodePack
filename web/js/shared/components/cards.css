@@ -1,0 +1,820 @@
+/* KRC shared components: cards.css (part of components.css, which @imports the parts in
+   order; the cascade depends on that order). Card lists and cards: badges, skeletons,
+   MISSING, the notch, list / thumb-list / grid views, the scrollbar lane, the pin,
+   selection, the NSFW thumb glyph, placeholders, hashes, the verification shield. */
+
+.krc-node .krc-lora-list {
+  box-sizing: border-box;
+  padding: calc(var(--krc-selection-ring-width, 3px) + 1px);
+  display: grid;
+  align-content: start;
+  gap: var(--krc-browser-list-gap);
+  min-height: 0;
+  overflow: auto;
+  overflow-x: hidden;
+}
+
+.krc-node .krc-browser-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.krc-node .krc-card-badge {
+  display: inline-grid;
+  place-items: center;
+  min-height: 14px;
+  padding: 2px 6px;
+  border-radius: var(--krc-radius-pill);
+  color: var(--krc-on-accent);
+  font-size: var(--krc-font-3xs);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.krc-node .krc-card-badge.is-json {
+  background: rgba(var(--krc-accent-blue-b-rgb), 0.88);
+}
+
+/* Both existing NSFW badge class forms share one color across all consumers. */
+.krc-node .krc-nsfw-badge,
+.krc-node .krc-card-badge.is-nsfw {
+  background: rgba(var(--krc-accent-red-rgb), 0.9);
+}
+
+/* Selection is an overlay: card tracks, padding and content never change. */
+.krc-node .krc-card-selection-toggle {
+  display: none;
+}
+
+.krc-node .is-selecting-cards .krc-card-selection-toggle {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--krc-card-pin-rail, 14px) + 4px);
+  z-index: calc(var(--krc-z-card-overlay) + 1);
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  transform: translateY(-50%);
+  border: 1px solid var(--krc-text-secondary);
+  border-radius: var(--krc-radius-sm);
+  appearance: none;
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+  font: 600 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.krc-node .is-selecting-cards .krc-card-selection-toggle[aria-checked="true"] {
+  border-color: var(--krc-accent-green);
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.krc-node .is-selecting-cards .krc-lora-list.is-grid .krc-card-selection-toggle {
+  top: auto;
+  right: 4px;
+  bottom: 18px;
+  transform: none;
+}
+
+/* Card status badges: one pill (above), the status colours of the node-level badges. */
+.krc-node .krc-card-badge.is-modified {
+  background: rgba(var(--krc-status-modified-rgb), 0.92);
+}
+
+.krc-node .krc-card-badge.is-missing {
+  background: rgba(var(--krc-status-discard-rgb), 0.92);
+}
+
+.krc-node .krc-lora-list.is-virtualized {
+  display: block;
+  position: relative;
+  gap: 0;
+}
+
+.krc-node .krc-lora-virtual-spacer {
+  position: relative;
+  min-height: 100%;
+}
+
+.krc-node .krc-lora-list.is-virtualized .krc-lora-card {
+  position: absolute;
+  contain: layout paint style;
+}
+
+.krc-node .krc-lora-list.is-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: var(--krc-browser-grid-card-height);
+}
+
+/* Cold-start skeleton placeholders (Perceived Loading gameplan, Stage 3). A
+   self-contained grid so it never fights the virtual-list geometry; sized by the
+   same card-height vars as real cards and matched per view, so real cards drop in
+   without a layout jump. Purely decorative (aria-hidden in markup). */
+/* The empty-state list keeps its own is-grid track sizing; drop it to a plain
+   block when it holds a skeleton shell so the shell owns the full width/height
+   and lays out its own grid. */
+.krc-node .krc-lora-list:has(.krc-skeleton-shell) {
+  display: block;
+}
+.krc-node .krc-skeleton-shell {
+  display: grid;
+  gap: var(--krc-browser-list-gap);
+  align-content: start;
+  width: 100%;
+}
+.krc-node .krc-skeleton-shell.is-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: var(--krc-browser-grid-card-height);
+}
+.krc-node .krc-skeleton-shell.is-thumb { grid-auto-rows: var(--krc-browser-thumb-card-height); }
+.krc-node .krc-skeleton-shell.is-list { grid-auto-rows: var(--krc-browser-list-card-min-height); }
+
+.krc-node .krc-skeleton-card {
+  display: grid;
+  grid-template-columns: var(--krc-browser-card-thumb-column) 1fr;
+  align-items: center;
+  gap: var(--krc-browser-card-gap);
+  padding: var(--krc-browser-card-padding);
+  border-radius: var(--krc-browser-card-radius);
+  background: var(--krc-bg-element);
+  overflow: hidden;
+}
+/* Grid cards stack a large thumb over the text lines; list rows drop the thumb. */
+.krc-node .krc-skeleton-shell.is-grid .krc-skeleton-card {
+  grid-template-columns: 1fr;
+  align-content: start;
+  align-items: stretch;
+}
+.krc-node .krc-skeleton-shell.is-list .krc-skeleton-card { grid-template-columns: 1fr; }
+.krc-node .krc-skeleton-shell.is-list .krc-skeleton-thumb { display: none; }
+
+.krc-node .krc-skeleton-thumb,
+.krc-node .krc-skeleton-line {
+  border-radius: var(--krc-radius-xs);
+  background: linear-gradient(
+    90deg,
+    var(--krc-bg-subtle, rgba(255, 255, 255, 0.05)) 25%,
+    var(--krc-bg-hover, rgba(255, 255, 255, 0.13)) 37%,
+    var(--krc-bg-subtle, rgba(255, 255, 255, 0.05)) 63%
+  );
+  background-size: 400% 100%;
+  animation: krc-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.krc-node .krc-skeleton-shell.is-thumb .krc-skeleton-card {
+  position: relative;
+  grid-template-columns: 1fr;
+  padding-left: var(--krc-browser-thumb-body-left);
+}
+.krc-node .krc-skeleton-shell.is-thumb .krc-skeleton-thumb {
+  position: absolute;
+  left: var(--krc-browser-thumb-left);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--krc-browser-thumb-width);
+  height: var(--krc-browser-thumb-height);
+}
+.krc-node .krc-skeleton-shell.is-grid .krc-skeleton-thumb {
+  width: min(100%, 130px);
+  height: auto;
+  aspect-ratio: 1;
+  justify-self: center;
+}
+.krc-node .krc-skeleton-lines { display: grid; gap: 6px; min-width: 0; }
+.krc-node .krc-skeleton-line { height: 9px; width: 60%; }
+.krc-node .krc-skeleton-line.is-wide { width: 85%; }
+
+@keyframes krc-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+/* Cold-start skeletons for the folder rail (LL/ML) and facet chips (PV). Reuse the
+   same shimmer gradient/animation as the card skeletons so the whole chrome reads as
+   one loading state. */
+.krc-node .krc-folder-skeleton-bar,
+.krc-node .krc-chip-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--krc-bg-subtle, rgba(255, 255, 255, 0.05)) 25%,
+    var(--krc-bg-hover, rgba(255, 255, 255, 0.13)) 37%,
+    var(--krc-bg-subtle, rgba(255, 255, 255, 0.05)) 63%
+  );
+  background-size: 400% 100%;
+  animation: krc-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.krc-node .krc-folder-skeleton-row {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+}
+.krc-node .krc-folder-skeleton-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: var(--krc-radius-xs);
+}
+.krc-node .krc-chip-skeleton {
+  flex: none;
+  height: 21px;
+  border-radius: var(--krc-radius-pill);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .krc-node .krc-skeleton-thumb,
+  .krc-node .krc-skeleton-line,
+  .krc-node .krc-folder-skeleton-bar,
+  .krc-node .krc-chip-skeleton { animation: none; }
+}
+
+.krc-node .krc-lora-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--krc-browser-card-thumb-column) 1fr;
+  align-items: center;
+  gap: var(--krc-browser-card-gap);
+  min-height: var(--krc-browser-card-min-height);
+  padding: var(--krc-browser-card-padding);
+  border: 1px solid var(--krc-card-edge);
+  border-radius: var(--krc-browser-card-radius);
+  background: var(--krc-bg-element);
+  cursor: pointer;
+}
+
+.krc-node .krc-lora-card.krc-card-has-notch {
+  grid-template-columns: var(--krc-browser-card-thumb-column) minmax(0, 1fr) 14px;
+  padding-right: 0;
+}
+
+.krc-node .krc-lora-card[data-card-color]:not([data-card-color=""]) {
+  border-color: var(--krc-card-color-border);
+  background: linear-gradient(0deg, var(--krc-card-color-soft), var(--krc-card-color-soft)), var(--krc-bg-element);
+}
+
+/* A missing card (renderModelCard opts.missing; CARD_MISSING_STATUS_GAMEPLAN.md): red
+   dashed border + tint, the same on hover. The card colour is dropped while missing, and
+   the border stays 1px, so the card never changes size. The :not()s do two jobs: drag /
+   drop states still show over it, and they lift it to (0,6,0) so it beats every node's
+   own card base (LL slots are (0,4,0), Config Switcher's coloured hover (0,5,0)) whatever
+   the stylesheet order. */
+.krc-node .krc-lora-card.is-missing:not(.is-dragging):not(.is-drop-target):not(.is-drop-reject),
+.krc-node .krc-lora-card.is-missing:not(.is-dragging):not(.is-drop-target):not(.is-drop-reject):hover {
+  border-style: dashed;
+  border-color: var(--krc-accent-red);
+  background: linear-gradient(0deg, rgba(var(--krc-accent-red-rgb), 0.16), rgba(var(--krc-accent-red-rgb), 0.16)), var(--krc-bg-element);
+}
+
+/* Fixed tracks were tuned against long titles and full badge rows. The zero
+   column minimum lets the thumbnail use the gutters without widening the notch. */
+.krc-node .krc-lora-list.is-grid .krc-lora-card {
+  container-type: inline-size;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--krc-browser-grid-thumb-size) 52px;
+  align-items: start;
+  gap: 2px;
+  min-height: 0;
+  height: var(--krc-browser-grid-card-height);
+  padding-top: 2px;
+  overflow: hidden;
+}
+
+/* The 6px track plus the existing negative bottom margin preserves the footer. */
+.krc-node .krc-lora-list.is-grid .krc-lora-card.krc-card-has-notch {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--krc-browser-grid-thumb-size) 52px 6px;
+  padding-right: var(--krc-browser-card-padding);
+}
+
+/* The footer bar reuses the base notch look (resting rgba tint + shared
+   muted→primary hover) but bleeds to the card's left/right/bottom edges and
+   swaps the side-rail's left border for a top divider. Background is left to
+   the base rule so the resting/hover states match list & thumb-list. */
+.krc-node .krc-lora-list.is-grid .krc-card-notch-button {
+  position: static;
+  display: grid;
+  place-items: center;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  /* Height matches the 14px width of the list/thumb-list side-rail notch. */
+  min-height: 14px;
+  margin: 0 calc(-1 * var(--krc-browser-card-padding)) calc(-1 * var(--krc-browser-card-padding));
+  border-width: 1px 0 0;
+  border-radius: 0;
+}
+
+.krc-node .krc-lora-list.is-grid .krc-lora-thumb {
+  width: var(--krc-browser-grid-thumb-size);
+  height: var(--krc-browser-grid-thumb-size);
+  min-width: var(--krc-browser-grid-thumb-size);
+  max-width: none;
+  aspect-ratio: 1;
+  justify-self: center;
+  align-self: start;
+}
+
+.krc-node .krc-lora-list.is-grid .krc-lora-body {
+  display: grid;
+  grid-template-rows: 25px 26px;
+  gap: 1px;
+  height: 52px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.krc-node .krc-lora-list.is-grid .krc-lora-name {
+  height: 25px;
+  min-height: 25px;
+  display: -webkit-box;
+  font-size: var(--krc-font-xs);
+  line-height: 12.5px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.krc-node .krc-lora-list.is-grid .krc-card-meta {
+  display: grid;
+  grid-template-rows: 14px 10px;
+  gap: 1px;
+  min-height: 0;
+  height: 26px;
+  overflow: hidden;
+}
+
+.krc-node .krc-lora-list.is-grid .krc-badge-row {
+  grid-row: 1;
+  flex-wrap: nowrap;
+  gap: 3px;
+  min-width: 0;
+  height: 14px;
+  overflow: hidden;
+}
+
+.krc-node .krc-lora-list.is-grid .krc-lora-sub {
+  grid-row: 2;
+  font-size: var(--krc-font-2xs);
+  line-height: 10px;
+  height: 10px;
+  min-height: 0;
+  padding: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.krc-node .krc-lora-list.is-list .krc-lora-card {
+  grid-template-columns: 1fr;
+  min-height: var(--krc-browser-list-card-min-height);
+  /* Slot-height cards (34px) have no room for the base 8px top/bottom padding;
+     drop it (the slot itself has none) and center the two-row body block. */
+  padding-top: 0;
+  padding-bottom: 0;
+  align-content: center;
+}
+
+.krc-node .krc-lora-list.is-list .krc-lora-card.krc-card-has-notch {
+  grid-template-columns: minmax(0, 1fr) 14px;
+  padding-right: 0;
+}
+
+.krc-node .krc-lora-list.is-virtualized.is-list .krc-lora-card {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.krc-node .krc-lora-list.is-list .krc-lora-thumb {
+  display: none;
+}
+
+/* Strict two-row list cards: the title/filename stays on ONE line (ellipsis;
+   full text on hover via the title attr set in model_card.js) — it must never
+   wrap into a third row. */
+.krc-node .krc-lora-list.is-list .krc-lora-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Optional tiny thumbnail in list view (per-node toggle). Anchored at the same
+   left offset as thumb-list (--krc-browser-thumb-left) so it lines up identically
+   from the card's left edge; the body is inset just past it. */
+.krc-node .krc-lora-list.is-list.krc-list-thumbs .krc-lora-thumb {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  left: var(--krc-browser-thumb-left);
+  /* A 32px square keeps the existing height and stays centered in taller rows. */
+  top: 0;
+  bottom: 0;
+  margin-block: auto;
+  width: var(--krc-browser-list-thumb-width);
+  height: auto;
+  overflow: hidden;
+  border-radius: var(--krc-radius-xs);
+}
+
+.krc-node .krc-lora-list.is-list.krc-list-thumbs .krc-lora-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+.krc-node .krc-lora-list.is-list.krc-list-thumbs .krc-lora-card {
+  padding-left: calc(var(--krc-browser-thumb-left) + var(--krc-browser-list-thumb-width) + 6px);
+}
+
+/* The notch spans the full card height independent of the body row: with zero
+   vertical padding the stretch+negative-margin trick no longer reaches the
+   edges, so anchor it to the card box (which is position:relative). */
+.krc-node .krc-lora-list.is-list .krc-card-notch-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: auto;
+  margin: 0;
+}
+
+.krc-node .krc-lora-list.is-thumb .krc-lora-card {
+  grid-template-columns: 1fr;
+  align-items: start;
+  height: var(--krc-browser-thumb-card-height);
+  min-height: var(--krc-browser-thumb-card-height);
+  padding: var(--krc-browser-thumb-offset) var(--krc-browser-thumb-left) var(--krc-browser-thumb-offset) var(--krc-browser-thumb-body-left);
+  overflow: hidden;
+}
+
+/* Give every card-browser view a small outboard scrollbar lane. The shared
+   virtualizer subtracts this same nudge from card width/column positioning so
+   the visible card layout stays at the original browser-column width. */
+.krc-node .krc-lora-list:is(.is-thumb, .is-list, .is-grid) {
+  width: calc(100% + var(--krc-browser-scrollbar-nudge));
+}
+
+.krc-node .krc-folder-tree {
+  width: calc(100% + var(--krc-browser-scrollbar-nudge));
+  overflow-x: hidden;
+}
+
+.krc-node .krc-folder-tree > * {
+  width: calc(100% - var(--krc-browser-scrollbar-nudge));
+}
+
+.krc-node .krc-lora-list.is-thumb .krc-lora-card.krc-card-has-notch {
+  grid-template-columns: minmax(0, 1fr) 14px;
+  padding-right: 0;
+}
+
+.krc-node .krc-card-notch-button {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 14px;
+  min-width: 14px;
+  margin: calc(-1 * var(--krc-browser-card-padding, 8px)) 0;
+  padding: 0;
+  border-width: 0 0 0 1px;
+  border-style: solid;
+  border-color: var(--krc-border-subtle);
+  border-radius: 0 var(--krc-browser-card-radius, var(--krc-radius-lg)) var(--krc-browser-card-radius, var(--krc-radius-lg)) 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--krc-control-shade);
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  line-height: 1;
+}
+
+/* Thumb cards use a 1px vertical padding, so the notch bleeds out by that much
+   to span the full card height. List cards keep the base card padding, so they
+   fall through to the base -card-padding margin above instead. */
+.krc-node .krc-lora-list.is-thumb .krc-card-notch-button {
+  margin: calc(-1 * var(--krc-browser-thumb-offset, 1px)) 0;
+}
+
+/* Pinned card glyph (pinnedGlyph, placed by renderModelCard) — one placement for every
+   browser (LL, ML, PV), clear of the context notch:
+     thumb-list  top-right, just left of the notch rail
+     list        vertically centred, just left of the notch rail
+     grid        top-right corner (the grid notch is a bottom strip)
+   --krc-card-pin-gap is the space to the card's top and to the notch / right edge, so
+   the corner spacing is even. A pinned card keeps its text out of the pin's strip. */
+.krc-node .krc-lora-card {
+  --krc-card-pin-gap: 6px;
+  --krc-card-pin-size: 12px;
+  --krc-card-pin-rail: 0px;
+}
+
+.krc-node .krc-lora-card.krc-card-has-notch {
+  --krc-card-pin-rail: 14px;
+}
+
+.krc-node .krc-lora-list.is-grid .krc-lora-card.krc-card-has-notch {
+  --krc-card-pin-rail: 0px;
+}
+
+.krc-node .krc-lora-card .krc-card-pin {
+  position: absolute;
+  top: var(--krc-card-pin-gap);
+  right: calc(var(--krc-card-pin-rail) + var(--krc-card-pin-gap));
+  z-index: var(--krc-z-card-overlay);
+  display: grid;
+  place-items: center;
+  width: var(--krc-card-pin-size);
+  height: var(--krc-card-pin-size);
+  color: var(--krc-text-primary);
+  line-height: 0;
+  pointer-events: none;
+}
+
+.krc-node .krc-lora-list.is-list .krc-lora-card .krc-card-pin {
+  top: 0;
+  bottom: 0;
+  margin-block: auto;
+}
+
+/* Grid: the pin sits over the thumbnail's corner; a soft shadow keeps it readable. */
+.krc-node .krc-lora-list.is-grid .krc-lora-card .krc-card-pin {
+  filter: var(--krc-glyph-shadow-filter);
+}
+
+.krc-node .krc-lora-list:is(.is-thumb, .is-list) .krc-lora-card.has-card-pin .krc-lora-body {
+  padding-right: calc(var(--krc-card-pin-size) + var(--krc-card-pin-gap));
+}
+
+.krc-node .krc-card-notch-button:hover,
+.krc-node .krc-card-notch-button:focus-visible,
+.krc-node .krc-card-notch-button[aria-expanded="true"] {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.krc-node .krc-card-notch-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.krc-node .krc-lora-list.is-thumb .krc-lora-thumb {
+  position: absolute;
+  /* Center vertically instead of top-anchoring: the card is 66px border-box, so
+     its padding box is only 64px (2px borders) — a top:1px + 64px-tall thumb
+     overflowed 1px at the bottom (clipped) and left a 1px gap on top. Centering
+     distributes any slack symmetrically. */
+  top: 50%;
+  transform: translateY(-50%);
+  left: var(--krc-browser-thumb-left);
+  width: var(--krc-browser-thumb-width);
+  height: var(--krc-browser-thumb-height);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.krc-node .krc-lora-list.is-thumb .krc-lora-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+.krc-node .krc-lora-list.is-thumb .krc-lora-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* The card list is a scroll container (overflow: auto), so it already clips to
+   its box — declaring `contain: content` just tells the browser that too, so a
+   repaint inside the list (e.g. during canvas pan/zoom) can't invalidate layout
+   or paint outside it. Bounds the biggest subtree in the widget. */
+.krc-node .krc-lora-list {
+  contain: content;
+}
+
+.krc-node :where(.krc-lora-card).is-selected {
+  outline: var(--krc-selection-ring-width, 3px) solid var(--krc-accent-green);
+  outline-offset: 1px;
+}
+
+/* Selected list/thumb-list cards fill the dead gutter to the LEFT of the
+   thumbnail (0 → --krc-browser-thumb-left) with the selection green, so the
+   selection reads as a solid left bar — the native-list selected-row cue — on
+   top of the ring. Only the two views that actually place a thumbnail there get
+   it (plain list with thumbs off has no thumbnail, so no gutter to fill). The
+   strip sits fully left of the thumb (thumb starts at --krc-browser-thumb-left),
+   so it never overlaps it, and the card's overflow:hidden clips it to the
+   rounded corners. */
+.krc-node .krc-lora-list.is-thumb .krc-lora-card.is-selected::before,
+.krc-node .krc-lora-list.is-list.krc-list-thumbs .krc-lora-card.is-selected::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--krc-accent-green);
+  pointer-events: none;
+}
+
+/* Overhang the strip under the thumbnail's rounded LEFT corners by that view's
+   thumb corner-radius, so the card colour never peeks through the corner arcs.
+   The thumb paints over the pseudo-element (later in DOM order, opaque), so the
+   overhang is hidden everywhere except in those arcs. */
+.krc-node .krc-lora-list.is-thumb .krc-lora-card.is-selected::before {
+  width: calc(var(--krc-browser-thumb-left) + 7px);
+}
+.krc-node .krc-lora-list.is-list.krc-list-thumbs .krc-lora-card.is-selected::before {
+  width: calc(var(--krc-browser-thumb-left) + 4px);
+}
+
+.krc-node .krc-lora-thumb,
+.krc-node .krc-info-thumb {
+  contain: paint;
+  display: grid;
+  isolation: isolate;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+  backface-visibility: hidden;
+}
+
+.krc-node .krc-lora-thumb {
+  width: var(--krc-browser-thumb-width);
+  aspect-ratio: 1;
+}
+
+.krc-node .krc-lora-thumb img,
+.krc-node .krc-lora-thumb video,
+.krc-node .krc-info-thumb img,
+.krc-node .krc-info-thumb video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  backface-visibility: hidden;
+  image-rendering: auto;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+.krc-node .is-nsfw-blurred img,
+.krc-node .is-nsfw-blurred video {
+  filter: blur(12px);
+  transform: scale(1.04);
+}
+
+.krc-node .is-nsfw-blurred::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--krc-z-card-overlay);
+  background: var(--krc-blur-scrim);
+  pointer-events: none;
+}
+
+/* The NSFW glyph (same composite ⊘ as the NSFW button), centered and enlarged
+   over the blur scrim. Appended in browser_cards.js when a thumb is blurred. */
+.krc-node .krc-nsfw-blur-glyph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.5);
+  color: var(--krc-text-primary);
+  opacity: 0.4;
+  z-index: var(--krc-z-card-glyph);
+  pointer-events: none;
+  filter: var(--krc-pin-shadow-filter);
+}
+
+/* The info-panel thumb is larger, so the glyph can be bigger there. */
+.krc-node .krc-info-thumb .krc-nsfw-blur-glyph {
+  transform: translate(-50%, -50%) scale(2.4);
+}
+
+.krc-node .krc-info-thumb {
+  width: min(100%, var(--krc-info-thumbnail-width, 160px));
+  max-height: 284px;
+  justify-self: center;
+  aspect-ratio: var(--krc-info-thumbnail-ratio, 1);
+  font-size: var(--krc-font-6xl);
+}
+
+/* Align the info-panel thumbnail's top edge with the first control in the right
+   column. Both columns start at the grid top, but the right column leads with a
+   field label above its control, so shift the whole left column (thumbnail plus
+   the fields beneath it) down by one label row. --krc-info-thumb-nudge tunes it,
+   shared across PV / LL / ML. */
+.krc-node .krc-info-left {
+  padding-top: var(--krc-info-thumb-nudge, 17px);
+}
+
+/* Themed placeholder glyph shown when a thumbnail is missing (image kind) or a
+   video preview has no poster yet (video kind). Inherits the palette via a
+   token so it reads correctly under any theme. */
+.krc-node .krc-thumb-glyph {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--krc-text-muted);
+}
+
+.krc-node .krc-thumb-glyph svg {
+  width: 36%;
+  height: auto;
+  max-width: 52px;
+  opacity: 0.75;
+}
+
+.krc-node .krc-sha {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  padding: 6px 8px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--krc-font-xs);
+}
+
+/* The hash text: takes the remaining width and ellipsizes, so a leading shield
+   (and trailing stabilize button) stay put. */
+.krc-node .krc-sha-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Verification shield (shared/verification_shield.js) — the outlined SVG shield with
+   provider initials (HF/CAI/M) shown left of the KRC ID when a record is verified.
+   White (inherits --krc-text-primary via currentColor). Unprefixed (no .krc-node) so
+   it applies both in the Info Panel footer AND in the body-portaled More Info modal. */
+.krc-verify-shield {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  /* Inherit currentColor from its context so it dims to match the KRC ID text it
+     sits inside (the .krc-sha field / the More Info meta cell). */
+}
+.krc-verify-shield-svg {
+  display: block;
+  width: 13px;
+  height: 14px;
+}
+.krc-verify-shield-initials {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+/* In the More Info footer meta cell it sits inline before the "KRC ID …" label. */
+.krc-modal-meta-cell .krc-verify-shield {
+  margin-right: 4px;
+  vertical-align: middle;
+}
+/* Verified state of the More Info "Verify" toggle button. */
+.krc-verify-button.is-on {
+  color: var(--krc-text-primary);
+  border-color: var(--krc-accent-green);
+}
+
+/* Card media is pinned to its square frame, so Thumbnail framing (object-fit / -position)
+   has a frame to fit or fill. In flow, a grid item's 100% height could resolve to auto:
+   the image then took its own shape, the frame only cropped it, and framing never showed. */
+.krc-node .krc-lora-thumb > img,
+.krc-node .krc-lora-thumb > video {
+  position: absolute;
+  inset: 0;
+}
+
+/* Info Panels hug the full image within their bounds, independently of card framing. */
+.krc-node .krc-info-thumb img,
+.krc-node .krc-info-thumb video {
+  object-fit: contain;
+  object-position: center;
+  min-width: 0;
+  min-height: 0;
+}

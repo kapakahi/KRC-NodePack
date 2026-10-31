@@ -1,0 +1,678 @@
+.krc-model-library .krc-info {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 7px;
+}
+
+.krc-model-library .krc-info-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-info-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-info-footer {
+  display: grid;
+  /* sha (shrinks/ellipsis) + copy, fetch, more-info, save, config. The sha column
+     yields via minmax(0,1fr) so all five controls stay on one row. */
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto auto;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Fetch glyph (filled ⬇︎). Symbol font stack keeps the arrow monochrome + consistent
+   across platforms; sized to sit right next to the ⧉/i neighbors. Centering comes
+   from the button's inline-grid place-items:center. */
+.krc-model-library .krc-info-footer .krc-fetch-button {
+  font-size: var(--krc-font-3xl);
+  font-weight: 900;
+  line-height: 1;
+  font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols", sans-serif;
+}
+
+.krc-model-library .krc-info-footer .krc-more-info-button {
+  padding-bottom: 0;
+}
+
+.krc-model-library .krc-info-footer :is(.krc-copy-button, .krc-config-button) {
+  color: var(--krc-text-secondary);
+  opacity: var(--krc-info-footer-glyph-opacity, 0.72);
+}
+
+.krc-model-library .krc-info-footer :is(.krc-copy-button, .krc-config-button):hover:not(:disabled),
+.krc-model-library .krc-info-footer :is(.krc-copy-button, .krc-config-button):focus-visible:not(:disabled),
+.krc-model-library .krc-info-footer .krc-fetch-button:is(.is-loading, .is-success, .is-error) {
+  opacity: 1;
+}
+
+.krc-model-library .krc-info-footer :is(.krc-copy-button, .krc-config-button):disabled {
+  opacity: 0.45;
+}
+
+.krc-model-library .krc-more-info-glyph {
+  display: inline-grid;
+  grid-template-rows: 3px 10px;
+  justify-items: center;
+  align-items: center;
+  row-gap: 2px;
+  height: 15px;
+  transform: translateY(-0.5px);
+}
+
+.krc-model-library .krc-more-info-dot,
+.krc-model-library .krc-more-info-stem {
+  display: block;
+  width: 4px;
+  border-radius: var(--krc-radius-pill);
+  background: currentColor;
+}
+
+.krc-model-library .krc-more-info-dot {
+  height: 4px;
+}
+
+.krc-model-library .krc-more-info-stem {
+  height: 10px;
+}
+
+/* In-button fetch state: the glyph spins while processing/downloading, then flashes a
+   ✓ (success) or ⚠ (error/timeout/not-found) before resetting. */
+.krc-model-library .krc-fetch-button .krc-fetch-glyph {
+  display: inline-block;
+  transform: translateY(-0.25px);
+  line-height: 1;
+  text-shadow: 0.45px 0 currentColor, -0.45px 0 currentColor;
+}
+@keyframes krc-fetch-spin {
+  to { transform: rotate(360deg); }
+}
+/* Loading uses a border ring, not a spinning ⟳ character: a glyph rotates around its
+   em-box (not its ink), so it wobbles. A square ring with border-radius:50% spins
+   perfectly centered. */
+.krc-model-library .krc-fetch-button.is-loading .krc-fetch-glyph {
+  width: 13px;
+  height: 13px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.85;
+  animation: krc-fetch-spin 0.7s linear infinite;
+  text-shadow: none;
+}
+.krc-model-library .krc-fetch-button.is-success .krc-fetch-glyph {
+  color: var(--krc-accent-green);
+}
+.krc-model-library .krc-fetch-button.is-error .krc-fetch-glyph {
+  color: var(--krc-accent-red);
+}
+
+.krc-model-library .krc-info-grid {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 7px;
+  min-height: 0;
+}
+
+.krc-model-library .krc-info-name-field,
+.krc-model-library .krc-info-text {
+  min-width: 0;
+}
+
+.krc-model-library .krc-info-name-field .krc-field-label {
+  display: none;
+}
+
+.krc-model-library .krc-info-text {
+  display: grid;
+  gap: 3px;
+}
+
+.krc-model-library .krc-info-subline {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  margin: -4px 0 0 0;
+  color: var(--krc-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--krc-font-3xs);
+  line-height: 1.05;
+  opacity: var(--krc-meta-opacity, 0.68);
+}
+
+.krc-model-library .krc-info-subline span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-info-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-info-date {
+  flex: 0 0 auto;
+  margin-left: auto;
+  text-align: right;
+}
+
+.krc-model-library .krc-duplicate-row {
+  margin-top: 4px;
+}
+
+.krc-model-library .krc-duplicate-row:empty {
+  display: none;
+}
+
+.krc-model-library .krc-duplicate-button {
+  width: 100%;
+  height: 18px;
+  padding: 0 7px;
+  font-size: var(--krc-font-2xs);
+  line-height: 1;
+  white-space: nowrap;
+  color: rgb(var(--krc-black-rgb));
+  background: rgba(var(--krc-accent-gold-rgb), 0.9);
+}
+
+.krc-duplicate-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.krc-duplicate-path-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--krc-font-sm);
+}
+
+.krc-duplicate-tag {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: var(--krc-radius-pill);
+  background: rgba(var(--krc-text-muted-rgb), 0.35);
+  font-size: var(--krc-font-2xs);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.krc-duplicate-tag.is-canonical {
+  background: rgba(var(--krc-accent-gold-rgb), 0.9);
+  color: rgb(var(--krc-black-rgb));
+}
+
+.krc-model-library .krc-info-text-value {
+  overflow: hidden;
+  color: var(--krc-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--krc-font-xs);
+  opacity: var(--krc-meta-opacity, 0.68);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-model-type-field {
+  gap: 4px;
+}
+
+.krc-model-library .krc-model-type-field .krc-field-label {
+  display: none;
+}
+
+.krc-model-library .krc-model-type-field .krc-info-text-value {
+  display: block;
+  min-height: 16px;
+  color: var(--krc-text-primary);
+  font: 800 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: center;
+  text-transform: uppercase;
+  opacity: var(--krc-text-strong-opacity);
+}
+
+.krc-model-library .krc-info-left {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  width: 160px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-info-right {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-model-info .krc-info-right {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.krc-model-library .krc-model-info .krc-model-description,
+.krc-model-library .krc-model-info .krc-model-notes {
+  height: 100%;
+  min-height: 0;
+  resize: none;
+}
+
+.krc-model-library .krc-model-info .krc-info-right > .krc-field {
+  min-height: 0;
+}
+
+.krc-model-library .krc-info-thumb {
+  cursor: grab;
+}
+
+.krc-model-library .krc-info-thumb:active {
+  cursor: grabbing;
+}
+
+.krc-model-library .krc-field {
+  display: grid;
+  gap: 3px;
+}
+
+.krc-model-library .krc-chip-list {
+  align-content: flex-start;
+  align-items: flex-start;
+  max-height: 84px;
+}
+
+.krc-model-library .krc-chip {
+  flex: 0 0 auto;
+  position: relative;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--krc-dur-base) ease, color var(--krc-dur-base) ease, transform var(--krc-dur-instant) ease, filter var(--krc-dur-base) ease;
+}
+
+.krc-model-library .krc-chip-add {
+  color: var(--krc-accent-green);
+}
+
+.krc-model-library .krc-chip-editable,
+.krc-model-library .krc-chip-add {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.krc-model-library .krc-chip:hover:not(:disabled),
+.krc-model-library .krc-chip:focus-visible {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.krc-model-library .krc-chip:active:not(:disabled) {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  transform: translateY(1px);
+}
+
+.krc-model-library .krc-chip:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+.krc-model-library .krc-trained-word-popover {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: var(--krc-z-popover);
+  display: grid;
+  gap: 7px;
+  width: min(260px, calc(100% - 16px));
+  min-width: 0;
+  max-width: calc(100% - 16px);
+  height: auto;
+  min-height: 0;
+  padding: 8px;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-popup-bg, var(--krc-bg-deep));
+  color: var(--krc-text-primary);
+  font: var(--krc-font-base)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  box-shadow: var(--krc-shadow-popover);
+}
+
+.krc-model-library .krc-trained-word-popover-title {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-3xs);
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.krc-model-library .krc-trained-word-popover-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px 46px;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-trained-word-input {
+  width: 100%;
+  height: 26px;
+  min-width: 0;
+  padding: 0 7px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font: 500 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  outline: none;
+}
+
+.krc-model-library .krc-trained-word-input:focus {
+  border-color: var(--krc-accent-green);
+  box-shadow: 0 0 0 1px rgba(var(--krc-accent-green-rgb), 0.28);
+}
+
+.krc-model-library .krc-trained-word-action {
+  display: grid;
+  place-items: center;
+  height: 26px;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 700 var(--krc-font-3xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.krc-model-library .krc-trained-word-action:hover {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.krc-model-library .krc-trained-word-action:active {
+  transform: translateY(1px);
+}
+
+.krc-model-library .krc-trained-word-clear {
+  font-size: var(--krc-font-base);
+}
+
+.krc-model-library .krc-trained-word-clear.is-confirming {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+  font-size: var(--krc-font-3xs);
+}
+
+.krc-model-library .krc-textarea {
+  min-height: 48px;
+}
+
+.krc-model-library .krc-prompt {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Example Prompt 1, Example Prompt 2, and Description grow together (equal
+   flex), filling the right column and scaling uniformly as the node resizes. */
+.krc-model-library .krc-prompt-wrap {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 92px;
+  min-width: 0;
+}
+
+/* Box comes from the shared .krc-icon-button.is-compact variant; only position
+   and glyph size are local. */
+.krc-model-library .krc-prompt-copy {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  font-size: var(--krc-font-3xs);
+  font-weight: 700;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+
+.krc-model-library .krc-description {
+  flex: 1 1 auto;
+  min-height: 48px;
+}
+
+.krc-model-library .krc-info-footer .krc-sha {
+  opacity: var(--krc-meta-opacity, 0.68);
+}
+
+.krc-model-library .krc-info-footer .krc-sha.has-stabilize {
+  /* Base .krc-sha is a flex row (shield? · text · stabilize); just tighten the
+     right padding so the STABILIZE button doesn't crowd the edge. */
+  padding: 3px 4px 3px 8px;
+}
+
+.krc-model-library .krc-sha-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-sha-stabilize {
+  height: 20px;
+  min-width: 0;
+  padding: 0 7px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-sm);
+  background: var(--krc-control-bg, var(--krc-bg-deep));
+  color: var(--krc-accent-green);
+  cursor: pointer;
+  font: 800 var(--krc-font-3xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.krc-model-library .krc-sha-stabilize:hover:not(:disabled),
+.krc-model-library .krc-sha-stabilize:focus-visible:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.krc-model-library .krc-sha-stabilize:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.krc-model-library .krc-config {
+  position: relative;
+}
+
+.krc-model-library .krc-config-button {
+  width: 24px;
+  height: 24px;
+  font-size: var(--krc-font-md);
+}
+
+.krc-model-library .krc-config-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  display: grid;
+  gap: 2px;
+  min-width: 104px;
+  padding: 4px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deeper);
+  box-shadow: var(--krc-shadow-config-menu);
+  z-index: var(--krc-z-config-menu);
+}
+
+.krc-model-library .krc-config-menu[hidden] {
+  display: none;
+}
+
+.krc-model-library .krc-config-menu button {
+  width: 100%;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  background: transparent;
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-config-menu button:hover {
+  background: var(--krc-bg-element);
+  color: var(--krc-text-primary);
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-stack-output {
+  display: grid;
+  gap: 5px;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-stack-output .krc-switch-toggle.is-disabled,
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-stack-output .krc-switch-toggle:disabled {
+  opacity: 0.42;
+  cursor: default;
+  color: var(--krc-text-muted);
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-stack-output.is-daisy-disabled .krc-options-description,
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-stack-output .krc-options-description.is-disabled {
+  opacity: 0.62;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-description {
+  margin: -2px 0 4px 2px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  line-height: 1.25;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-description.krc-options-warning {
+  color: var(--krc-accent-gold);
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-appearance {
+  display: grid;
+  gap: 7px;
+}
+
+/* Missing-file panel — moved from the removed stacks_presets.css (the rest of
+   that file styled the stack/preset column, which the Model Library node does
+   not render). */
+.krc-model-library .krc-info-missing .krc-missing-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+}
+
+.krc-model-library .krc-missing-hero {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+}
+
+.krc-model-library .krc-missing-hero .krc-info-thumb {
+  opacity: 0.75;
+  filter: grayscale(0.4);
+}
+
+/* Position context so the description can lock to the thumbnail's height:
+   the thumbnail's square aspect-ratio drives the row height, and the absolutely
+   positioned description fills its cell and scrolls. */
+.krc-model-library .krc-missing-desc-cell {
+  position: relative;
+  align-self: stretch;
+  min-width: 0;
+}
+
+.krc-model-library .krc-missing-desc {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-secondary);
+  font: 500 var(--krc-font-sm)/1.4 Inter, ui-sans-serif, system-ui, sans-serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.krc-model-library .krc-missing-desc.is-empty {
+  color: var(--krc-text-muted);
+  font-style: italic;
+}
+
+.krc-model-library .krc-missing-name {
+  font: 700 var(--krc-font-base)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--krc-text-primary);
+}
+
+.krc-model-library .krc-missing-path {
+  font: 500 var(--krc-font-sm)/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--krc-accent-red);
+  word-break: break-all;
+  background: rgba(var(--krc-accent-red-rgb), 0.12);
+  border-radius: var(--krc-radius-xs);
+  padding: 4px 6px;
+}
+
+.krc-model-library .krc-missing-meta,
+.krc-model-library .krc-missing-id {
+  font: 500 var(--krc-font-xs)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--krc-text-muted);
+  word-break: break-all;
+}
+
+.krc-model-library .krc-missing-note {
+  font: 500 var(--krc-font-xs)/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--krc-text-muted);
+  font-style: italic;
+}
+
+.krc-model-library .krc-missing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 8px 8px;
+}
+
+.krc-model-library .krc-missing-actions .krc-action-button {
+  flex: 1 1 auto;
+}
+
+.krc-model-library .krc-missing-actions .is-danger {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}

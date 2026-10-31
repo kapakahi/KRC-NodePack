@@ -1,0 +1,130 @@
+.wb-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.wb-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 5px;   /* reserved on every row so locking adds no horizontal shift */
+  border-radius: var(--krc-radius-lg);
+}
+
+.wb-row.locked {
+  background: rgba(var(--krc-accent-gold-rgb), 0.12);
+  box-shadow: inset 0 0 0 1px rgba(var(--krc-accent-gold-rgb), 0.55);
+}
+
+.wb-row.missing-word .wb-val {
+  border-color: rgba(var(--krc-accent-red-rgb), 0.68);
+  background: linear-gradient(rgba(var(--krc-accent-red-rgb), 0.14), rgba(var(--krc-accent-red-rgb), 0.14)), var(--krc-bg-deep);
+}
+
+/* The row's bank picker: the shared searchable select (shared/searchable_select.js,
+   .krc-preset-* in components.css), sized and framed like the value field beside it. */
+.krc-node .wb-row .wb-cat.krc-preset-picker {
+  flex: 0 0 138px;
+  width: 138px;
+}
+
+/* The bank picker and the value field match the 26px dropdown every KRC node uses. */
+.krc-node .wb-row .wb-cat .krc-preset-search-button {
+  height: 26px;
+  border: 1px solid var(--krc-border-edit);
+  background: var(--krc-bg-element);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-node .wb-row .wb-cat .krc-preset-search-button:hover,
+.krc-node .wb-row .wb-cat.is-open .krc-preset-search-button {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+}
+
+.wb-val {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-base);
+}
+
+.wb-val::placeholder {
+  color: var(--krc-text-muted);
+}
+
+/* Single-glyph copy button (shared krc-copy-button design) between the bank
+   dropdown and value; puts the row's <placeholder> handle on the clipboard. */
+.wb-row .wb-copy {
+  flex: 0 0 auto;
+}
+
+.wb-btn {
+  display: grid;
+  place-items: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-md);
+  transition: background var(--krc-dur-base) ease, color var(--krc-dur-base) ease, transform var(--krc-dur-instant) ease, filter var(--krc-dur-base) ease;
+}
+
+.wb-btn.lk {
+  background: rgba(var(--krc-accent-gold-rgb), 0.24);
+  color: var(--krc-text-primary);
+}
+
+.wb-btn.lk:hover {
+  background: rgba(var(--krc-accent-gold-rgb), 0.3);
+}
+
+.wb-word-add:hover:not(:disabled) {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.wb-word-add.is-added {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.wb-word-add.is-added:hover:not(:disabled) {
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+}
+
+.wb-word-remove:hover:not(:disabled) {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+.wb-btn.rm:hover {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+/* armed confirm state (two-click delete/remove) — matches LoRA Loadout is-confirming */
+.wb-btn.is-confirming,
+.wb-preset-btn.krc-action-button.is-confirming {
+  background: var(--krc-danger-armed-bg);
+  color: var(--krc-on-accent);
+}
+
+.wb-btn.is-confirming:hover,
+.wb-preset-btn.krc-action-button.is-confirming:hover {
+  background: var(--krc-danger-armed-hover-bg);
+  color: var(--krc-on-accent);
+}

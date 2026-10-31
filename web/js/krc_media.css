@@ -1,0 +1,1836 @@
+/* KRC Media: the Portal's Media tab and the KRC Media Loader / Output nodes.
+   Shared sheets: ?v= must match SHARED_STYLE_VERSION in shared/stylesheets.js
+   so every KRC node fetches each shared file once (one URL, one CSSOM copy). */
+@import url("./shared/design_tokens.css?v=1.6.68");
+@import url("./shared/themes.css?v=1.6.68");
+@import url("./shared/components.css?v=1.6.68");
+
+/* KRC tokens only (--krc-*); cards, panels, buttons, the header and search come from
+   NodePack's shared components.css (under .krc-node). */
+/* ---- The browser column ----------------------------------------------------------- */
+.krc-mio-media .krc-mio-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.krc-mio-media .krc-mio-browser .krc-lora-list {
+  flex: 1;
+}
+
+/* The Portal's tab already names the mode: no title in the header (as the built-in modes). */
+.krc-mio-media .krc-mio-browser .krc-panel-header > span {
+  display: none;
+}
+
+/* The kind filter (all / videos / images): gold while it narrows the list. */
+.krc-mio-media .krc-mio-kind-filter.is-active {
+  color: var(--krc-accent-gold);
+}
+
+/* Input / Output folders: one letter, I or O. */
+.krc-mio-media .krc-mio-storage-toggle {
+  /* A smaller label at one fixed width, so INPUT / OUTPUT never pushes the row's buttons. */
+  flex: none;
+  width: 48px;
+  min-width: 0;
+  padding: 0 2px;
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.krc-mio-media .krc-mio-storage-toggle.is-output {
+  color: var(--krc-accent-gold);
+}
+
+/* Delete: the trash glyph (an SVG in currentColor), red. */
+.krc-mio-media .krc-mio-delete {
+  display: inline-grid;
+  place-items: center;
+  color: var(--krc-accent-red);
+}
+
+.krc-mio-media .krc-mio-delete > svg {
+  display: block;
+  pointer-events: none;
+}
+
+.krc-mio-flush-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-mio-flush-body p {
+  margin: 0;
+}
+
+.krc-mio-flush-warning {
+  color: var(--krc-accent-red);
+}
+
+.krc-mio-flush-note {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+/* Card badges: the shared pill (.krc-card-badge), Media's colours. */
+/* IMAGE / VIDEO: glyph + word, each kind its own soft colour (teal / dusty rose: not card
+   colours, which are black, blue, gray, green, orange, purple, red and yellow). */
+.krc-node {
+  --krc-mio-kind-image-rgb: 86, 148, 150;
+  --krc-mio-kind-video-rgb: 170, 112, 140;
+}
+
+.krc-node .krc-mio-badge.is-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(var(--krc-mio-kind-image-rgb), 0.88);
+}
+
+.krc-node .krc-mio-badge.is-kind.is-video {
+  background: rgba(var(--krc-mio-kind-video-rgb), 0.88);
+}
+
+.krc-node .krc-mio-badge.is-kind > .krc-thumb-glyph {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 10px;
+  height: 10px;
+  color: inherit;                   /* the badge's text colour, not the placeholder's muted one */
+  opacity: 1;
+}
+
+.krc-node .krc-mio-badge.is-kind > .krc-thumb-glyph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  opacity: 1;
+}
+
+.krc-node .krc-mio-badge.is-duration {
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+}
+
+.krc-node .krc-mio-badge.is-muted {
+  background: var(--krc-bg-element);
+  color: var(--krc-text-muted);
+}
+
+.krc-node .krc-mio-badge.is-active {
+  background: rgba(var(--krc-accent-gold-rgb), 0.92);
+  color: var(--krc-on-accent);
+}
+
+/* The card notch menu's Send to sub-mode. */
+.krc-mio-send {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ---- The InfoPanel side ------------------------------------------------------------ */
+.krc-mio-media .krc-mio-info {
+  min-width: 0;
+  overflow: hidden;
+  padding: 8px;
+  border-radius: var(--krc-radius-2xl);
+  background: var(--krc-bg-col);
+}
+
+.krc-mio-info-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.krc-mio-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.krc-mio-tab {
+  height: 22px;
+  padding: 0 10px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: transparent;
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: 700 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-transform: uppercase;
+}
+
+.krc-mio-tab:hover {
+  color: var(--krc-text-primary);
+}
+
+.krc-mio-tab.is-active {
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-primary);
+}
+
+.krc-mio-upload-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 4px 4px 10px;
+  border: 1px dashed var(--krc-border-strong);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-upload-hint,
+.krc-mio-drop-sub,
+.krc-mio-slot-sub,
+.krc-mio-node-hint {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-mio-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.krc-mio-section-title {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* Nothing selected: the uploader takes the panel (a button: click to choose a file). */
+.krc-mio-drop {
+  display: grid;
+  width: 100%;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  flex: 1;
+  place-content: center;
+  gap: 6px;
+  min-height: 160px;
+  border: 1px dashed var(--krc-border-strong);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deep);
+  text-align: center;
+}
+
+.krc-mio-drop:hover {
+  border-color: var(--krc-accent-green);
+}
+
+.krc-mio-drop.is-static {
+  cursor: default;
+}
+
+.krc-mio-drop.is-static:hover {
+  border-color: var(--krc-border-strong);
+}
+
+/* A file dragged over the Media: the selection ring around the mode. */
+.krc-mio-media.is-file-drop .krc-mio-info,
+.krc-mio-media.is-file-drop .krc-mio-browser {
+  box-shadow: var(--krc-selection-ring);
+}
+
+.krc-mio-drop-title {
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-base);
+  font-weight: 700;
+}
+
+.krc-mio-settings,
+.krc-mio-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.krc-mio-setting,
+.krc-mio-detail {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 2px 6px;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-setting-label,
+.krc-mio-detail-label {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  text-transform: uppercase;
+}
+
+.krc-mio-setting-input {
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-col);
+  color: var(--krc-text-secondary);
+  font: inherit;
+  font-size: var(--krc-font-xs);
+}
+
+.krc-mio-detail-value,
+.krc-mio-item-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-item-name {
+  color: var(--krc-text-primary);
+  font-weight: 700;
+}
+
+/* The preview: a 1:1 square sized by the panel (full width, capped by the window height so
+   the details stay in view), never by the image; the image is scaled to fit whole inside
+   it whatever its aspect ratio. */
+.krc-mio-preview {
+  position: relative;
+  flex: none;
+  width: min(100%, 52vh);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-preview-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.krc-mio-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.krc-mio-choice {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 600 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-mio-choice.is-active {
+  box-shadow: var(--krc-selection-ring);
+  color: var(--krc-text-primary);
+}
+
+.krc-mio-choice:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* A dropped video's KRC player controls, trim marks and the conversion's progress. */
+.krc-mio-player-controls {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.krc-mio-time {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.krc-mio-trim {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
+}
+
+.krc-mio-trim-mark {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 4px 2px 6px;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-trim-mark .krc-mio-detail-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.krc-mio-trim-set,
+.krc-mio-trim-reset {
+  height: 22px;
+  padding: 0 8px;
+}
+
+.krc-mio-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-progress-fill {
+  height: 100%;
+  background: rgba(var(--krc-accent-green-rgb), 0.8);
+  transition: width 0.3s ease;
+}
+
+.krc-mio-status {
+  min-height: 16px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-mio-status.is-error {
+  color: var(--krc-accent-red);
+}
+
+.krc-mio-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.krc-mio-send-note {
+  max-width: 220px;
+  padding: 6px 8px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-mio-preview-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+/* The Presets page: the preset's 6 slots (they fit without scrolling). */
+.krc-mio-active-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.krc-mio-slot-count {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+}
+
+.krc-mio-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.krc-mio-slot {
+  display: grid;
+  grid-template-columns: 18px 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 58px;
+  padding: 5px 6px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-slot.is-empty .krc-mio-slot-thumb {
+  border: 1px dashed var(--krc-border-strong);
+}
+
+.krc-mio-slot.is-missing .krc-mio-slot-sub {
+  color: var(--krc-accent-red);
+}
+
+.krc-mio-slot.is-drop-target {
+  box-shadow: var(--krc-selection-ring);
+}
+
+.krc-mio-slot-img {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+.krc-mio-slot-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.krc-mio-slot-number {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  font-weight: 700;
+  text-align: center;
+}
+
+.krc-mio-slot-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-col);
+}
+
+.krc-mio-slot-body {
+  min-width: 0;
+}
+
+.krc-mio-slot-name {
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  font: 600 var(--krc-font-sm)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-slot-thumb {
+  overflow: hidden;
+}
+
+.krc-mio-upload-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.krc-mio-name-input.is-invalid {
+  border-color: var(--krc-accent-red);
+}
+
+/* ---- KRC Media Loader: the KRC node structure ------------------------------------- */
+/* .krc-node › .krc-panel (the background cell, from NodePack) › header, preview, cells, bar */
+.krc-mio-node .krc-mio-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.krc-mio-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.krc-node .krc-mio-header > .krc-mio-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 1 auto;
+  min-width: 0;
+  width: 64%;
+  max-width: 64%;
+}
+
+.krc-mio-preset-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-preset-label:empty {
+  display: none;
+}
+
+.krc-mio-preset-caret {
+  flex: none;
+  color: var(--krc-text-muted);
+}
+
+.krc-mio-header-gap {
+  flex: 1;
+}
+
+/* Barebones: one row, the two dropdowns share the width before Options. */
+.krc-node .krc-mio-barebones-row > .krc-mio-preset-btn {
+  flex: 1 1 0;
+  width: auto;
+  max-width: none;
+}
+
+.krc-mio-barebones-row.is-disabled .krc-mio-preset-btn {
+  opacity: 0.45;
+}
+
+/* The node's square follows the node's width (the Media's is capped by the window). */
+.krc-mio-preview.krc-mio-pick-preview {
+  width: 100%;
+}
+
+/* Bypassed (Ctrl+B): the preview dims under a label. */
+.krc-mio-preview.is-disabled > :not(.krc-mio-pending-overlay) {
+  opacity: 0.3;
+}
+
+.krc-mio-preview.is-disabled::after {
+  content: attr(data-disabled-label);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-sm);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* A pending upload on the node: its local preview, then status / progress / ✕ or ■. */
+.krc-mio-pending-overlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 6px;
+  padding: 6px;
+  background: rgba(var(--krc-bg-deep-rgb), 0.85);
+}
+
+.krc-mio-pending-text {
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-pending-text.is-error {
+  color: var(--krc-accent-red);
+  white-space: normal;
+}
+
+.krc-mio-pending-overlay .krc-mio-progress {
+  grid-column: 1;
+}
+
+.krc-mio-pending-close {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+/* SLOT / HISTORY on the left, the media name right-aligned. */
+.krc-mio-caption {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 14px;
+  min-height: 14px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.krc-mio-caption-label {
+  flex: none;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.krc-mio-caption-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+}
+
+/* UPLOAD / DOWNLOAD: a thick arrow before the label. */
+.krc-node .krc-mio-bar > .krc-mio-arrow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.krc-mio-arrow-glyph {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.krc-mio-arrow-glyph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The 6 slot cells: fixed squares in one row. */
+.krc-mio-cells {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.krc-mio-cell {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+  cursor: pointer;
+}
+
+div.krc-mio-cell {
+  cursor: default;
+}
+
+.krc-mio-cell.is-empty {
+  border-style: dashed;
+  border-color: var(--krc-border-strong);
+}
+
+/* The selected slot: the green KRC selection ring, drawn above the thumbnail (an inset
+   shadow on the cell itself would sit under the image). */
+.krc-mio-cell.is-selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: var(--krc-selection-ring);
+  pointer-events: none;
+}
+
+.krc-mio-cell-img {
+  overflow: hidden;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+/* ThumbnailBox owns the NSFW blur/scrim; these children keep the old image sizing. */
+.krc-mio-slot-img img,
+.krc-mio-cell-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+.krc-mio-cell-number {
+  position: absolute;
+  z-index: 2;
+  top: 2px;
+  left: 3px;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  text-shadow: 0 0 3px rgb(var(--krc-bg-deep-rgb));
+}
+
+.krc-mio-cell.is-empty .krc-mio-cell-number {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-shadow: none;
+}
+
+.krc-mio-bar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px;
+}
+
+.krc-node .krc-mio-bar > .krc-action-button {
+  width: 100%;
+}
+
+.krc-mio-bar > button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.krc-mio-media-btn {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.krc-mio-slot-thumb.is-empty {
+  border: 1px dashed var(--krc-border-strong);
+}
+
+.krc-mio-slot-sub.is-error,
+.krc-mio-choice.is-missing {
+  color: var(--krc-accent-red);
+}
+
+/* The preset picker menu (NodePack's preset-menu look, narrower). */
+.krc-preset-menu.krc-mio-preset-menu {
+  width: 240px;
+  min-width: 200px;
+}
+
+/* ---- Presets page: the preset row ---------------------------------------------------- */
+.krc-mio-preset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.krc-node .krc-icon-button.krc-mio-preset-delete.is-armed {
+  width: auto;
+  padding: 0 6px;
+}
+
+/* A video preview (thumbnailBox): its poster, playing while hovered, fit to the square. */
+.krc-mio-preview-thumb {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Placed like the stills' image (absolute, filling the square): as a centred grid item a
+   video kept its intrinsic size as its minimum and was clipped by the box. */
+.krc-mio-preview-thumb video,
+.krc-mio-preview-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+}
+
+/* ---- InfoPanel: the card's buttons, its editable name, Add ------------------------- */
+.krc-mio-tabs {
+  align-items: center;
+}
+
+/* Geometry is shared with PV / Models via .krc-info-actions. */
+.krc-mio-info-actions {
+  margin-left: auto;
+}
+
+.krc-mio-name-input {
+  width: 100%;
+  padding: 1px 4px;
+  margin-left: -5px;
+  border: 1px solid transparent;
+  border-radius: var(--krc-radius-md);
+  background: transparent;
+  font: 700 var(--krc-font-sm)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-mio-name-input:hover,
+.krc-mio-name-input:focus,
+.krc-mio-rename-input {
+  border-color: var(--krc-border-subtle);
+  background: var(--krc-bg-col);
+  outline: none;
+}
+
+.krc-mio-rename-input {
+  min-width: 180px;
+  margin: 4px 0;
+  padding: 3px 6px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  color: var(--krc-text-primary);
+  font: 500 var(--krc-font-xs)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-mio-upload-strip .krc-mio-upload-hint {
+  flex: 1;
+  min-width: 0;
+}
+
+.krc-mio-add-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- Presets page: the current slot's preview and caption ------------------------- */
+/* Compact (the default): small enough for the preset row, the caption and all 6 slot cards
+   to fit without scrolling; large: the full preview. A click toggles (zoom cursor). */
+/* The anchor has the box's size (centred, room left on each side for the sound toggle,
+   which sits just right of the box, at its bottom). */
+.krc-mio-preview-anchor {
+  position: relative;
+  flex: none;
+  width: min(100% - 72px, var(--krc-mio-preview-compact, 132px));
+  margin: 0 auto;
+  transition: width 0.15s ease;
+}
+
+.krc-mio-preview-anchor.is-large {
+  width: min(100% - 72px, 34vh);
+}
+
+.krc-mio-preview.krc-mio-active-preview {
+  width: 100%;
+  cursor: zoom-in;
+}
+
+.krc-mio-preview-anchor.is-large .krc-mio-preview.krc-mio-active-preview {
+  cursor: zoom-out;
+}
+
+.krc-mio-preview-anchor > .krc-mio-sound {
+  position: absolute;
+  bottom: 0;
+  left: calc(100% + 6px);
+}
+
+.krc-mio-active-caption {
+  min-width: 0;
+}
+
+.krc-mio-active-caption .krc-mio-slot-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-slot {
+  cursor: pointer;
+}
+
+.krc-mio-slot.is-current {
+  box-shadow: var(--krc-selection-ring);
+}
+
+/* The favourite star on Media cards: NodePack's look (each NodePack browser scopes its own
+   .krc-badge-star; same tokens here). */
+.krc-mio-media .krc-badge-star {
+  flex: 0 0 auto;
+  color: var(--krc-accent-gold);
+  font-size: var(--krc-font-base);
+  line-height: 1;
+}
+
+/* ---- The folder chip strip (NodePack's chip pills; the container is ours) ------------- */
+.krc-mio-media .krc-mio-folder-slot {
+  flex: none;
+}
+
+.krc-mio-media .krc-chip-list-shell {
+  position: relative;
+  display: block;
+}
+
+.krc-mio-media .krc-chip-list-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-element);
+  pointer-events: none;
+}
+
+.krc-mio-media[data-krc-theme="native"] .krc-chip-list-bg {
+  background: var(--krc-native-chip-shade);
+}
+
+.krc-mio-media .krc-chip-list-scroll {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 150px;                    /* fixed at PV's chip view height; more chips scroll */
+  padding: 5px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.krc-mio-media .krc-chip.is-drop-target,
+.krc-mio-media .krc-chip-split.is-drop-target {
+  box-shadow: var(--krc-selection-ring);
+}
+
+/* Protected folders: an inline lock after the name, before the actions notch. */
+.krc-mio-media .krc-chip-split.is-kept .krc-chip-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.krc-mio-media .krc-mio-folder-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.krc-mio-media .krc-mio-folder-lock {
+  flex: 0 0 10px;
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  opacity: 0.65;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='10' width='14' height='11' rx='2'/%3E%3Cpath d='M8 10V7a4 4 0 0 1 8 0v3M12 14v3'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+  pointer-events: none;
+}
+
+/* The card menu's slot boxes (quickExtra): the Presets page's preset, 6 numbered boxes. */
+.krc-mio-menu-slots {
+  display: grid;
+  gap: 4px;
+  padding: 4px 6px 6px;
+}
+
+.krc-mio-menu-slots-label {
+  overflow: hidden;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-menu-slots-row {
+  display: grid;
+  grid-template-columns: repeat(6, 26px);
+  gap: 4px;
+}
+
+.krc-mio-menu-slots-row.is-busy {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.krc-mio-menu-slot {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-md);
+  background: transparent;
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 700 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-mio-menu-slot.is-empty {
+  border-style: dashed;
+}
+
+.krc-mio-menu-slot.is-taken {
+  border-color: rgba(var(--krc-accent-green-rgb), 0.45);
+  background: rgba(var(--krc-accent-green-rgb), 0.22);
+  color: var(--krc-text-primary);
+}
+
+.krc-mio-menu-slot.is-this {
+  border-color: var(--krc-accent-green);
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+/* The folder editor's PROTECT: NodePack's chip-editor button; green while protected (as
+   SAVE). The chip itself shows an inline lock. */
+.krc-mio-media .krc-chip-editor-action.krc-mio-protect {
+  flex: none;
+  padding: 0 12px;
+  letter-spacing: 0.04em;
+}
+
+.krc-mio-media .krc-chip-editor-action.krc-mio-protect.is-on,
+.krc-mio-media .krc-chip-editor-action.krc-mio-protect.is-on:hover {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+/* ---- The Preview page: never scrolls. The preview takes the height the name and the facts
+   box leave, as the largest square that fits (container units). */
+.krc-mio-page.krc-mio-item {
+  overflow: hidden;
+}
+
+.krc-mio-preview-fit {
+  display: grid;
+  flex: 1 1 0;
+  place-items: center;
+  min-height: 80px;
+  container-type: size;
+}
+
+.krc-mio-preview.krc-mio-fit-preview {
+  width: min(100cqw, 100cqh);
+  margin: 0;
+}
+
+.krc-mio-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  flex: none;
+  gap: 3px;
+  padding: 6px 8px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-meta-line {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 5px;
+  min-width: 0;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.krc-mio-meta-line:first-child .krc-mio-fact:first-child {
+  color: var(--krc-text-primary);
+  font-weight: 700;
+}
+
+.krc-mio-meta-line + .krc-mio-meta-line {
+  grid-column: 1;
+  color: var(--krc-text-muted);
+}
+
+.krc-mio-fact {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-fact-sep {
+  color: var(--krc-text-muted);
+}
+
+/* ---- The Batch page: the list | the preview (one fixed height), the controls below ---- */
+.krc-mio-page.krc-mio-batch {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.krc-mio-batch-top {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr) var(--krc-mio-batch-side, 168px);
+  gap: 8px;
+  height: var(--krc-mio-batch-height, 228px);   /* about six rows; both columns the same */
+}
+
+.krc-mio-batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 0;
+  padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-batch-list.is-empty { cursor: pointer; }
+.krc-mio-batch-list.is-empty:focus-visible {
+  outline: 1px solid var(--krc-accent-green);
+  outline-offset: -2px;
+}
+
+.krc-mio-batch-empty {
+  padding: 8px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-mio-batch-row {
+  display: grid;
+  flex: none;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 4px;
+  border-radius: var(--krc-radius-md);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font-size: var(--krc-font-xs);
+}
+
+.krc-mio-batch-row:hover,
+.krc-mio-batch-row.is-uploading,
+.krc-mio-batch-row.is-converting {
+  background: var(--krc-bg-element);
+}
+
+.krc-mio-batch-row.is-pinned {
+  box-shadow: var(--krc-selection-ring);
+}
+
+.krc-mio-batch-row.is-queued,
+.krc-mio-batch-row.is-duplicate {
+  color: var(--krc-text-muted);
+}
+
+.krc-mio-batch-thumb {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: var(--krc-radius-sm, 4px);
+  background: var(--krc-bg-col);
+}
+
+.krc-mio-batch-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+.krc-mio-batch-glyph {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+}
+
+.krc-mio-batch-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-batch-status {
+  min-width: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.krc-mio-batch-row.is-done .krc-mio-batch-status {
+  color: var(--krc-accent-green);
+}
+
+.krc-mio-batch-row.is-error .krc-mio-batch-status,
+.krc-mio-batch-row.is-error .krc-mio-batch-name {
+  color: var(--krc-accent-red);
+}
+
+.krc-mio-batch-retry,
+.krc-mio-batch-remove {
+  width: 22px;
+  height: 22px;
+}
+
+.krc-mio-batch-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.krc-mio-batch-caption,
+.krc-mio-batch-totals {
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-batch-totals {
+  color: var(--krc-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.krc-mio-batch-controls {
+  display: grid;
+  flex: none;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-batch-section {
+  display: grid;
+  gap: 4px;
+}
+
+.krc-mio-batch-line {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.krc-mio-batch-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.krc-mio-batch-target {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- The Presets page's preset combobox: the name field and ▾ as one control ---------- */
+.krc-mio-combo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  min-width: 0;
+  height: 26px;
+  overflow: hidden;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+}
+
+.krc-mio-combo:focus-within {
+  border-color: var(--krc-accent-green);
+}
+
+.krc-mio-combo-input {
+  min-width: 0;
+  height: 100%;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--krc-text-primary);
+  font: 700 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  outline: none;
+}
+
+.krc-mio-combo-input.is-invalid {
+  color: var(--krc-accent-red);
+}
+
+.krc-mio-combo .krc-mio-combo-caret {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  max-width: none;
+  height: 100%;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  border-left: 1px solid var(--krc-border-strong);
+  border-radius: 0;
+  background: var(--krc-bg-element);
+}
+
+.krc-mio-combo .krc-mio-combo-caret:hover {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+}
+
+.krc-mio-combo .krc-mio-combo-caret .krc-mio-preset-label {
+  display: none;
+}
+
+.krc-mio-combo .krc-mio-combo-caret .krc-mio-preset-caret {
+  line-height: 1;
+}
+
+/* ---- Batch: right-aligned choices, headers, the kind titles, Add to, Clear all -------- */
+.krc-mio-batch-line .krc-mio-choices {
+  justify-content: flex-end;
+}
+
+.krc-mio-batch-line {
+  align-items: start;
+}
+
+.krc-mio-batch-line > .krc-mio-detail-label {
+  padding-top: 5px;
+}
+
+.krc-mio-batch-heading {
+  color: var(--krc-text-muted);
+  font: 800 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.krc-mio-batch-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.krc-mio-batch-column > .krc-mio-batch-list {
+  flex: 1 1 0;
+}
+
+.krc-mio-batch-kind {
+  margin-top: 2px;
+  color: var(--krc-text-primary);
+  font: 800 var(--krc-font-base)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.krc-mio-batch-section + .krc-mio-batch-section {
+  padding-top: 6px;
+  border-top: 1px solid var(--krc-border-subtle);
+}
+
+.krc-mio-batch-buttons {
+  flex-wrap: wrap;
+}
+
+.krc-mio-batch-add {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-mio-batch-clear-all.is-armed {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+/* The Custom… megapixels popover (NodePack's numeric popover; LoRA Loadout's look). */
+.krc-mio-media .krc-mio-mp-popover {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: var(--krc-z-popover);
+  display: grid;
+  gap: 8px;
+  width: 238px;
+  padding: 8px;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-popup-bg, var(--krc-bg-deep));
+  color: var(--krc-text-primary);
+  font: var(--krc-font-base)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  box-shadow: var(--krc-shadow-popover);
+}
+
+.krc-mio-media .krc-mio-mp-popover * {
+  box-sizing: border-box;
+}
+
+.krc-mio-media .krc-mio-mp-input {
+  width: 100%;
+  height: 26px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font: inherit;
+  text-align: center;
+}
+
+.krc-mio-media .krc-mio-mp-input:focus {
+  border-color: var(--krc-accent-green);
+  outline: none;
+}
+
+.krc-mio-media .krc-mio-mp-slider-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
+  align-items: center;
+  gap: 6px;
+}
+
+.krc-mio-media .krc-mio-mp-slider {
+  width: 100%;
+}
+
+.krc-mio-media .krc-mio-mp-nudge {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+/* The previews' sound-on-hover toggle, outside the box (the Preview page's name row, the
+   Presets page's preview anchor): a CSS speaker, centred. */
+.krc-node .krc-icon-button.krc-mio-sound {
+  flex: none;
+  color: var(--krc-text-muted);
+}
+
+.krc-node .krc-icon-button.krc-mio-sound.is-on {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+/* 16x12: the body and the cone on the left, one wave (the box's own right border, curved)
+   on the right, so the whole glyph sits centred. Off: dimmed; on: the button turns green. */
+.krc-mio-speaker-glyph {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 16px;
+  height: 12px;
+  border-right: 2px solid currentColor;
+  border-radius: 0 5px 5px 0 / 0 6px 6px 0;
+  opacity: 0.6;
+}
+
+.krc-node .krc-mio-sound.is-on .krc-mio-speaker-glyph {
+  opacity: 1;
+}
+
+.krc-mio-speaker-glyph::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 1px;
+  width: 4px;
+  height: 4px;
+  background: currentColor;
+}
+
+.krc-mio-speaker-glyph::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  width: 0;
+  height: 4px;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-right: 5px solid currentColor;
+}
+
+/* The Preview page's name row: the name, then (a video with sound) the toggle on the right. */
+.krc-mio-name-row {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.krc-mio-name-row .krc-mio-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The header's Delete sits at the right end: the controls row fills the header (the other
+   controls stay where they were, on the left) and Delete takes the slack before it. */
+.krc-mio-media .krc-mio-browser .krc-browser-actions {
+  flex: 1 1 auto;
+}
+
+.krc-mio-media .krc-browser-actions .krc-mio-delete {
+  margin-left: auto;
+}
+
+/* The KRC switches' labels in Media's settings match the other option labels (small,
+   dimmed, capitals) instead of NodePack's options-page size. */
+.krc-mio-media .krc-options-host .krc-switch-label {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+/* The × buttons (the preset's delete, a slot's empty, a Batch row's remove): the search
+   bars' × (NodePack's .krc-search-clear-glyph, optically centred), at its size and colour. */
+.krc-node .krc-icon-button.krc-mio-x {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-lg);
+  line-height: 1;
+}
+
+.krc-node .krc-icon-button.krc-mio-x:hover:not(:disabled) {
+  color: var(--krc-text-primary);
+}
+
+.krc-node .krc-icon-button.krc-mio-x.is-armed {
+  color: var(--krc-accent-red);
+  font-size: var(--krc-font-2xs);
+}
+
+/* The Presets page's + (a new preset), left of the delete ×. */
+.krc-node .krc-icon-button.krc-mio-preset-add {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-lg);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.krc-node .krc-icon-button.krc-mio-preset-add:hover:not(:disabled) {
+  color: var(--krc-text-primary);
+}
+
+/* The upload strip's hint: the line, then the folder it goes into. */
+.krc-mio-upload-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.krc-mio-upload-hint-folder {
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Output shares Loader chrome, preview and history-cell geometry. */
+.krc-node.krc-mio-output .krc-mio-header > .krc-mio-output-folder {
+  max-width: 64%;
+  flex: 0 1 auto;
+  min-width: 0;
+  width: 64%;
+  height: 24px;
+}
+.krc-mio-output-options {
+  display: grid;
+  gap: 8px;
+}
+.krc-mio-output-setting {
+  min-width: 0;
+  width: 100%;
+  height: 28px;
+}
+.krc-mio-output-note {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  line-height: 1.4;
+}
+
+/* Node previews share a quiet, non-interactive media-type marker; slot cells opt out. */
+.krc-mio-preview > .krc-mio-media-type {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: var(--krc-text-primary);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.krc-mio-preview > .krc-mio-media-type .krc-thumb-glyph {
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+}
+
+/* Match the Options glyph's normal foreground; states change the glyph only. */
+.krc-node .krc-icon-button.krc-mio-control {
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.krc-mio-control-glyph,
+.krc-mio-control-glyph svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.krc-node .krc-icon-button.krc-mio-output-mute.is-muted {
+  color: var(--krc-accent-red);
+}
+
+.krc-mio-output-autoplay.is-off .krc-mio-control-glyph {
+  opacity: 0.35;
+}
+
+.krc-mio-preview > .krc-mio-media-type .krc-thumb-glyph svg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  opacity: 1;
+}
+
+/* Source pixel dimensions share the corner marker's quiet baseline. */
+.krc-mio-preview > .krc-mio-media-resolution {
+  position: absolute;
+  right: 30px;
+  bottom: 7px;
+  z-index: 2;
+  height: 18px;
+  max-width: calc(100% - 37px);
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  opacity: 0.4;
+  font-size: 10px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Match Portal Options: one right-aligned 180 × 22 control column, including palette. */
+.krc-mio-node-options .krc-modal-field,
+.krc-mio-node-options.krc-modal-field {
+  justify-content: space-between;
+  gap: 10px;
+}
+.krc-mio-node-options .krc-modal-field > .krc-modal-select,
+.krc-mio-node-options.krc-modal-field > .krc-modal-select,
+.krc-mio-node-options .krc-modal-field > .krc-mio-number-field {
+  box-sizing: border-box;
+  flex: 0 1 180px;
+  width: 180px;
+  min-width: 0;
+  max-width: 100%;
+  height: 22px;
+  padding: 0 7px;
+}
+.krc-mio-node-options .krc-modal-field > .krc-mio-number-field {
+  position: relative;
+  padding: 0;
+}
+.krc-mio-number-field > input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0 23px 0 7px;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.krc-mio-number-field > input::-webkit-inner-spin-button,
+.krc-mio-number-field > input::-webkit-outer-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}
+.krc-mio-number-arrows {
+  position: absolute;
+  inset: 1px 1px 1px auto;
+  display: flex;
+  flex-direction: column;
+  width: 14px;
+  overflow: hidden;
+  border-left: 1px solid var(--krc-border-subtle);
+  border-radius: 0 var(--krc-radius-md) var(--krc-radius-md) 0;
+}
+.krc-mio-number-arrows > button {
+  display: flex;
+  flex: 1 1 50%;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--krc-text-muted);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+}
+.krc-mio-number-arrows > button:first-child {
+  border-bottom: 1px solid var(--krc-hairline);
+}
+.krc-mio-number-arrows > button:hover:not(:disabled) {
+  color: var(--krc-text-primary);
+  background: rgba(var(--krc-white-rgb), 0.10);
+}
+.krc-mio-number-arrows > button:active:not(:disabled) {
+  background: rgba(var(--krc-white-rgb), 0.18);
+}
+.krc-mio-number-arrows > button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.krc-mio-number-glyph.is-down { transform: translateY(-1px); }
+
+/* Download stays at the Properties cell's right edge, beside both fact rows. */
+.krc-mio-meta-download {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: end;
+}
+
+.krc-mio-meta-download > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
+/* Media drop feedback overlays the thumbnail without changing slot geometry. */
+.krc-mio-cell.is-drop-target::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  box-shadow: var(--krc-selection-ring);
+  background: rgba(var(--krc-accent-green-rgb), 0.15);
+  pointer-events: none;
+}

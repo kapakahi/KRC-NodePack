@@ -1,0 +1,251 @@
+/* KRC shared components: glyphs_states.css (part of components.css, which @imports the
+   parts in order; the cascade depends on that order). NSFW and gear glyphs, confirming /
+   danger / disabled states, thumbnail actions, field labels, the toast, chip lists. */
+
+.krc-node .krc-nsfw-glyph::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border: 2px solid currentColor;
+  border-radius: var(--krc-radius-pill);
+  box-sizing: border-box;
+}
+
+.krc-node .krc-nsfw-glyph::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 1px;
+  width: 2px;
+  height: 12px;
+  border-radius: var(--krc-radius-pill);
+  background: currentColor;
+  transform: rotate(45deg);
+  transform-origin: center;
+}
+
+.krc-node .krc-gear-glyph {
+  position: relative;
+  display: block;
+  width: 15px;
+  height: 15px;
+  font-size: 0;
+}
+
+.krc-node .krc-gear-glyph::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-radius: var(--krc-radius-pill);
+  box-sizing: border-box;
+}
+
+.krc-node .krc-gear-glyph::after {
+  content: "";
+  position: absolute;
+  left: 6.5px;
+  top: 0;
+  width: 2px;
+  height: 3px;
+  border-radius: var(--krc-radius-hair);
+  background: currentColor;
+  box-shadow:
+    0 12px 0 currentColor,
+    -6px 6px 0 currentColor,
+    6px 6px 0 currentColor,
+    -4px 2px 0 currentColor,
+    4px 2px 0 currentColor,
+    -4px 10px 0 currentColor,
+    4px 10px 0 currentColor;
+}
+
+.krc-node .krc-icon-button.is-confirming,
+.krc-node .krc-action-button.is-confirming,
+.krc-node .krc-thumb-action.is-confirming,
+.krc-node .krc-search-clear.is-confirming,
+.krc-node .krc-prompt-clear.is-confirming,
+.krc-node .krc-chip-editor-action.is-confirming,
+.krc-node .krc-action-button.is-danger,
+.krc-node .krc-thumb-action.is-danger,
+.krc-node .krc-chip-editor-action.is-danger.is-confirming {
+  background: var(--krc-danger-armed-bg);
+  color: var(--krc-on-accent);
+}
+
+.krc-node .krc-icon-button.is-confirming:hover:not(:disabled),
+.krc-node .krc-action-button.is-confirming:hover:not(:disabled),
+.krc-node .krc-thumb-action.is-confirming:hover:not(:disabled),
+.krc-node .krc-search-clear.is-confirming:hover:not(:disabled),
+.krc-node .krc-prompt-clear.is-confirming:hover:not(:disabled),
+.krc-node .krc-chip-editor-action.is-confirming:hover:not(:disabled),
+.krc-node .krc-action-button.is-danger:hover:not(:disabled),
+.krc-node .krc-thumb-action.is-danger:hover:not(:disabled),
+.krc-node .krc-chip-editor-action.is-danger.is-confirming:hover:not(:disabled) {
+  background: var(--krc-danger-armed-hover-bg);
+  color: var(--krc-on-accent);
+}
+
+.krc-node .krc-icon-button:disabled,
+.krc-node .krc-refresh-button:disabled,
+.krc-node .krc-action-button:disabled,
+.krc-node .krc-favorite-button:disabled,
+.krc-node .krc-thumb-action:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.krc-node .krc-thumb-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  gap: 6px;
+  width: 100%;
+}
+
+.krc-node .krc-thumb-action {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 18px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 500 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.3px;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.krc-node .krc-thumb-mode-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 23px;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--krc-radius-lg);
+}
+
+.krc-node .krc-thumb-main {
+  border-radius: var(--krc-radius-lg) 0 0 var(--krc-radius-lg);
+}
+
+.krc-node .krc-thumb-mode-toggle {
+  border-left: 1px solid var(--krc-border-subtle);
+  border-radius: 0 var(--krc-radius-lg) var(--krc-radius-lg) 0;
+  padding: 0;
+  color: var(--krc-text-muted);
+}
+
+.krc-node .krc-thumb-remove-icon {
+  position: relative;
+  min-width: 24px;
+  padding: 0;
+  border-radius: var(--krc-radius-lg);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-node .krc-thumb-remove-icon::before,
+.krc-node .krc-thumb-remove-icon::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  color: currentColor;
+}
+
+.krc-node .krc-thumb-remove-icon::before {
+  left: 9px;
+  top: 8px;
+  width: 6px;
+  height: 7px;
+  border: 1.5px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 var(--krc-radius-hair-plus) var(--krc-radius-hair-plus);
+}
+
+.krc-node .krc-thumb-remove-icon::after {
+  left: 8px;
+  top: 6px;
+  width: 8px;
+  height: 1.5px;
+  border-radius: var(--krc-radius-pill);
+  background: currentColor;
+  box-shadow: 2px -2px 0 -0.5px currentColor;
+}
+
+.krc-node .krc-thumb-remove-icon.is-confirming::before,
+.krc-node .krc-thumb-remove-icon.is-confirming::after {
+  display: none;
+}
+
+.krc-node .krc-field-label,
+.krc-node .krc-footer {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-node .krc-field-label {
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.krc-node .krc-info-cycle {
+  font-size: var(--krc-font-2xs);
+}
+
+.krc-node .krc-textarea.has-prompt-controls,
+.krc-node .krc-prompt.has-prompt-controls {
+  padding-right: 26px;
+  padding-bottom: 7px;
+}
+
+.krc-node .krc-browser-empty-note {
+  padding: 16px;
+  white-space: pre-line;
+}
+
+.krc-toast {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  z-index: var(--krc-z-toast);
+  padding: 8px 14px;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-col);
+  color: var(--krc-text-primary);
+  box-shadow: var(--krc-shadow-toast);
+  font: 500 var(--krc-font-base) Inter, ui-sans-serif, system-ui, sans-serif;
+  transform: translateX(-50%);
+}
+
+.krc-node .krc-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 34px;
+  overflow: auto;
+  padding: 5px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-element);
+}
+
+.krc-node .krc-chip {
+  max-width: 100%;
+  padding: 3px 7px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-chip-bg, var(--krc-bg-deep));
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-node .krc-chip.is-active {
+  background: var(--krc-chip-active-bg, var(--krc-bg-deeper));
+  box-shadow: inset 0 0 0 var(--krc-selection-ring-width, 2px) var(--krc-chip-active-ring, transparent);
+  color: var(--krc-chip-active-text);
+}

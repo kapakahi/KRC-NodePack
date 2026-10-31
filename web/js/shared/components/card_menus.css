@@ -1,0 +1,489 @@
+/* KRC shared components: card_menus.css (part of components.css, which @imports the parts
+   in order; the cascade depends on that order). The body-portaled card colour menu and
+   card context menu (quick row, badge editor, swatches, move-to-category sub-view,
+   overwrite popover). */
+
+body > .krc-card-color-menu {
+  position: fixed;
+  z-index: var(--krc-z-floating-menu);
+  min-width: 112px;
+  padding: 4px;
+  border: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deeper, #161a1d);
+  box-shadow: var(--krc-shadow-floating);
+}
+
+body > .krc-card-color-menu[hidden] {
+  display: none;
+}
+
+body > .krc-card-color-menu .krc-card-color-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 24px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font: 500 var(--krc-font-sm)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+}
+
+body > .krc-card-color-menu .krc-card-color-option:hover {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--krc-text-primary, #fff);
+}
+
+body > .krc-card-color-menu .krc-card-color-option-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--krc-card-filter-color, conic-gradient(#d96d6d, #d8b84f, #7b9e87, #4f7a9e, #8a8f98, #d96d6d));
+  box-shadow: inset 0 0 0 1px rgba(var(--krc-white-rgb, 255, 255, 255), 0.42), 0 0 0 1px rgba(var(--krc-black-rgb, 0, 0, 0), 0.28);
+}
+
+body > .krc-card-color-menu .krc-card-color-option[data-card-color=""] .krc-card-color-option-swatch {
+  filter: grayscale(1) saturate(0.25);
+  opacity: 0.42;
+}
+
+body > .krc-card-color-menu .krc-card-color-option.is-rainbow .krc-card-color-option-swatch {
+  filter: none;
+  opacity: 1;
+}
+
+body > .krc-card-context-menu {
+  position: fixed;
+  /* Above every other body-portaled layer — a context menu opens FROM a card that may
+     itself live in a high-z portal (e.g. Config Switcher's .ddp-model-menu dropdown at
+     999999), so the popover must clear it or it renders behind and is unclickable. */
+  z-index: var(--krc-z-context-menu);
+  min-width: 132px;
+  padding: 4px;
+  border: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deeper, #161a1d);
+  box-shadow: var(--krc-shadow-floating);
+}
+
+body > .krc-card-context-menu[hidden] {
+  display: none;
+}
+
+body > .krc-browser-selection-menu .krc-selection-summary {
+  padding: 4px 6px;
+  color: var(--krc-text-primary);
+  font: 600 var(--krc-font-sm)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body > .krc-browser-selection-menu .krc-selection-preview-note {
+  max-width: 190px;
+  padding: 4px 6px;
+  color: var(--krc-text-muted);
+  font: 500 var(--krc-font-xs)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body > .krc-browser-selection-menu .krc-card-menu-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+body > .krc-card-context-menu .krc-card-menu-quick-slot {
+  min-height: 28px;
+}
+
+body > .krc-card-context-menu :where(.krc-card-menu-quick-row, .krc-card-menu-color-row, .krc-card-menu-badge-row, .krc-card-menu-rename-row) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+}
+
+body > .krc-card-context-menu :where(.krc-card-menu-quick-button, .krc-card-menu-mode-back, .krc-card-menu-badge-save, .krc-card-menu-badge-remove, .krc-card-menu-rename-save) {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font: 600 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body > .krc-card-context-menu :where(.krc-card-menu-quick-button, .krc-card-menu-mode-back, .krc-card-menu-badge-save, .krc-card-menu-badge-remove, .krc-card-menu-rename-save):hover:not(:disabled),
+body > .krc-card-context-menu :where(.krc-card-menu-quick-button, .krc-card-menu-mode-back, .krc-card-menu-badge-save, .krc-card-menu-badge-remove, .krc-card-menu-rename-save):focus-visible,
+body > .krc-card-context-menu .krc-card-menu-quick-button.is-on {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--krc-text-primary, #fff);
+}
+
+body > .krc-card-context-menu .krc-card-menu-quick-button:disabled,
+body > .krc-card-context-menu .krc-card-menu-badge-save:disabled,
+body > .krc-card-context-menu .krc-card-menu-badge-remove:disabled,
+body > .krc-card-context-menu .krc-card-menu-rename-save:disabled,
+body > .krc-card-context-menu .krc-card-menu-badge-input:disabled,
+body > .krc-card-context-menu .krc-card-menu-rename-input:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+body > .krc-card-context-menu .krc-card-menu-quick-button.is-favorite.is-on {
+  color: var(--krc-accent-gold);
+}
+
+body > .krc-card-context-menu .krc-card-menu-quick-button.is-nsfw.is-on {
+  color: var(--krc-accent-red);
+}
+
+body > .krc-card-context-menu .krc-card-menu-badge-save {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+body > .krc-card-context-menu .krc-card-menu-badge-save:hover:not(:disabled),
+body > .krc-card-context-menu .krc-card-menu-badge-save:focus-visible {
+  background: var(--krc-accent-green);
+  filter: brightness(1.1);
+}
+
+body > .krc-card-context-menu .krc-card-menu-badge-save:active:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+body > .krc-card-context-menu .krc-card-menu-badge-remove {
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.52));
+}
+
+body > .krc-card-context-menu .krc-card-menu-badge-remove:hover:not(:disabled),
+body > .krc-card-context-menu .krc-card-menu-badge-remove:focus-visible {
+  color: var(--krc-accent-red);
+}
+
+body > .krc-card-context-menu .krc-card-color-filter-glyph {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--krc-card-filter-color, conic-gradient(#d96d6d, #d8b84f, #7b9e87, #4f7a9e, #8a8f98, #d96d6d));
+  box-shadow: var(--krc-swatch-glyph-ring);
+}
+
+body > .krc-card-context-menu .krc-card-menu-quick-button.is-color[data-card-color=""] .krc-card-color-filter-glyph {
+  filter: grayscale(1) saturate(0.25);
+  opacity: 0.42;
+}
+
+body > .krc-card-context-menu .krc-card-menu-badge-glyph {
+  display: block;
+}
+
+.krc-node .krc-custom-badge-button.is-active {
+  color: var(--krc-accent-blue-b);
+}
+
+.krc-node .krc-custom-badge-glyph {
+  display: block;
+}
+
+:where(.krc-node, body > .krc-card-context-menu) .krc-label-tag-glyph {
+  position: relative;
+  width: 12px;
+  height: 15px;
+  background: currentColor;
+  clip-path: polygon(23% 0, 77% 0, 100% 30%, 100% 100%, 0 100%, 0 30%);
+  transform: translate(0.13px, -0.25px) scale(0.86);
+}
+
+:where(.krc-node, body > .krc-card-context-menu) .krc-label-tag-glyph::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--krc-bg-deeper, #161a1d);
+  transform: translateX(-50%);
+}
+
+body > .krc-card-context-menu .krc-card-menu-swatch {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(var(--krc-white-rgb, 255, 255, 255), 0.18);
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--krc-swatch, transparent);
+  box-shadow: inset 0 0 0 1px rgba(var(--krc-black-rgb, 0, 0, 0), 0.28);
+  cursor: pointer;
+}
+
+body > .krc-card-context-menu .krc-card-menu-swatch[data-card-color=""] {
+  background:
+    linear-gradient(135deg, transparent 43%, rgba(var(--krc-accent-red-rgb), 0.92) 45%, rgba(var(--krc-accent-red-rgb), 0.92) 55%, transparent 57%),
+    rgba(var(--krc-white-rgb, 255, 255, 255), 0.08);
+}
+
+body > .krc-card-context-menu .krc-card-menu-swatch:hover,
+body > .krc-card-context-menu .krc-card-menu-swatch:focus-visible,
+body > .krc-card-context-menu .krc-card-menu-swatch.is-active {
+  outline: 2px solid var(--krc-text-primary, #fff);
+  outline-offset: 1px;
+}
+
+body > .krc-card-context-menu :where(.krc-card-menu-badge-input, .krc-card-menu-rename-input) {
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-element, rgba(255, 255, 255, 0.06));
+  color: var(--krc-text-primary, #fff);
+  font: 500 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body > .krc-card-context-menu :where(.krc-card-menu-badge-input, .krc-card-menu-rename-input).is-invalid {
+  border-color: var(--krc-accent-red, #d96d6d);
+}
+
+body > .krc-card-context-menu .krc-card-menu-empty {
+  padding: 5px 7px;
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.52));
+  font: 500 var(--krc-font-xs)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body > .krc-card-context-menu .krc-card-menu-separator {
+  height: 1px;
+  margin: 4px 3px;
+  background: var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+body > .krc-card-context-menu .krc-card-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 24px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font: 500 var(--krc-font-sm)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+}
+
+body > .krc-card-context-menu .krc-card-menu-item:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--krc-text-primary, #fff);
+}
+
+body > .krc-card-context-menu .krc-card-menu-item:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+body > .krc-card-context-menu .krc-card-menu-item.is-danger {
+  color: var(--krc-accent-red, #d96d6d);
+}
+
+body > .krc-card-context-menu .krc-card-menu-item.is-confirming {
+  background: rgba(var(--krc-accent-red-rgb, 217, 109, 109), 0.18);
+  color: var(--krc-text-primary, #fff);
+}
+
+body > .krc-card-context-menu .krc-card-menu-item-icon {
+  flex: none;
+  width: 12px;
+  text-align: center;
+  line-height: 1;
+}
+
+body > .krc-card-context-menu .krc-card-menu-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "Move to category" sub-view (Prompt Vault card notch). A back+title head, a
+   scrollable target list (color dot + name), and a "+ new category" creator. */
+body > .krc-card-context-menu .krc-card-menu-move {
+  min-width: 172px;
+}
+body > .krc-card-context-menu .krc-card-menu-move-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 4px;
+}
+body > .krc-card-context-menu .krc-card-menu-move-title {
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.52));
+  font: 600 var(--krc-font-2xs)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-transform: uppercase;
+}
+body > .krc-card-context-menu .krc-card-menu-move-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 208px;
+  overflow-y: auto;
+}
+body > .krc-card-context-menu .krc-card-menu-move-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 24px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font: 500 var(--krc-font-sm)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+}
+body > .krc-card-context-menu .krc-card-menu-move-item:hover {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--krc-text-primary, #fff);
+}
+body > .krc-card-context-menu .krc-card-menu-move-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--krc-move-dot, transparent);
+}
+body > .krc-card-context-menu .krc-card-menu-move-dot.is-none {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--krc-border-subtle, rgba(255, 255, 255, 0.3));
+}
+body > .krc-card-context-menu .krc-card-menu-move-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body > .krc-card-context-menu .krc-card-menu-move-name.is-pinned {
+  font-weight: 700;
+}
+body > .krc-card-context-menu .krc-card-menu-move-empty {
+  padding: 6px 7px;
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.52));
+  font: 500 var(--krc-font-xs)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+body > .krc-card-context-menu .krc-card-menu-move-create {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px;
+}
+body > .krc-card-context-menu .krc-card-menu-move-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--krc-radius-sm);
+  background: var(--krc-bg-element, rgba(255, 255, 255, 0.05));
+  color: var(--krc-text-primary, #fff);
+  font: 500 var(--krc-font-sm)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+body > .krc-card-context-menu .krc-card-menu-move-add {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  background: var(--krc-bg-element, rgba(255, 255, 255, 0.06));
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font-size: var(--krc-font-base);
+}
+body > .krc-card-context-menu .krc-card-menu-move-add:hover {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.12));
+  color: var(--krc-text-primary, #fff);
+}
+
+/* Rename/move name-collision confirm popover (anchored). Reuses the card-context-menu
+   shell for bg/border/shadow/z-index; this adds its own copy + Cancel/Overwrite row. */
+body > .krc-card-context-menu.krc-overwrite-popover {
+  width: 244px;
+  padding: 10px;
+}
+body > .krc-card-context-menu .krc-overwrite-msg {
+  color: var(--krc-text-primary, #fff);
+  font: 600 var(--krc-font-sm)/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  overflow-wrap: anywhere;
+}
+body > .krc-card-context-menu .krc-overwrite-sub {
+  margin-top: 4px;
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.6));
+  font: 500 var(--krc-font-xs)/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+body > .krc-card-context-menu .krc-overwrite-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+body > .krc-card-context-menu .krc-overwrite-btn {
+  min-height: 24px;
+  padding: 4px 12px;
+  border: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--krc-radius-sm);
+  background: var(--krc-bg-element, rgba(255, 255, 255, 0.05));
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font: 600 var(--krc-font-xs)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+body > .krc-card-context-menu .krc-overwrite-btn:hover {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.1));
+  color: var(--krc-text-primary, #fff);
+}
+body > .krc-card-context-menu .krc-overwrite-btn.is-danger {
+  border-color: transparent;
+  background: rgba(var(--krc-accent-red-rgb, 217, 109, 109), 0.18);
+  color: var(--krc-accent-red, #d96d6d);
+}
+body > .krc-card-context-menu .krc-overwrite-btn.is-danger:hover {
+  background: var(--krc-accent-red, #d96d6d);
+  color: var(--krc-on-accent);
+}
+
+.krc-node .krc-nsfw-glyph {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  font-size: 0;
+}

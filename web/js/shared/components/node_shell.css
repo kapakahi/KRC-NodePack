@@ -1,0 +1,97 @@
+/* KRC shared components: node_shell.css (part of components.css, which @imports the parts
+   in order; the cascade depends on that order). Node-level fixes: confirm-dialog text,
+   Node 2.0 phantom hidden-widget rows, and the drag-lag text-selection guard. */
+
+/* Confirm-dialog body text (shared/modal.js openKrcConfirm). */
+.krc-confirm-message {
+  line-height: 1.5;
+}
+
+.krc-node .krc-copy-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: var(--krc-font-lg);
+  line-height: 1;
+}
+
+.krc-node .krc-copy-button:not(.krc-fetch-button):not(.krc-more-info-button) {
+  padding-bottom: 2px;
+  font-weight: 700;
+}
+
+/*
+ * Node 2.0 (Vue @comfyorg/litegraph) phantom hidden-widget rows.
+ *
+ * On the Vue frontend (verified 1.47.x), a hidden backing widget still gets an
+ * empty subgrid cell in `.lg-node-widgets` — `widget.type = "hidden"` /
+ * `widget.hidden = true` / `computeSize = [0,-4]` stop it being DRAWN but do NOT
+ * remove the grid track. Each plain (non-DOM) hidden widget therefore leaves a
+ * ~20px empty row (multiline widgets collapse because their <textarea> gets
+ * display:none, but single-line/toggle widgets do not). On a fixed-height node
+ * (PV/LL) this hides below the UI unnoticed; on a grow-to-fit node (Word Bank)
+ * it shows as a fixed empty band under the UI.
+ *
+ * A node whose ONLY visible widget is its DOM UI marks that UI `.krc-solo-widget`;
+ * we then collapse every OTHER widget cell in that node's grid. Opt-in on purpose:
+ * NOT applied to nodes with intentionally-visible native widgets (Config Switcher),
+ * which use `.krc-node` but not this marker. `!important` overrides the frontend's
+ * own grid-cell display. `:has()` is supported in current Chrome + Safari.
+ */
+.lg-node:has(.krc-solo-widget) .lg-node-widgets > .lg-node-widget:not(:has(.krc-solo-widget)) {
+  display: none !important;
+}
+
+.lg-node:has(.krc-solo-widget) .lg-node-widgets {
+  gap: 0 !important;
+  row-gap: 0 !important;
+}
+
+/*
+ * Drag lag from text selection. Dragging a node sweeps the cursor across the
+ * DOM widget; with the default `user-select`, the browser selects/deselects the
+ * UI text on every mousemove (the highlight-flicker you see), forcing
+ * selection-range + repaint work over a large DOM — which feels like drag lag.
+ * Suppress selection on the node UI, but restore it on real text controls so
+ * users can still select / copy / edit. Add `.krc-selectable` to opt any other
+ * element back in. (-webkit- prefix for Safari.)
+ */
+.krc-node {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.krc-node input,
+.krc-node textarea,
+.krc-node [contenteditable="true"],
+.krc-node .krc-selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+html.krc-canvas-select-guard,
+html.krc-canvas-select-guard body,
+html.krc-canvas-select-guard body *,
+html.krc-canvas-select-guard .krc-node,
+html.krc-canvas-select-guard .krc-node *,
+html.krc-canvas-select-guard .krc-node input,
+html.krc-canvas-select-guard .krc-node textarea,
+html.krc-canvas-select-guard .krc-node [contenteditable="true"],
+html.krc-canvas-select-guard .krc-node .krc-selectable,
+html.krc-canvas-select-guard .lg-node,
+html.krc-canvas-select-guard .lg-node *,
+html.krc-canvas-select-guard .lg-node input,
+html.krc-canvas-select-guard .lg-node textarea,
+html.krc-canvas-select-guard .lg-node [contenteditable="true"] {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+html.krc-canvas-dragging .krc-node *,
+html.krc-canvas-dragging .krc-node *::before,
+html.krc-canvas-dragging .krc-node *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+html.krc-canvas-dragging .krc-node:is(.wb-wrap, .ddp-wrap) {
+  pointer-events: none !important;
+}

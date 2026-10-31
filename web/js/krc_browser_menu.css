@@ -1,0 +1,19 @@
+/* Canvas right-click "KRC Portal" entry (krc_browser_menu.js). The green BROWSE
+   pill is drawn on the row itself, keyed by the option's className, because some
+   setups sanitize menu labels and strip inline styles. Tokens live on :root (the
+   menu is body-appended); literal fallbacks cover a not-yet-loaded token sheet. */
+.litemenu-entry.krc-portal-menu-entry::before {
+  content: "BROWSE";
+  display: inline-block;
+  width: 58px;
+  height: 22px;
+  margin-right: 8px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-accent-green, rgb(123, 158, 135));
+  color: var(--krc-on-accent);
+  font: 700 var(--krc-font-2xs)/22px Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.25px;
+  text-align: center;
+  text-transform: uppercase;
+  vertical-align: middle;
+}

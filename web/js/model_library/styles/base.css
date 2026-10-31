@@ -1,0 +1,175 @@
+/* Design tokens (the --krc-* palette) now live in shared/design_tokens.css. */
+
+/* Match Prompt Vault's root box exactly (.krc-node.krc-pm): the DOM-to-canvas bleed
+   is calc(100% + 2px) / margin-left:-1px with no root min-width/min-height. The 882
+   width floor and the 668px height floor come from the shell clamp (.krc-ml-shell) and
+   the .lg-node min-height rules below — same as PV — so a redundant root min-width was
+   forcing the DOM (and its 1fr InfoPanel column) wider than PV. */
+.krc-model-library {
+  position: relative;
+  contain: layout paint;
+  width: calc(100% + 2px);
+  height: 100%;
+  margin-left: -1px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--krc-text-primary);
+  letter-spacing: 0;
+  overflow: hidden;
+}
+
+.lg-node.krc-ml-shell,
+.lg-node:has(.krc-model-library:not(.is-mini)) {
+  --min-node-width: 882px !important;
+  width: clamp(882px, var(--node-width), 3528px) !important;
+  min-width: 882px !important;
+  max-width: 3528px !important;
+  max-height: 1771px !important;
+}
+
+.lg-node.krc-ml-shell > [class*="bg-node-component-header-surface"],
+.lg-node:has(.krc-model-library:not(.is-mini)) > [class*="bg-node-component-header-surface"] {
+  width: clamp(882px, var(--node-width), 3528px) !important;
+  min-width: 882px !important;
+  max-width: 3528px !important;
+}
+
+.lg-node:has(.krc-model-library.is-mini) {
+  --min-node-width: 356px !important;
+  width: max(var(--node-width), 356px) !important;
+  min-width: 356px !important;
+}
+
+.lg-node:has(.krc-model-library.is-mini) > [class*="bg-node-component-header-surface"] {
+  width: max(var(--node-width), 356px) !important;
+  min-width: 356px !important;
+}
+
+.lg-node:has(.krc-model-library:not(.is-mini)) .lg-node-widgets > .lg-node-widget:not(:has(.krc-model-library:not(.is-mini))) {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.lg-node:has(.krc-model-library.is-mini) .lg-node-widgets > .lg-node-widget:not(:has(.krc-model-library.is-mini)) {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.lg-node:has(.krc-model-library:not(.is-mini)) .lg-node-widget:has(.krc-model-library:not(.is-mini)),
+.lg-node:has(.krc-model-library:not(.is-mini)) .lg-node-widget:has(.krc-model-library:not(.is-mini)) > .flex.flex-col,
+.lg-node:has(.krc-model-library:not(.is-mini)) .krc-model-library:not(.is-mini) {
+  min-height: 668px !important;
+}
+
+.lg-node:has(.krc-model-library.is-mini) .lg-node-widget:has(.krc-model-library.is-mini),
+.lg-node:has(.krc-model-library.is-mini) .lg-node-widget:has(.krc-model-library.is-mini) > .flex.flex-col,
+.lg-node:has(.krc-model-library.is-mini) .krc-model-library.is-mini {
+  min-height: 668px !important;
+}
+
+.lg-node:has(.krc-model-library:not(.is-mini)) .lg-node-widget:has(.krc-model-library:not(.is-mini)) > .flex.flex-col,
+.lg-node:has(.krc-model-library:not(.is-mini)) .krc-model-library:not(.is-mini) {
+  height: var(--krc-dom-h, 668px) !important;
+  flex: 0 0 var(--krc-dom-h, 668px) !important;
+}
+
+.lg-node:has(.krc-model-library.is-mini) .lg-node-widget:has(.krc-model-library.is-mini) > .flex.flex-col,
+.lg-node:has(.krc-model-library.is-mini) .krc-model-library.is-mini {
+  height: 668px !important;
+  flex: 0 0 668px !important;
+}
+
+.krc-model-library:not(.is-mini) {
+  width: calc(100% + 2px);
+  height: 100%;
+  margin-left: -1px;
+}
+
+.krc-model-library.is-mini {
+  contain: layout paint;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  margin: -1px;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.krc-canvas-dragging .lg-node:has(.krc-model-library.is-mini),
+.krc-canvas-dragging .krc-model-library.is-mini {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.krc-model-library.is-mini,
+.krc-model-library.is-mini * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.krc-model-library .krc-lora-layout {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-areas: "browser info";
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 8px;
+  padding: 0;
+  min-height: 0;
+}
+
+.krc-model-library .krc-lora-layout > .krc-browser {
+  grid-area: browser;
+}
+
+.krc-model-library .krc-lora-layout > .krc-info {
+  grid-area: info;
+}
+
+/* At most 340, never wider than the root: the root clips (overflow hidden), and in the
+   classic canvas it is only 338 wide (widget 336 + 2), so a fixed 340 column lost 1px
+   off each side and the panels' rounded corners. Card widths follow their container. */
+.krc-model-library .krc-lora-mini-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 340px);
+  justify-content: center;
+  height: 100%;
+}
+
+.krc-model-library .krc-panel {
+  overflow: hidden;
+}
+
+.krc-model-library .krc-panel-header {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.krc-model-library .krc-browser-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-browser .krc-panel-header > span {
+  display: none;
+}
+
+.krc-model-library .krc-browser .krc-panel-header {
+  justify-content: flex-start;
+}
+
+.krc-model-library .krc-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+

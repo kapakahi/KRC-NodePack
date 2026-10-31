@@ -1,0 +1,259 @@
+/*
+ * KRC shared design tokens — the pack-wide --krc-* palette.
+ * Single source of truth for both KRC LoRA Loadout and KRC Prompt Vault
+ * (extracted from the LoRA Loadout stylesheet, which remains the reference
+ * style). Declared on :root so every KRC node UI inherits it.
+ *
+ * Each palette color has one authoritative definition as an RGB triplet
+ * (`--krc-*-rgb: R, G, B`). Solid `--krc-*` tokens are derived from those
+ * triplets, and alpha variants are written inline as
+ * `rgba(var(--krc-*-rgb), <alpha>)`. This keeps a single source of truth per
+ * color so a future palette/theme swap only needs to change the triplets here.
+ *
+ * The default palette applies globally on :root, and also to any element
+ * carrying data-krc-theme="default" — so a per-node override can force the
+ * default palette on one node even when :root carries an alternate palette.
+ *
+ * :root is wrapped in :where() so it contributes ZERO specificity. The base
+ * tokens are only a fallback; an alternate palette selector in themes.css
+ * ([data-krc-theme="x"], specificity 0,1,0) must always win over them on the
+ * same element (the document root, when a global palette is active). Without
+ * :where(), bare :root is also (0,1,0) and ties the alternate, making the
+ * winner depend on stylesheet load order — which loads nondeterministically
+ * across the pack, so global theming would intermittently revert to default.
+ */
+/*
+ * Palette DATA — the per-palette values. The default (purple) lives here;
+ * alternates override these same tokens in themes.css. Triplets are the
+ * authoritative color data; text + neutral channels are direct values.
+ */
+:where(:root),
+[data-krc-theme="default"] {
+  /* Surfaces (outer shell → deepest wells) */
+  --krc-bg-outer-rgb: 123, 117, 196;
+  --krc-bg-col-rgb: 107, 101, 180;
+  --krc-bg-element-rgb: 90, 84, 144;
+  --krc-bg-deep-rgb: 74, 68, 128;
+  --krc-bg-deeper-rgb: 58, 52, 112;
+
+  /* Accents */
+  --krc-accent-green-rgb: 123, 158, 135;
+  --krc-accent-purple-a-rgb: 155, 111, 212;
+  --krc-accent-blue-b-rgb: 79, 122, 158;
+  --krc-accent-gold-rgb: 216, 184, 79;
+  --krc-accent-red-rgb: 217, 109, 109;
+  --krc-accent-orange-rgb: 207, 139, 68;
+  --krc-accent-yellow-rgb: 212, 178, 84;
+  --krc-accent-teal-rgb: 96, 168, 158;
+  --krc-accent-magenta-rgb: 196, 98, 168;
+
+  /* Local-status semantics (LOCAL_STATUS_AND_DRAFT_GAMEPLAN.md): Modified /
+     Stale / Draft badges and SAVE / SYNC actions. Aliases, so a theme swap or a
+     later color-tuning pass re-points them in one place; the yellow/teal base
+     tones above are placeholders to refine. */
+  --krc-status-modified-rgb: var(--krc-accent-orange-rgb);
+  --krc-status-stale-rgb: var(--krc-accent-yellow-rgb);
+  --krc-status-draft-rgb: var(--krc-accent-teal-rgb);
+  /* Conflict: edited here AND saved elsewhere (STATUS_CONFLICT_GAMEPLAN.md). */
+  --krc-status-conflict-rgb: var(--krc-accent-magenta-rgb);
+  --krc-status-save-rgb: var(--krc-accent-green-rgb);
+  --krc-status-sync-rgb: var(--krc-accent-blue-b-rgb);
+  /* Shared "hover here to discard" affordance for every status badge. */
+  --krc-status-discard-rgb: var(--krc-accent-red-rgb);
+
+  /* Text */
+  --krc-text-primary: #ffffff;
+  --krc-text-secondary: #c8c5e8;
+  --krc-text-muted: #9b97d4;
+
+  /* Neutral channels for borders, overlays and shadows */
+  --krc-white-rgb: 255, 255, 255;
+  --krc-black-rgb: 0, 0, 0;
+}
+
+/*
+ * DERIVED solid tokens — the rgb() colors the UI actually paints with.
+ * Declared on :root AND on any element carrying a data-krc-theme attribute, so
+ * a per-node palette RE-DERIVES its solids from that node's own triplets. A CSS
+ * custom property with var() is computed in the scope where it's declared; if
+ * these lived only on :root they'd compute once with the default triplets and
+ * inherit as fixed colors, so a node that overrides only the -rgb triplets
+ * would keep the root's solid colors (canvas changes, DOM does not). Re-
+ * declaring them at every themed scope makes per-node DOM theming work.
+ *
+ * Wrapped in :where() (zero specificity) so a palette block in themes.css that
+ * needs to override a SOLID token directly — e.g. Native's translucent
+ * surfaces — wins with a plain [data-krc-theme="x"] selector, regardless of
+ * stylesheet load order.
+ */
+:where(:root),
+:where([data-krc-theme]) {
+  --krc-bg-outer: rgb(var(--krc-bg-outer-rgb));
+  --krc-bg-col: rgb(var(--krc-bg-col-rgb));
+  --krc-bg-element: rgb(var(--krc-bg-element-rgb));
+  --krc-bg-deep: rgb(var(--krc-bg-deep-rgb));
+  --krc-bg-deeper: rgb(var(--krc-bg-deeper-rgb));
+
+  --krc-accent-green: rgb(var(--krc-accent-green-rgb));
+  --krc-accent-purple-a: rgb(var(--krc-accent-purple-a-rgb));
+  --krc-accent-blue-b: rgb(var(--krc-accent-blue-b-rgb));
+  --krc-accent-gold: rgb(var(--krc-accent-gold-rgb));
+  --krc-accent-red: rgb(var(--krc-accent-red-rgb));
+  --krc-accent-orange: rgb(var(--krc-accent-orange-rgb));
+
+  --krc-border-subtle: rgba(var(--krc-white-rgb), 0.12);
+  --krc-border-edit: rgba(var(--krc-white-rgb), 0.18);
+  /* Popovers, menus and framed controls: a step above edit (it was used before it existed). */
+  --krc-border-strong: rgba(var(--krc-white-rgb), 0.26);
+  --krc-selection-ring-width: 3px;
+  /* The one selection ring for the whole pack: the green "this is selected"
+     indicator drawn on cards, option rows, active control chips and color
+     swatches. Single-sourced so a swap (green→blue, thicker, inset→outset) is a
+     one-line change here and re-derives per theme. Do NOT retype the box-shadow
+     inline — reference this. Soft focus hints / drag-state / decorative accents
+     are intentionally separate and keep their own values. */
+  --krc-selection-ring: inset 0 0 0 var(--krc-selection-ring-width) var(--krc-accent-green);
+  --krc-meta-opacity: 0.68;
+
+  --krc-chip-bg: var(--krc-bg-deep);
+  --krc-chip-active-bg: var(--krc-bg-deeper);
+  --krc-chip-active-ring: rgba(var(--krc-accent-green-rgb), 0.82);
+  --krc-control-hover-bg: var(--krc-bg-deeper);
+
+  --krc-list-active-bg: rgba(var(--krc-bg-deep-rgb), 0.55);
+  --krc-count-bg: rgba(var(--krc-bg-deeper-rgb), 0.5);
+  --krc-empty-swatch-bg: rgba(var(--krc-bg-deeper-rgb), 0.72);
+
+  /* Shared IMPORT/EXPORT buttons: a solid neutral gray held constant across
+     every palette (no theme, including Native, overrides these), so the I/O
+     utility reads the same everywhere instead of tinting or going translucent. */
+  --krc-io-btn-bg: #575757;
+  --krc-io-btn-bg-hover: #3d3d3d;
+
+  /* ── Washes, rings and dimmed text (CSS_TOKENS_HIGH_CONTRAST_GAMEPLAN.md stage 1) ──
+     Each value is exactly what the component CSS used inline before, so every palette
+     looks the same; a theme (KRC High Contrast) may strengthen them. Named by role:
+     two roles with different values keep two tokens — nothing is merged or snapped. */
+
+  /* Armed / confirming danger buttons: a white lift over the accent red. */
+  --krc-danger-armed-bg: linear-gradient(rgba(var(--krc-white-rgb), 0.16), rgba(var(--krc-white-rgb), 0.16)), var(--krc-accent-red);
+  --krc-danger-armed-hover-bg: linear-gradient(rgba(var(--krc-white-rgb), 0.24), rgba(var(--krc-white-rgb), 0.24)), var(--krc-accent-red);
+  --krc-danger-armed-soft-bg: linear-gradient(rgba(var(--krc-white-rgb), 0.12), rgba(var(--krc-white-rgb), 0.12)), var(--krc-accent-red);
+  /* Confirming reset / clear buttons on hover: darkened, slightly see-through red. */
+  --krc-danger-shaded-bg: linear-gradient(rgba(var(--krc-black-rgb), 0.24), rgba(var(--krc-black-rgb), 0.24)), rgba(var(--krc-accent-red-rgb), 0.92);
+
+  /* Rings */
+  --krc-on-ring: inset 0 0 0 1px rgba(var(--krc-white-rgb), 0.24);         /* switch tracks / toggles that are on */
+  --krc-pressed-ring: inset 0 0 0 2px rgba(var(--krc-white-rgb), 0.22);    /* LL browse button while its browser is open */
+  --krc-check-ring: 0 0 0 1px rgba(var(--krc-white-rgb), 0.18);            /* checked LL slot checkbox */
+  --krc-swatch-glyph-ring: inset 0 0 0 1px rgba(var(--krc-white-rgb), 0.42), 0 0 0 1px rgba(var(--krc-black-rgb), 0.28); /* colour filter glyph */
+  --krc-drop-ok-ring: 0 0 0 2px rgba(var(--krc-accent-green-rgb), 0.5), inset 0 0 0 1px rgba(var(--krc-white-rgb), 0.12);
+  /* Every floating menu / popover (dropdowns, card menus, Config Switcher menus). */
+  --krc-shadow-floating: 0 10px 24px rgba(var(--krc-black-rgb), 0.3);
+  --krc-drop-reject-ring: 0 0 0 2px rgba(var(--krc-accent-red-rgb), 0.5), inset 0 0 0 1px rgba(var(--krc-white-rgb), 0.1);
+
+  /* Lines and fills */
+  --krc-hairline: rgba(var(--krc-white-rgb), 0.08);           /* thin dividers / field edges inside a control */
+  --krc-swatch-border: rgba(var(--krc-white-rgb), 0.18);      /* folder colour swatch button */
+  --krc-swatch-empty-mark: rgba(var(--krc-white-rgb), 0.3);   /* the slash on a "no colour" swatch */
+  --krc-hover-wash: rgba(var(--krc-white-rgb), 0.12);         /* strength fields, nudges, kit field values */
+  --krc-remove-hover-wash: rgba(var(--krc-white-rgb), 0.14);  /* LL slot remove button */
+  --krc-status-pill-bg: rgba(var(--krc-white-rgb), 0.08);     /* Extra Options pack status "ok" */
+  --krc-control-shade: rgba(var(--krc-black-rgb), 0.12);      /* small remove / clear / edit / notch buttons */
+  --krc-message-shade: rgba(var(--krc-black-rgb), 0.08);      /* chip editor message */
+  --krc-native-chip-shade: rgba(var(--krc-black-rgb), 0.06);  /* PV chip list under Native */
+  --krc-blur-scrim: rgba(var(--krc-black-rgb), 0.22);         /* over an NSFW-blurred thumbnail */
+  --krc-modal-scrim: rgba(var(--krc-black-rgb), 0.5);         /* modal overlay backdrop */
+  --krc-thumb-wash: linear-gradient(0deg, rgba(var(--krc-white-rgb), 0.045), rgba(var(--krc-white-rgb), 0.045)); /* ML home menu thumbs */
+  --krc-chip-list-wash: linear-gradient(0deg,rgba(var(--krc-white-rgb),0.095),rgba(var(--krc-white-rgb),0.095)); /* PV chip list */
+  --krc-strip-wash: linear-gradient(rgba(var(--krc-white-rgb), 0.035), rgba(var(--krc-white-rgb), 0.035)); /* kit field strip */
+  --krc-action-wash: linear-gradient(rgba(var(--krc-white-rgb), 0.1), rgba(var(--krc-white-rgb), 0.1));   /* chip editor actions */
+
+  /* Text on a solid accent / status / danger fill (buttons, badges, pills). Stage 2. */
+  --krc-on-accent: var(--krc-text-primary);
+  /* Browser card edge (cards keep a 1px border so size never changes; transparent here). */
+  --krc-card-edge: transparent;
+  /* Text on the active chip. */
+  --krc-chip-active-text: var(--krc-text-primary);
+
+  /* Dimmed readable text (disabled / dragging states keep their own literal dimming). */
+  --krc-text-faint-opacity: 0.62;    /* CS placeholders + empty labels, PV date line */
+  --krc-text-soft-opacity: 0.85;     /* CS orphaned label, card-view subtitle */
+  --krc-text-strong-opacity: 0.95;   /* ML model-type value */
+  --krc-placeholder-opacity: 0.74;   /* text entry placeholder */
+  --krc-preview-text-opacity: 0.72;  /* preset name preview */
+  --krc-field-label-opacity: 0.75;   /* kit field label */
+  --krc-option-badge-opacity: 0.68;  /* CS preset option badge */
+
+  /* ── Elevation, layering, shape, type, motion (gameplan stages 3–6) ───────────
+     Pure tokenization: each value is exactly what the CSS used inline, nothing merged
+     or snapped. Shadows and z-index layers are named by role; radius, font size and
+     duration are ordered ladders (a step keeps its name if a theme overrides it). */
+
+  /* Shadows (stage 3) */
+  --krc-shadow-menu: 0 10px 24px rgba(var(--krc-black-rgb), 0.34);         /* preset menus, CS config-action menu */
+  --krc-shadow-dropdown: 0 14px 34px rgba(var(--krc-black-rgb), 0.35);     /* CS number-format / string menus */
+  --krc-shadow-popover: 0 12px 32px rgba(var(--krc-black-rgb), 0.42);      /* strength / trained-word / string popovers */
+  --krc-shadow-config-menu: 0 6px 18px rgba(var(--krc-black-rgb), 0.35);   /* LL / ML info-panel config menu */
+  --krc-shadow-toast: 0 4px 16px rgba(var(--krc-black-rgb), 0.45);
+  --krc-shadow-range-thumb: 0 1px 3px rgba(var(--krc-black-rgb), 0.35);
+  --krc-shadow-library: 0 18px 48px rgba(var(--krc-black-rgb), 0.5);       /* KRC Portal window */
+  --krc-shadow-modal: 0 12px 48px rgba(var(--krc-black-rgb), 0.55);        /* modal panel */
+  --krc-glyph-shadow-filter: drop-shadow(0 0 2px rgba(var(--krc-black-rgb), 0.85));
+  --krc-pin-shadow-filter: drop-shadow(0 1px 4px rgba(var(--krc-black-rgb), 0.75));
+
+  /* Layers (stage 6): each keeps its current number; the names document the stacking. */
+  --krc-z-chip: 1;
+  --krc-z-card-overlay: 2;          /* pin, blur scrim, active split-chip ring */
+  --krc-z-card-glyph: 3;            /* NSFW blur glyph */
+  --krc-z-preset-panel: 5;
+  --krc-z-config-menu: 20;
+  --krc-z-preset-menu: 30;
+  --krc-z-preset-picker: 40;        /* an open preset picker */
+  --krc-z-popover: 10000;           /* popovers, fixed portal menus, Portal window, modal overlay */
+  --krc-z-action-menu: 10050;       /* CS config-action menu */
+  --krc-z-toast: 99999;
+  --krc-z-floating-menu: 100000;    /* menu selects, search hint, card colour menu */
+  --krc-z-field-menu: 999999;       /* CS model / number-format / string menus */
+  --krc-z-context-menu: 1000001;    /* card context menu */
+
+  /* Corner radius ladder (stage 4) */
+  --krc-radius-hair: 1px;
+  --krc-radius-hair-plus: 1.5px;
+  --krc-radius-3xs: 2px;
+  --krc-radius-2xs: 3px;
+  --krc-radius-xs: 4px;
+  --krc-radius-sm: 5px;
+  --krc-radius-md: 6px;
+  --krc-radius-lg: 7px;
+  --krc-radius-xl: 8px;
+  --krc-radius-2xl: 12px;
+  --krc-radius-pill: 999px;
+
+  /* Font size ladder (stage 5); -plus = the half step above. */
+  --krc-font-3xs: 8px;
+  --krc-font-2xs: 9px;
+  --krc-font-xs: 10px;
+  --krc-font-xs-plus: 10.5px;
+  --krc-font-sm: 11px;
+  --krc-font-base: 12px;
+  --krc-font-md: 13px;
+  --krc-font-lg: 14px;
+  --krc-font-xl: 16px;
+  --krc-font-xl-plus: 17px;
+  --krc-font-2xl: 18px;
+  --krc-font-2xl-plus: 19px;
+  --krc-font-3xl: 20px;
+  --krc-font-4xl: 22px;
+  --krc-font-5xl: 24px;
+  --krc-font-6xl: 32px;
+
+  /* Transition durations (stage 6) */
+  --krc-dur-instant: 0.06s;
+  --krc-dur-fast: 0.08s;
+  --krc-dur-snap: 0.1s;
+  --krc-dur-base: 0.12s;
+  --krc-dur-slow: 180ms;
+  --krc-dur-slower: 220ms;
+
+}

@@ -1,0 +1,225 @@
+/* Options — the KRC Portal's global Options page (model_library/options_page.js).
+   Each setting row: name + control on one line, its description under it. The
+   shared switch / description / button styles come from `.krc-options-host`.
+   Token-only. */
+
+.krc-model-library .krc-setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.krc-model-library .krc-setting-row + .krc-setting-row {
+  margin-top: 5px;
+}
+
+.krc-model-library .krc-setting-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 22px;
+}
+
+.krc-model-library .krc-setting-label {
+  min-width: 0;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-model-library .krc-setting-desc {
+  margin: 0 0 0 1px;
+}
+
+/* The shared switch is width: 100% (options_chips.css), which in a setting row squeezed
+   the label onto two lines and left the track mid-row. Here the label takes the room and
+   the switch keeps its own width at the right edge. */
+.krc-model-library .krc-options-page .krc-setting-head .krc-setting-label {
+  flex: 1 1 auto;
+}
+
+.krc-model-library .krc-options-page .krc-setting-head .krc-switch-toggle {
+  flex: 0 0 auto;
+  width: auto;
+  justify-content: flex-end;
+}
+
+/* One width for every dropdown and the text field, right-aligned; shrinks only on a
+   narrow panel (the shared compact select caps at 60px). */
+.krc-model-library .krc-setting-head .krc-setting-select,
+.krc-model-library .krc-setting-head .krc-setting-input {
+  flex: 0 1 180px;
+  width: 180px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.krc-model-library .krc-setting-input {
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-primary);
+  font: inherit;
+  font-size: var(--krc-font-sm);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.krc-model-library .krc-setting-input:focus {
+  border-color: var(--krc-accent-purple-a);
+}
+
+.krc-model-library .krc-setting-input::placeholder {
+  color: var(--krc-text-muted);
+}
+
+.krc-model-library .krc-setting-head .krc-setting-action {
+  align-self: center;
+  min-width: 80px;
+}
+
+/* The ffmpeg status block under the Media rows, and the database status under Support. */
+.krc-model-library .krc-options-page .krc-ffmpeg-status,
+.krc-model-library .krc-options-page .krc-db-status {
+  margin-top: 6px;
+}
+
+/* Support ▸ Restore (shared/db_status.js): a setting row whose control slot holds the
+   area + snapshot pickers and the button, at the right edge (wrapping, still right-
+   aligned, on a narrow panel). The pickers are sized to their longest option in JS. */
+/* Support ▸ Storage: the backup rows (Back up every / Keep backups / Back up now) and
+   Restore follow the status lines, spaced like the page's other rows. */
+.krc-model-library .krc-options-page .krc-db-backups {
+  margin-top: 8px;
+}
+
+.krc-model-library .krc-options-page .krc-db-backups + .krc-setting-row {
+  margin-top: 5px;
+}
+
+.krc-model-library .krc-options-page .krc-db-restore {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-options-page .krc-setting-head .krc-db-restore-select {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+
+/* Network ▸ External API (shared/external_api_options.js): the access key field and its
+   buttons on one wrapping row. */
+.krc-model-library .krc-options-page .krc-ext-api-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.krc-model-library .krc-options-page .krc-ext-api-key .krc-setting-input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+/* Extra Options (model_library/extra_options_page.js): one section per KRC pack —
+   version + status pill, the problem line, its nodes as chips (missing ones dimmed). */
+.krc-model-library .krc-pack-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 22px;
+}
+
+.krc-model-library .krc-pack-version {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-pack-status {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: var(--krc-radius-lg);
+  background: rgba(var(--krc-status-discard-rgb), 0.92);
+  color: var(--krc-on-accent);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.krc-model-library .krc-pack-status.is-ok {
+  background: var(--krc-status-pill-bg);
+  color: var(--krc-accent-green);
+}
+
+.krc-model-library .krc-pack-status.is-partial {
+  background: rgba(var(--krc-status-stale-rgb), 0.92);
+  color: var(--krc-bg-deeper);
+}
+
+.krc-model-library .krc-pack-problem {
+  margin: 4px 0 0 1px;
+}
+
+.krc-model-library .krc-pack-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+
+.krc-model-library .krc-pack-node {
+  padding: 3px 7px;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-model-library .krc-pack-node.is-missing {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+/* Network ▸ Where KRC may connect (shared/network_hosts.js): one block per owner. */
+.krc-model-library .krc-network-host-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.krc-model-library .krc-network-host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.krc-model-library .krc-network-host-owner {
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-sm);
+  font-weight: 600;
+}
+
+.krc-model-library .krc-network-host-names {
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-model-library .krc-network-host .krc-setting-desc {
+  flex-basis: 100%;
+}

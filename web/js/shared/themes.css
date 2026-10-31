@@ -1,0 +1,279 @@
+/*
+ * KRC alternate palettes for the theme swap.
+ *
+ * The default palette lives in design_tokens.css on :root. Each alternate
+ * palette here only needs to redefine the RGB-triplet base tokens
+ * (--krc-*-rgb) plus the three text tokens; every solid/alpha color in the KRC
+ * node UIs is derived from those, so a palette is a small data block.
+ *
+ * A palette is activated by setting data-krc-theme="<id>" on an element: the
+ * document root for the global palette (handled by krc_theme.js), or a node's
+ * .krc-node root for a per-node override (handled by shared/node_palette.js).
+ * Selectors are intentionally NOT :root-anchored so the same block applies at
+ * either level; the nearest ancestor carrying the attribute wins. With no
+ * attribute set, the default purple palette from design_tokens.css applies.
+ *
+ * To add a palette:
+ *   1. Copy the TEMPLATE block below, give it a unique <id> selector.
+ *   2. Fill in the triplets / text tokens.
+ *   3. Register it in the PALETTES list in shared/palettes.js (id + label).
+ *
+ * --------------------------------------------------------------------------
+ * TEMPLATE — copy, rename the [data-krc-theme="..."] id, and fill in values:
+ *
+ * [data-krc-theme="my-palette"] {
+ *   --krc-bg-outer-rgb:   R, G, B;
+ *   --krc-bg-col-rgb:     R, G, B;
+ *   --krc-bg-element-rgb: R, G, B;
+ *   --krc-bg-deep-rgb:    R, G, B;
+ *   --krc-bg-deeper-rgb:  R, G, B;
+ *
+ *   --krc-accent-green-rgb:    R, G, B;
+ *   --krc-accent-purple-a-rgb: R, G, B;
+ *   --krc-accent-blue-b-rgb:   R, G, B;
+ *   --krc-accent-gold-rgb:     R, G, B;
+ *   --krc-accent-red-rgb:      R, G, B;
+ *   --krc-accent-orange-rgb:   R, G, B;
+ *
+ *   --krc-text-primary:   #ffffff;
+ *   --krc-text-secondary: #rrggbb;
+ *   --krc-text-muted:     #rrggbb;
+ * }
+ * --------------------------------------------------------------------------
+ */
+
+/*
+ * Dark — near-black grayscale surfaces with a single vivid red accent. Keeps
+ * the light-text-on-dark-surface layout of the default palette. Green is
+ * carried over from KRC Purple so the green action buttons (save / add /
+ * toggle-on) stay green; red carries the alert accents (danger/nsfw, modified);
+ * the remaining semantic accents (favorite, pin, json) go neutral gray.
+ */
+[data-krc-theme="dark"] {
+  --krc-bg-outer-rgb:   46, 46, 46;   /* #2e2e2e */
+  --krc-bg-col-rgb:     38, 38, 38;   /* #262626 */
+  --krc-bg-element-rgb: 30, 30, 30;   /* #1e1e1e */
+  --krc-bg-deep-rgb:    22, 22, 22;   /* #161616 */
+  --krc-bg-deeper-rgb:  13, 13, 13;   /* #0d0d0d (palette black) */
+
+  --krc-accent-green-rgb:    123, 158, 135;  /* carried from KRC Purple — green buttons */
+  --krc-accent-red-rgb:      224, 33, 33;    /* #e02121 (palette red) — danger/nsfw */
+  --krc-accent-orange-rgb:   224, 33, 33;    /* modified badge stays in the red family */
+  --krc-accent-gold-rgb:     227, 227, 227;  /* #e3e3e3 — favorite highlight (bright neutral) */
+  --krc-accent-blue-b-rgb:   165, 165, 165;  /* #a5a5a5 — json badge (neutral) */
+  --krc-accent-purple-a-rgb: 165, 165, 165;  /* #a5a5a5 — pin (neutral) */
+
+  --krc-text-primary:   #ffffff;  /* palette white */
+  --krc-text-secondary: #e3e3e3;  /* palette light gray */
+  --krc-text-muted:     #a5a5a5;  /* palette mid gray */
+}
+
+/*
+ * Blue — desaturated steel-blue surfaces. Only surfaces + text change: the
+ * accent triplets are intentionally NOT declared here, so they inherit the
+ * default palette and every accent stays as-is (green buttons/toggle-on stay
+ * green, favorite gold, etc.). Card highlights are palette-independent
+ * (shared/card_colors.js).
+ */
+[data-krc-theme="blue"] {
+  --krc-bg-outer-rgb:   82, 101, 165;  /* KRC Purple ratio from main cell */
+  --krc-bg-col-rgb:     71,  88, 144;  /* #475890 */
+  --krc-bg-element-rgb: 59,  73, 120;  /* KRC Purple ratio from main cell */
+  --krc-bg-deep-rgb:    48,  60,  98;  /* KRC Purple ratio from main cell */
+  --krc-bg-deeper-rgb:  38,  47,  77;  /* KRC Purple ratio from main cell */
+
+  --krc-text-primary:   #ffffff;
+  --krc-text-secondary: #ccd6ea;
+  --krc-text-muted:     #97a3c4;
+  --krc-meta-opacity: 0.74;
+}
+
+/*
+ * Red — dusty rose surfaces, built like Blue (same ratios from the main cell, white
+ * text). One accent is overridden: the default danger/NSFW red melts into rose, so it
+ * becomes a vivid crimson. Every other accent inherits (green stays green).
+ */
+[data-krc-theme="red"] {
+  --krc-bg-outer-rgb:   190, 106, 117;  /* KRC Purple ratio from main cell */
+  --krc-bg-col-rgb:     165,  92, 102;  /* #a55c66 */
+  --krc-bg-element-rgb: 137,  77,  85;  /* KRC Purple ratio from main cell */
+  --krc-bg-deep-rgb:    112,  63,  69;  /* KRC Purple ratio from main cell */
+  --krc-bg-deeper-rgb:   88,  49,  54;  /* KRC Purple ratio from main cell */
+
+  --krc-accent-red-rgb: 226, 66, 84;    /* #e24254 — danger/nsfw, clear of the rose */
+
+  --krc-text-primary:   #ffffff;
+  --krc-text-secondary: #ecccd1;
+  --krc-text-muted:     #c99aa1;
+  --krc-meta-opacity: 0.74;
+}
+
+/*
+ * Yellow — golden wheat surfaces, built like Blue (same ratios, white text). As light
+ * as yellow goes while white text stays readable on the cards. Two accents are
+ * overridden because they sink into the wheat: favorite gold becomes a bright
+ * butter-cream, and the Modified orange a burnt orange. The rest inherit.
+ */
+[data-krc-theme="yellow"] {
+  --krc-bg-outer-rgb:   196, 173,  83;  /* KRC Purple ratio from main cell */
+  --krc-bg-col-rgb:     170, 150,  72;  /* #aa9648 */
+  --krc-bg-element-rgb: 141, 125,  60;  /* KRC Purple ratio from main cell */
+  --krc-bg-deep-rgb:    116, 102,  49;  /* KRC Purple ratio from main cell */
+  --krc-bg-deeper-rgb:   91,  80,  38;  /* KRC Purple ratio from main cell */
+
+  --krc-accent-gold-rgb:   250, 226, 140;  /* #fae28c — favorite, clear of the wheat */
+  --krc-accent-orange-rgb: 204, 102,  44;  /* #cc662c — modified badge */
+
+  --krc-text-primary:   #ffffff;
+  --krc-text-secondary: #f4ebcc;
+  --krc-text-muted:     #dacb95;
+  --krc-meta-opacity: 0.74;
+}
+
+/*
+ * High Contrast — an accessibility palette (CSS_TOKENS_HIGH_CONTRAST_GAMEPLAN.md,
+ * stage 2): black surfaces, white text, muted text kept bright (~12:1 on cards),
+ * vivid accents with BLACK text on every accent fill (--krc-on-accent), solid light
+ * borders, outlined cards, a thick selection ring with a black inner edge, no dimmed
+ * readable text, and every faint wash from stage 1 strengthened so hovers, chips and
+ * dividers are obvious. The deeper wells step LIGHTER than the element surface here,
+ * so wells, chips and hover states separate from the black panels.
+ */
+[data-krc-theme="high-contrast"] {
+  --krc-bg-outer-rgb:    0,  0,  0;   /* #000000 */
+  --krc-bg-col-rgb:      0,  0,  0;   /* #000000 */
+  --krc-bg-element-rgb: 11, 11, 11;   /* #0b0b0b */
+  --krc-bg-deep-rgb:    21, 21, 21;   /* #151515 */
+  --krc-bg-deeper-rgb:  31, 31, 31;   /* #1f1f1f */
+
+  --krc-accent-green-rgb:     61, 220, 132;  /* #3ddc84 — save / on / selection */
+  --krc-accent-red-rgb:      255,  92,  92;  /* #ff5c5c — danger / nsfw */
+  --krc-accent-orange-rgb:   255, 176,  32;  /* #ffb020 — modified */
+  --krc-accent-gold-rgb:     255, 212,   0;  /* #ffd400 — favorite */
+  --krc-accent-yellow-rgb:   255, 221,  51;  /* #ffdd33 — stale */
+  --krc-accent-teal-rgb:      45, 212, 191;  /* #2dd4bf — draft */
+  --krc-accent-purple-a-rgb: 190, 150, 255;  /* #be96ff — pin */
+  --krc-accent-blue-b-rgb:    96, 170, 255;  /* #60aaff — json / sync */
+
+  /* Status aliases re-declared here so a PER-NODE High Contrast follows its own accents. */
+  --krc-status-modified-rgb: var(--krc-accent-orange-rgb);
+  --krc-status-stale-rgb: var(--krc-accent-yellow-rgb);
+  --krc-status-draft-rgb: var(--krc-accent-teal-rgb);
+  --krc-status-save-rgb: var(--krc-accent-green-rgb);
+  --krc-status-sync-rgb: var(--krc-accent-blue-b-rgb);
+  --krc-status-discard-rgb: var(--krc-accent-red-rgb);
+
+  --krc-text-primary:   #ffffff;
+  --krc-text-secondary: #f2f2f2;
+  --krc-text-muted:     #cfcfcf;
+  --krc-meta-opacity: 1;
+  --krc-on-accent: #000000;
+
+  --krc-border-subtle: #bdbdbd;
+  --krc-border-edit: #ffffff;
+  --krc-border-strong: #ffffff;
+  --krc-card-edge: #bdbdbd;
+  --krc-selection-ring-width: 4px;
+  --krc-selection-ring: inset 0 0 0 4px var(--krc-accent-green), inset 0 0 0 6px #000000;
+
+  --krc-chip-bg: rgba(255, 255, 255, 0.18);
+  --krc-chip-active-bg: #ffffff;
+  --krc-chip-active-text: #000000;
+  --krc-chip-active-ring: var(--krc-accent-green);
+  --krc-control-hover-bg: rgba(255, 255, 255, 0.22);
+  --krc-list-active-bg: rgba(255, 255, 255, 0.12);
+  --krc-count-bg: #1f1f1f;
+  --krc-empty-swatch-bg: #1f1f1f;
+
+  /* Stage-1 washes and rings, strengthened. */
+  --krc-danger-armed-bg: var(--krc-accent-red);
+  --krc-danger-armed-hover-bg: linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)), var(--krc-accent-red);
+  --krc-danger-armed-soft-bg: var(--krc-accent-red);
+  --krc-danger-shaded-bg: var(--krc-accent-red);
+  --krc-on-ring: inset 0 0 0 2px #ffffff;
+  --krc-pressed-ring: inset 0 0 0 3px #ffffff;
+  --krc-check-ring: 0 0 0 2px #ffffff;
+  --krc-swatch-glyph-ring: inset 0 0 0 1px #ffffff, 0 0 0 1px #000000;
+  --krc-drop-ok-ring: 0 0 0 3px var(--krc-accent-green), inset 0 0 0 1px #ffffff;
+  --krc-drop-reject-ring: 0 0 0 3px var(--krc-accent-red), inset 0 0 0 1px #ffffff;
+  --krc-hairline: rgba(255, 255, 255, 0.55);
+  --krc-swatch-border: #ffffff;
+  --krc-swatch-empty-mark: #ffffff;
+  --krc-hover-wash: rgba(255, 255, 255, 0.22);
+  --krc-remove-hover-wash: rgba(255, 255, 255, 0.3);
+  --krc-status-pill-bg: rgba(255, 255, 255, 0.2);
+  --krc-control-shade: rgba(255, 255, 255, 0.14);
+  --krc-message-shade: rgba(255, 255, 255, 0.1);
+  --krc-blur-scrim: rgba(0, 0, 0, 0.45);
+  --krc-modal-scrim: rgba(0, 0, 0, 0.75);
+  --krc-thumb-wash: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+  --krc-chip-list-wash: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14));
+  --krc-strip-wash: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+  --krc-action-wash: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2));
+
+  /* Readable text is never dimmed; placeholders stay just distinguishable. */
+  --krc-text-faint-opacity: 1;
+  --krc-text-soft-opacity: 1;
+  --krc-text-strong-opacity: 1;
+  --krc-placeholder-opacity: 0.8;
+  --krc-preview-text-opacity: 1;
+  --krc-field-label-opacity: 1;
+  --krc-option-badge-opacity: 1;
+}
+
+/*
+ * Gray — neutral grayscale surfaces. Same rule as Blue: surfaces + text only;
+ * accents inherit the default palette (green stays green).
+ */
+[data-krc-theme="gray"] {
+  --krc-bg-outer-rgb:   108, 108, 108;  /* KRC Purple ratio from main cell */
+  --krc-bg-col-rgb:     94, 94, 94;  /* #5e5e5e */
+  --krc-bg-element-rgb: 78, 78, 78;  /* KRC Purple ratio from main cell */
+  --krc-bg-deep-rgb:    64, 64, 64;  /* KRC Purple ratio from main cell */
+  --krc-bg-deeper-rgb:  50, 50, 50;  /* KRC Purple ratio from main cell */
+
+  --krc-text-primary:   #ffffff;
+  --krc-text-secondary: #d6d6d6;
+  --krc-text-muted:     #a2a2a2;
+  --krc-meta-opacity: 0.74;
+}
+
+/*
+ * Native — the KRC DOM surfaces go translucent so the node's own ComfyUI /
+ * LiteGraph body color (whatever the user picks) shows through and tints the
+ * whole UI. Depth is faked with stacked translucent black at increasing
+ * opacity (outer transparent → deeper darkest). The surface triplets are set to
+ * black so the inline rgba(var(--krc-bg-*-rgb), a) usages also become
+ * translucent black. Accents inherit the default palette (green stays green);
+ * card highlights are palette-independent. JS (node_palette.js) leaves the
+ * canvas chrome to LiteGraph/the user under this palette.
+ *
+ * Note: text stays light, so Native reads best over medium/dark node colors.
+ */
+[data-krc-theme="native"] {
+  --krc-bg-outer-rgb:   0, 0, 0;
+  --krc-bg-col-rgb:     0, 0, 0;
+  --krc-bg-element-rgb: 0, 0, 0;
+  --krc-bg-deep-rgb:    0, 0, 0;
+  --krc-bg-deeper-rgb:  0, 0, 0;
+
+  --krc-bg-outer:   transparent;
+  --krc-bg-col:     rgba(0, 0, 0, 0.13);
+  --krc-bg-element: rgba(0, 0, 0, 0.15);
+  --krc-bg-deep:    rgba(0, 0, 0, 0.17);
+  --krc-bg-deeper:  rgba(0, 0, 0, 0.19);
+
+  --krc-control-bg: rgba(0, 0, 0, 0.15);
+  --krc-control-compact-bg: rgba(0, 0, 0, 0.15);
+  --krc-control-hover-bg: rgba(0, 0, 0, 0.43);
+  --krc-chip-bg: rgba(0, 0, 0, 0.09);
+  --krc-chip-active-bg: rgba(0, 0, 0, 0.22);
+  --krc-list-active-bg: rgba(0, 0, 0, 0.19);
+  --krc-count-bg: rgba(0, 0, 0, 0.16);
+  --krc-empty-swatch-bg: rgba(0, 0, 0, 0.16);
+  --krc-meta-opacity: 0.58;
+
+  --krc-text-primary:   #ffffff;
+  --krc-text-secondary: #ececf2;
+  --krc-text-muted:     #c4c4cc;
+}

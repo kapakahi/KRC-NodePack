@@ -1,0 +1,301 @@
+/*
+ * KRC shared component styles.
+ *
+ * These are intentionally scoped under .krc-node so common class names can be
+ * reused by multiple DOM-widget nodes without leaking onto ComfyUI or older KRC
+ * UIs. Node-specific stylesheets keep layout and domain-specific details.
+ */
+.krc-node,
+.krc-node * {
+  box-sizing: border-box;
+}
+
+.krc-node {
+  width: 100%;
+  --krc-browser-list-gap: 8px;
+  --krc-thumbnail-fit: cover;
+  --krc-thumbnail-position: 50% 25%; /* Fill — Top: upper-quarter framing. */
+  --krc-browser-grid-card-height: 218px;
+  --krc-browser-grid-thumb-size: 144px;
+  --krc-browser-grid-thumb-width: min(100%, 96px);
+  --krc-browser-grid-thumb-max-height: 150px;
+  --krc-browser-card-gap: 10px;
+  --krc-browser-card-radius: 7px;
+  --krc-browser-card-min-height: 66px;
+  --krc-browser-card-padding: 8px;
+  --krc-browser-card-thumb-column: calc(var(--krc-browser-thumb-width) + 10px);
+  --krc-browser-list-card-min-height: 34px; /* = one LL preset slot (minmax 34px row); mirror of KRC_BROWSER_LIST_CARD_HEIGHT */
+  --krc-browser-thumb-card-height: 66px;
+  --krc-browser-thumb-width: var(--krc-browser-thumb-height);
+  --krc-browser-thumb-height: 64px;
+  --krc-browser-thumb-offset: 1px;
+  --krc-browser-thumb-left: 8px;
+  --krc-browser-thumb-body-left: calc(var(--krc-browser-thumb-left) + var(--krc-browser-thumb-width) + var(--krc-browser-card-gap));
+  --krc-browser-list-thumb-width: 32px; /* Square; keeps the existing near-full list-row height. */
+  --krc-browser-scrollbar-nudge: 8px;
+  --krc-action-button-width: auto;
+  --krc-action-button-height: 24px;
+  --krc-action-button-padding: 0 9px;
+  --krc-action-button-font: inherit;
+  --krc-action-button-letter-spacing: 0;
+  --krc-action-button-text-align: center;
+  --krc-action-button-white-space: nowrap;
+  --krc-save-button-width: 58px;
+  --krc-save-button-height: 24px;
+  /* Vertical nudge that drops the info-panel thumbnail column so the thumbnail's
+     top lines up with the first control in the right column (which sits below a
+     field label), instead of with that label. One knob for PV / LL / ML. */
+  --krc-info-thumb-nudge: 17px;
+  color: var(--krc-text-secondary);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--krc-font-base);
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  /* Left at the browser default (auto) on purpose: geometricPrecision forces
+     subpixel text metrics and re-rasterizes all card text on every zoom step,
+     which showed up as pan/zoom lag on a node with hundreds of cards. */
+}
+
+.krc-node .krc-panel {
+  min-width: 0;
+  min-height: 0;
+  padding: 8px;
+  border-radius: var(--krc-radius-2xl);
+  background: var(--krc-bg-col);
+}
+
+.krc-node .krc-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 31px;
+  min-height: 31px;
+  max-height: 31px;
+  padding-bottom: 6px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--krc-border-subtle);
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-base);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.krc-node .krc-search,
+.krc-node .krc-input,
+.krc-node .krc-textarea {
+  width: 100%;
+  border: 1px solid var(--krc-border-edit);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.krc-node .krc-search,
+.krc-node .krc-input {
+  height: 30px;
+  padding: 0 8px;
+}
+
+.krc-node .krc-textarea {
+  padding: 7px;
+  resize: none;
+}
+
+.krc-node .krc-search-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.krc-node .krc-search {
+  padding-right: 34px;
+}
+
+.krc-node .krc-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-control-compact-bg, var(--krc-bg-deep));
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-lg);
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+/* Optically center + size the × glyph (U+00D7 sits low; dialed in via the tuner). */
+.krc-node .krc-search-clear-glyph {
+  display: block;
+  transform: translate(0px, -1.5px) scale(1.24);
+  opacity: 0.55;
+}
+
+.krc-node .krc-search::placeholder,
+.krc-node .krc-textarea::placeholder {
+  color: var(--krc-text-muted);
+}
+
+.krc-node .krc-browser-select {
+  width: auto;
+  max-width: 52px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--krc-radius-xl);
+  padding: 0 4px;
+  background: var(--krc-control-compact-bg, rgba(var(--krc-bg-deeper-rgb), 0.45));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-2xs);
+}
+
+.krc-node .krc-sort-select {
+  max-width: 78px;
+}
+
+/* Compact DOM dropdown (shared/browser_controls.js menuSelect) — the DOM
+   replacement for the native <select> browser sort / name-mode controls. The
+   button keeps the old .krc-browser-select footprint; its option list is a
+   body-portaled menu (shared/floating_menu.js) that inherits the node's palette
+   (Native → Gray), styled like the card-color picker menu. */
+.krc-node .krc-menu-select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  max-width: 60px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-control-compact-bg, rgba(var(--krc-bg-deeper-rgb), 0.45));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-2xs);
+}
+.krc-node .krc-menu-select:hover {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+/* Locked width: the sort button stays a fixed size regardless of which option is
+   selected (no shrink-to-content jitter), sized so "Modified ▼" + the dropdown
+   caret never clip. */
+.krc-node .krc-menu-select.krc-sort-select {
+  width: 66px;
+  max-width: 66px;
+}
+.krc-node .krc-menu-select-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.krc-node .krc-menu-select-arrow {
+  flex: 0 0 auto;
+  font-size: var(--krc-font-3xs);
+  line-height: 1;
+  opacity: 0.7;
+}
+
+body > .krc-menu-select-menu {
+  position: fixed;
+  z-index: var(--krc-z-floating-menu);
+  min-width: 66px;
+  padding: 4px;
+  border: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deeper, #161a1d);
+  box-shadow: var(--krc-shadow-floating);
+}
+body > .krc-menu-select-menu[hidden] {
+  display: none;
+}
+body > .krc-menu-select-menu .krc-menu-select-option {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font: 500 var(--krc-font-sm)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+  white-space: nowrap;
+}
+body > .krc-menu-select-menu .krc-menu-select-option:hover {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--krc-text-primary, #fff);
+}
+body > .krc-menu-select-menu .krc-menu-select-option.is-selected {
+  color: var(--krc-text-primary, #fff);
+  box-shadow: var(--krc-selection-ring);
+}
+
+/* Search-hint hover tooltip (shared/search_hint_tooltip.js) — body-portaled and
+   theme-synced (data-krc-theme stamped by the module), so it matches the node's
+   palette. pointer-events:none: it's purely informational and must never eat the
+   hover it's describing. */
+body > .krc-search-hint {
+  position: fixed;
+  z-index: var(--krc-z-floating-menu);
+  max-width: 320px;
+  padding: 10px 12px;
+  border: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deeper, #161a1d);
+  box-shadow: var(--krc-shadow-menu);
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  font: 500 var(--krc-font-sm)/1.4 Inter, ui-sans-serif, system-ui, sans-serif;
+  pointer-events: none;
+}
+body > .krc-search-hint .krc-search-hint-title {
+  margin-bottom: 4px;
+  color: var(--krc-text-primary, #fff);
+  font-weight: 600;
+}
+body > .krc-search-hint .krc-search-hint-intro {
+  margin-bottom: 8px;
+}
+body > .krc-search-hint .krc-search-hint-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  align-items: baseline;
+}
+body > .krc-search-hint .krc-search-hint-key {
+  color: var(--krc-accent-green, #7b9e87);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: var(--krc-font-xs-plus);
+  white-space: nowrap;
+}
+body > .krc-search-hint .krc-search-hint-foot {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.5));
+  font-size: var(--krc-font-xs);
+}
+
+/* The global card framing preference updates mounted and future cards together. */
+:root[data-krc-thumbnail-framing="fill-center"] .krc-node,
+:root[data-krc-thumbnail-framing="fit"] .krc-node {
+  --krc-thumbnail-position: 50% 50%;
+}
+:root[data-krc-thumbnail-framing="fit"] .krc-node {
+  --krc-thumbnail-fit: contain;
+}

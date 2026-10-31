@@ -1,0 +1,1391 @@
+/* Widening the node past its 600px minimum grows names and value controls together from
+ * their default widths: 2/3 of the extra width to the value column, the rest to the name
+ * (the 1fr track). --ddp-fields-min-width is this list's width at the minimum node width
+ * (600 - 18 DOM widget margins - 16 panel padding). Model/Prompt cards and switches keep
+ * their size and sit at the column's right edge, so every row's name still lines up. */
+.ddp-fields {
+  container-type: inline-size;
+  --ddp-fields-min-width: 566px;
+}
+
+.ddp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: var(--krc-radius-xl);
+  box-sizing: border-box;
+  contain: layout paint;
+  --ddp-param-name-min-width: 170px;
+  --ddp-param-card-width: var(--ddp-model-card-width, 324px);
+  --ddp-param-grow: max(0px, (100cqw - var(--ddp-fields-min-width)) * 2 / 3);
+  --ddp-param-value-width: calc(var(--ddp-param-card-width) + var(--ddp-param-grow));
+  min-height: 28px;
+  padding: 2px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--krc-border-subtle);
+}
+
+/* The notch adds 12px + a 2px gap; reclaim exactly that from the name. */
+.ddp-field.is-editing {
+  --ddp-param-name-min-width: 156px;
+}
+
+.ddp-compact-field {
+  display: grid;
+  grid-template-columns: minmax(var(--ddp-param-name-min-width), 1fr) var(--ddp-param-value-width);
+  align-items: center;
+  gap: 2px;
+}
+
+/* Non-card fields have TWO trailing action columns (Share + remove, side by side)
+ * vs the Model/Prompt cards' one (stacked). To keep the name box the same width as
+ * the cards, give that extra 22px column + 2px gap back to the name by shrinking the
+ * value column 24px in edit mode only (view mode has no trailing buttons, so the
+ * name boxes already match there). Value controls here don't need the full card width. */
+.ddp-compact-field.is-editing {
+  grid-template-columns: minmax(var(--ddp-param-name-min-width), 1fr) calc(var(--ddp-param-value-width) - 24px) 22px 22px 12px;
+}
+
+.ddp-boolean-field.is-editing {
+  grid-template-columns: minmax(var(--ddp-param-name-min-width), 1fr) calc(var(--ddp-param-value-width) - 24px) 22px 22px 12px;
+}
+
+.ddp-boolean-field {
+  grid-template-columns: minmax(var(--ddp-param-name-min-width), 1fr) var(--ddp-param-value-width);
+}
+
+.ddp-model-field {
+  display: grid;
+  grid-template-columns: minmax(var(--ddp-param-name-min-width), 1fr) var(--ddp-param-value-width);
+  align-items: center;
+  gap: 2px;
+  min-height: 70px;
+}
+
+.ddp-model-field.is-editing {
+  grid-template-columns: minmax(var(--ddp-param-name-min-width), 1fr) var(--ddp-param-value-width) 22px 12px;
+}
+
+.ddp-model-field .ddp-model-drop {
+  justify-self: end;
+  width: var(--ddp-param-card-width);
+  max-width: 100%;
+}
+
+/* A populated field card is a drag source (drag it to another node). Hint with a grab
+   cursor and dim while dragging; matches the browser cards' drag affordance. */
+.ddp-model-drop .krc-lora-card[draggable="true"] {
+  cursor: grab;
+}
+.ddp-model-drop .krc-lora-card.is-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.ddp-model-field-actions {
+  display: grid;
+  align-self: center;
+  gap: 3px;
+  width: 22px;
+}
+
+.ddp-btn.ddp-danger:hover {
+  border-color: var(--krc-accent-red);
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+.ddp-btn.ddp-danger.is-confirming {
+  border-color: transparent;
+  background: var(--krc-danger-armed-bg);
+  color: var(--krc-on-accent);
+}
+
+.ddp-btn.ddp-danger.is-confirming:hover {
+  background: var(--krc-danger-armed-hover-bg);
+}
+
+.ddp-name {
+  font-weight: 600;
+}
+
+.ddp-name-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.ddp-name-wrap .ddp-name {
+  width: 100%;
+  padding-right: 22px;
+}
+
+.ddp-name-clear {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  background: transparent;
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.ddp-name-clear:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-name-clear:disabled {
+  display: none;
+}
+
+.ddp-name.is-readonly {
+  border-color: transparent;
+  background: transparent;
+  color: var(--krc-text-primary);
+  cursor: default;
+}
+
+.ddp-name.is-readonly:focus {
+  border-color: transparent;
+  color: var(--krc-text-primary);
+}
+
+.ddp-field-share {
+  width: 22px;
+  height: 24px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+.ddp-field-share-glyph,
+.ddp-field-share-glyph svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+.ddp-field-share { color: var(--krc-text-muted); }
+.ddp-field-share.is-active {
+  color: var(--krc-accent-green);
+  background: rgba(var(--krc-accent-green-rgb), 0.14);
+}
+/* Shared styling stays visible after leaving edit mode. */
+.ddp-field.is-shared {
+  background: rgba(var(--krc-white-rgb), 0.08);
+}
+/* Larger name inside the same 24px input: vertical padding yields so row height is unchanged. */
+.ddp-field.is-shared .ddp-name {
+  background: rgba(var(--krc-white-rgb), 0.06);
+  font-weight: 700;
+  font-size: var(--krc-font-lg);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Fits in the existing row height; only the name column yields horizontal room. */
+.ddp-field-grip {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 12px;
+  min-height: 24px;
+  box-sizing: border-box;
+  border: 0;
+  border-left: 1px solid var(--krc-border-subtle);
+  border-radius: 0 var(--krc-radius-lg) var(--krc-radius-lg) 0;
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ddp-field-grip:hover,
+.ddp-field-grip:focus-visible {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+  outline: none;
+}
+
+.ddp-field-grip:active {
+  cursor: grabbing;
+}
+
+.ddp-field-grip-glyph {
+  width: 8px;
+  height: 12px;
+  background-image: radial-gradient(circle, currentColor 1.1px, transparent 1.5px);
+  background-size: 4px 4px;
+  pointer-events: none;
+}
+
+/* While a parameter is dragged: it dims, and the row under the pointer shows where it
+   lands with a line on its top or bottom edge (inside the row: .ddp-field clips paint). */
+.ddp-field.is-field-dragging {
+  opacity: 0.45;
+}
+
+.ddp-field.is-field-drop-before {
+  box-shadow: inset 0 2px 0 0 var(--krc-accent-green);
+}
+
+.ddp-field.is-field-drop-after {
+  box-shadow: inset 0 -2px 0 0 var(--krc-accent-green);
+}
+
+.ddp-bool-toggle {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  width: 34px;
+  min-width: 34px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: transparent;
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color var(--krc-dur-fast), background var(--krc-dur-fast), color var(--krc-dur-fast);
+}
+
+.ddp-boolean-value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.ddp-bool-toggle:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-bool-toggle:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ddp-bool-toggle.is-on {
+  color: var(--krc-text-primary);
+}
+
+.ddp-bool-track {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-bg-element);
+  box-shadow: inset 0 0 0 1px var(--krc-border-edit);
+}
+
+.ddp-bool-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-text-secondary);
+  transition: transform var(--krc-dur-base) ease, background var(--krc-dur-base) ease;
+}
+
+.ddp-bool-toggle.is-on .ddp-bool-track {
+  background: rgba(var(--krc-accent-green-rgb), 0.62);
+  box-shadow: var(--krc-on-ring);
+}
+
+.ddp-bool-toggle.is-on .ddp-bool-knob {
+  background: var(--krc-text-primary);
+  transform: translateX(14px);
+}
+
+.ddp-number-format {
+  font-size: var(--krc-font-base);
+}
+
+.ddp-number-format-menu {
+  position: fixed;
+  z-index: var(--krc-z-field-menu);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 5px;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-col);
+  box-shadow: var(--krc-shadow-dropdown);
+  box-sizing: border-box;
+}
+
+.ddp-number-format-option {
+  display: block;
+  width: 100%;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-sm);
+  text-align: left;
+}
+
+.ddp-number-format-option:hover,
+.ddp-number-format-option.is-selected {
+  border-color: var(--krc-border-strong);
+  color: var(--krc-text-primary);
+}
+
+.ddp-number-format-option.is-selected {
+  border-color: var(--krc-accent-green);
+}
+
+.ddp-field .ddp-input {
+  box-sizing: border-box;
+  height: 24px;
+}
+
+.ddp-number-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22px 22px auto;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* SEED (seed_field.js): the seed box, then Lock / Randomize / Mode, each a number-step
+   sized glyph button. Locked: the lock lights up and the box gets a green edge; the
+   other two grey out (disabled). */
+.ddp-seed-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22px 22px 22px;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.ddp-seed-value .ddp-seed-glyph {
+  display: inline-block;
+  font-size: var(--krc-font-xs);
+  line-height: 1;
+}
+
+.ddp-seed-value .ddp-seed-mode-glyph {
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.ddp-seed-value .ddp-seed-lock.is-on {
+  background: rgba(var(--krc-accent-green-rgb), 0.35);
+  color: var(--krc-text-primary);
+}
+
+.ddp-seed-value.is-locked .ddp-seed-input {
+  box-shadow: inset 0 0 0 1px rgba(var(--krc-accent-green-rgb), 0.75);
+}
+
+.ddp-number-input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  font: 500 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.ddp-number-input:focus {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+}
+
+.ddp-number-step {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-base);
+  line-height: 1;
+}
+
+.ddp-number-step:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-number-step:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ddp-number-step-glyph {
+  display: inline-block;
+}
+
+.ddp-number-step-glyph-minus {
+  transform: translate(0.5px, -1px); /* dialed in via glyph tuner */
+}
+
+.ddp-number-step-glyph-plus {
+  transform: translate(0, -1px); /* dialed in via glyph tuner */
+}
+
+.ddp-field .ddp-input::placeholder,
+.ddp-string-select.is-empty .ddp-string-select-label {
+  color: var(--krc-text-muted);
+  opacity: var(--krc-text-faint-opacity);
+}
+
+/* A combo value that's no longer in the field's saved list (still emitted as-is). */
+.ddp-string-select.is-orphan .ddp-string-select-label {
+  color: var(--krc-accent-red);
+  opacity: var(--krc-text-soft-opacity);
+}
+
+.ddp-string-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* STRING and NOTES boxes share the COMBO / NUMBER controls' shade. The border stays (made
+   invisible) so box sizes don't move; focus keeps the purple edge from .ddp-input. */
+.ddp-field .ddp-string-input,
+.ddp-field .ddp-note-input {
+  background: var(--krc-control-bg, var(--krc-bg-element));
+}
+
+.ddp-field .ddp-string-input:not(:focus),
+.ddp-field .ddp-note-input:not(:focus) {
+  border-color: transparent;
+}
+
+/* Multi-line raw STRING: a textarea instead of the single-line input. Same specificity
+   as `.ddp-field .ddp-input { height: 24px }` and declared later, so this height wins.
+   Row height is reserved by DDP_STRING_MULTILINE_H in config.js — keep them in sync. */
+.ddp-field .ddp-string-textarea {
+  height: 62px;
+  min-height: 62px;
+  padding: 5px 8px;
+  resize: none;
+  overflow: auto;
+  font: 500 var(--krc-font-base)/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* SECTION/DIVIDER (section_field.js): one ordinary row tall, full width, no name column.
+   Blank = a gap; a title shows bold and centred. A card colour washes the whole row (the
+   cards' soft colour, so palettes and High Contrast carry it). Edit mode: the title box,
+   the colour button, remove and the reorder notch. */
+.ddp-section-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 2px;
+}
+
+.ddp-section-field.is-editing {
+  grid-template-columns: minmax(0, 1fr) 22px 22px 12px;
+}
+
+.ddp-section-field[data-card-color]:not([data-card-color=""]) {
+  background: var(--krc-card-color-soft);
+  box-shadow: inset 0 0 0 1px var(--krc-card-color-border);
+}
+
+/* A field under a coloured section: a lighter wash of its colour (section_field.js
+   SECTION_TINT_ALPHA), down to the next section. A shared field keeps its own wash on top. */
+.ddp-field.is-section-tinted {
+  background: var(--ddp-section-tint);
+}
+
+.ddp-field.is-section-tinted.is-shared {
+  background: linear-gradient(0deg, rgba(var(--krc-white-rgb), 0.08), rgba(var(--krc-white-rgb), 0.08)), var(--ddp-section-tint);
+}
+
+.ddp-section-title,
+.ddp-field .ddp-section-title-input {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 var(--krc-font-base)/24px Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--krc-text-primary);
+}
+
+.ddp-section-title {
+  height: 24px;
+  padding: 0 8px;
+}
+
+/* The title box shares the STRING / NOTES shade, so it reads as typeable. */
+.ddp-field .ddp-section-title-input {
+  width: 100%;
+  background: var(--krc-control-bg, var(--krc-bg-element));
+}
+
+.ddp-field .ddp-section-title-input:not(:focus) {
+  border-color: transparent;
+}
+
+.ddp-field .ddp-section-title-input::placeholder {
+  font-weight: 500;
+}
+
+.ddp-section-field .ddp-section-color {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+}
+
+/* NOTE: a notes box sized in whole lines (note_field.js sets its height; keep
+   NOTE_LINE_H / NOTE_BOX_CHROME_H in step with the line-height, padding and border here).
+   The name sits at the top; text that doesn't fit scrolls. */
+.ddp-note-field {
+  align-items: start;
+}
+
+.ddp-note-value {
+  position: relative;
+  min-width: 0;
+}
+
+.ddp-field .ddp-note-input {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 5px 8px;
+  box-sizing: border-box;
+  resize: none;
+  overflow: auto;
+  font: 500 var(--krc-font-base)/16px Inter, ui-sans-serif, system-ui, sans-serif;
+  white-space: pre-wrap;
+}
+
+/* Normal mode: read-only, a step dimmer than a value. */
+.ddp-field .ddp-note-input.is-readonly {
+  color: var(--krc-text-secondary);
+  cursor: default;
+}
+
+/* The bottom-edge resize grip (both modes): a short bar over the box's bottom border. */
+.ddp-note-grip {
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 6px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.ddp-note-grip::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 24px;
+  height: 2px;
+  margin-left: -12px;
+  border-radius: 1px;
+  background: var(--krc-border-strong);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.ddp-note-value:hover .ddp-note-grip::after,
+.ddp-note-grip.is-dragging::after {
+  opacity: 1;
+}
+
+.ddp-note-grip.is-dragging::after {
+  background: var(--krc-accent-green);
+}
+
+/* Keep the single/multi toggle at the top edge next to a tall textarea. */
+.ddp-string-value:has(.ddp-string-textarea) {
+  align-items: flex-start;
+}
+
+.ddp-string-lines.is-on {
+  border-color: var(--krc-accent-green);
+  color: var(--krc-accent-green);
+}
+
+.ddp-string-select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 500 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+}
+
+.ddp-string-select:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-string-select-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddp-string-select-arrow {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+  line-height: 1;
+}
+
+.ddp-string-add {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.ddp-string-add:hover:not(:disabled) {
+  border-color: var(--krc-border-strong);
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.ddp-string-menu,
+.ddp-string-option {
+  box-sizing: border-box;
+}
+
+.ddp-string-menu {
+  position: fixed;
+  z-index: var(--krc-z-field-menu);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 5px;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-col);
+  box-shadow: var(--krc-shadow-dropdown);
+}
+
+.ddp-string-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  min-height: 26px;
+  border: 1px solid transparent;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+}
+
+.ddp-string-option.is-editing {
+  grid-template-columns: minmax(0, 1fr) 22px 22px;
+}
+
+.ddp-string-option:hover,
+.ddp-string-option.is-selected {
+  border-color: var(--krc-border-strong);
+  color: var(--krc-text-primary);
+}
+
+.ddp-string-option.is-selected {
+  border-color: var(--krc-accent-green);
+}
+
+.ddp-string-option-label {
+  min-width: 0;
+  padding: 0 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddp-string-option-edit,
+.ddp-string-option-remove {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 22px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--krc-border-subtle);
+  background: var(--krc-control-shade);
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.ddp-string-option-edit {
+  font-size: var(--krc-font-sm);
+}
+
+.ddp-string-option-remove {
+  border-radius: 0 var(--krc-radius-md) var(--krc-radius-md) 0;
+  font-size: var(--krc-font-md);
+}
+
+.ddp-string-option-edit:hover,
+.ddp-string-option-remove:hover {
+  color: var(--krc-text-primary);
+}
+
+/* Armed: the option is used by other configs too (second click clears them). */
+.ddp-string-option-remove.is-confirming,
+.ddp-string-option-remove.is-confirming:hover {
+  background: var(--krc-danger-armed-bg);
+  color: var(--krc-on-accent);
+}
+
+.ddp-string-empty {
+  padding: 8px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+  text-align: center;
+}
+
+/* On document.body (fixed), like .ddp-string-menu, so it shows past the node; it
+   carries .krc-node for the palette, so beat that class's width: 100%. */
+.krc-node.ddp-string-popover {
+  box-sizing: border-box;
+  position: fixed;
+  z-index: var(--krc-z-field-menu);
+  display: grid;
+  gap: 7px;
+  width: 260px;
+  min-width: 0;
+  max-width: calc(100vw - 16px);
+  height: auto;
+  min-height: 0;
+  padding: 8px;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-popup-bg, var(--krc-bg-deep));
+  color: var(--krc-text-primary);
+  font: var(--krc-font-base)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  box-shadow: var(--krc-shadow-popover);
+}
+
+.ddp-string-popover-title {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-3xs);
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.ddp-string-popover-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ddp-string-popover-input {
+  width: 100%;
+  height: 26px;
+  min-width: 0;
+  padding: 0 7px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font: 500 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  outline: none;
+}
+
+.ddp-string-popover-input:focus {
+  border-color: var(--krc-accent-green);
+  box-shadow: 0 0 0 1px rgba(var(--krc-accent-green-rgb), 0.28);
+}
+
+.ddp-string-popover-add {
+  display: grid;
+  place-items: center;
+  height: 26px;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 700 var(--krc-font-3xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ddp-string-popover-add:hover {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-string-popover-add:active {
+  transform: translateY(1px);
+}
+
+/* Add Value: the One / List toggle beside the title, and List's multi-line box. */
+.ddp-string-popover [hidden] {
+  display: none;
+}
+
+.ddp-string-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Items / Text toggle, Delete all (trash), Capture glyph, right of the title. */
+.ddp-string-popover-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+/* Same box as the One / List toggle (18px + 1px padding + 1px border = 22px). */
+.ddp-string-popover-capture {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.ddp-string-popover-capture:hover {
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-primary);
+}
+
+/* Delete all / Reset: Capture's box; armed (one more click deletes) it turns red with a ✕. */
+.ddp-string-popover-clear {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: 700 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.ddp-string-popover-clear:hover {
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-accent-red);
+}
+
+.ddp-string-popover-clear.is-confirming,
+.ddp-string-popover-clear.is-confirming:hover {
+  border-color: var(--krc-accent-red);
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+.ddp-string-clear-glyph,
+.ddp-string-clear-glyph svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+.ddp-string-capture-glyph,
+.ddp-string-capture-glyph svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+.ddp-string-popover-modes {
+  display: inline-flex;
+  flex: none;
+  padding: 1px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+}
+
+.ddp-string-popover-mode {
+  height: 18px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: calc(var(--krc-radius-md) - 1px);
+  background: transparent;
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: 700 var(--krc-font-3xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-transform: uppercase;
+}
+
+.ddp-string-popover-mode:hover {
+  color: var(--krc-text-primary);
+}
+
+.ddp-string-popover-mode.is-active {
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-primary);
+}
+
+/* Items view: the saved values as the dropdown's rows, scrolling past ~7 rows. Its own
+   scrollbar lane: the list reaches into the popover's 8px right padding and keeps it as
+   padding, so rows end with the add field and the scrollbar sits after the × buttons. */
+.ddp-string-popover-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  max-height: 210px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin-right: calc(-1 * var(--krc-browser-scrollbar-nudge));
+  padding-right: var(--krc-browser-scrollbar-nudge);
+}
+
+.ddp-string-popover-items .ddp-string-option {
+  flex: none;
+}
+
+/* Not a pick (picking is the dropdown's): no pointer on the row itself. */
+.ddp-string-option.is-item {
+  cursor: default;
+}
+
+.ddp-string-option.is-item .ddp-string-option-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ddp-string-option-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A value being edited in place (✎): the label becomes a text field. */
+.ddp-string-option-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: var(--krc-radius-lg) 0 0 var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font: inherit;
+  outline: 1px solid var(--krc-accent-green);
+  outline-offset: -1px;
+}
+
+/* Captured draft: a value the capture adds. */
+.ddp-string-option-badge {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: var(--krc-radius-sm, 3px);
+  background: rgba(var(--krc-accent-green-rgb), 0.16);
+  color: var(--krc-accent-green);
+  font-size: var(--krc-font-3xs);
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+/* Captured draft: a saved value the capture drops (restore with ↺). */
+.ddp-string-option.is-dropped {
+  grid-template-columns: minmax(0, 1fr) 22px;
+}
+
+.ddp-string-option.is-dropped .ddp-string-option-text {
+  color: var(--krc-text-muted);
+  text-decoration: line-through;
+}
+
+.ddp-string-option.is-dropped .ddp-string-option-edit {
+  border-radius: 0 var(--krc-radius-md) var(--krc-radius-md) 0;
+}
+
+/* DYNAMIC COMBO (CS_DYNAMIC_COMBO_GAMEPLAN.md): an option's settings or why Config Switcher
+   can't drive it, muted after the key; unsupported options greyed out and not a pick. */
+.ddp-string-option.is-unsupported .ddp-string-option-label,
+.ddp-string-option.is-option .ddp-string-option-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ddp-string-option-reason {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddp-string-option.is-unsupported {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ddp-string-option.is-unsupported:hover {
+  border-color: transparent;
+  color: var(--krc-text-secondary);
+}
+
+.ddp-string-option.is-option:not(.is-removable) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ddp-string-option.is-option.is-removable {
+  grid-template-columns: minmax(0, 1fr) 22px;
+}
+
+/* A DYNAMIC COMBO option hidden from the dropdown (↺ shows it again). */
+.ddp-string-option.is-hidden-option .ddp-string-option-text {
+  color: var(--krc-text-muted);
+  text-decoration: line-through;
+}
+
+.ddp-string-option.is-option.is-removable .ddp-string-option-edit {
+  border-radius: 0 var(--krc-radius-md) var(--krc-radius-md) 0;
+}
+
+/* A COMBO setting's own values open in place under its button. */
+.ddp-dynamic-setting-combo {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ddp-dynamic-setting-options {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.ddp-dynamic-settings-glyph,
+.ddp-dynamic-settings-glyph svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+/* The settings popover: one block per setting, its name and range over its control. */
+.krc-node.ddp-string-popover.ddp-dynamic-settings {
+  width: 280px;
+}
+
+.ddp-dynamic-settings-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ddp-dynamic-setting {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ddp-dynamic-setting-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ddp-dynamic-setting-name {
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddp-dynamic-setting-hint {
+  flex: none;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+}
+
+/* Outside a field row the inputs don't get the row's fixed height. */
+.ddp-dynamic-settings .ddp-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 24px;
+}
+
+.ddp-dynamic-settings .ddp-dynamic-setting-text.is-multiline {
+  height: auto;
+  min-height: 62px;
+  padding: 4px 6px;
+  resize: vertical;
+}
+
+.ddp-dynamic-settings .ddp-number-value,
+.ddp-dynamic-settings .ddp-string-select {
+  width: 100%;
+}
+
+.ddp-dynamic-settings .ddp-bool-toggle {
+  justify-self: start;
+}
+
+/* The captured draft's foot under Items: hint, Discard, SAVE. */
+.ddp-string-popover-items-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 42px;
+  align-items: center;
+  gap: 5px;
+}
+
+.ddp-string-popover-discard {
+  height: 22px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: 600 var(--krc-font-xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.ddp-string-popover-discard:hover {
+  color: var(--krc-text-primary);
+}
+
+.ddp-string-popover-list-block {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ddp-string-popover-list {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 96px;
+  max-height: 220px;
+  padding: 5px 7px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font: 500 var(--krc-font-base)/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  outline: none;
+  resize: vertical;
+}
+
+.ddp-string-popover-list:focus {
+  border-color: var(--krc-accent-green);
+  box-shadow: 0 0 0 1px rgba(var(--krc-accent-green-rgb), 0.28);
+}
+
+.ddp-string-popover-list-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 5px;
+}
+
+.ddp-string-popover-hint {
+  min-width: 0;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  line-height: 1.25;
+}
+
+/* List SAVE armed: removing values other configs use (SAVE again to confirm). */
+.ddp-string-popover-add.is-confirming {
+  border-color: rgba(var(--krc-accent-red-rgb), 0.7);
+  background: rgba(var(--krc-accent-red-rgb), 0.86);
+  color: var(--krc-on-accent);
+}
+
+.ddp-string-popover-hint.is-warning {
+  color: var(--krc-accent-red);
+}
+
+.ddp-addrow .ddp-edit-fields {
+  display: grid;
+  place-items: center;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  font-size: var(--krc-font-lg);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ddp-addrow .ddp-add-field-wrap {
+  position: relative;
+  flex: 0 0 92px;
+  width: 92px;
+}
+
+.ddp-addrow .ddp-add-field-wrap[hidden] {
+  display: none;
+}
+
+.ddp-addrow .ddp-add-field {
+  width: 100%;
+  height: 27px;
+  border-color: transparent;
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.ddp-addrow .ddp-edit-fields:hover {
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+}
+
+.ddp-addrow .ddp-add-field:hover {
+  filter: brightness(1.1);
+}
+
+.ddp-addrow .ddp-edit-fields:active {
+  transform: none;
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+}
+
+.ddp-addrow .ddp-add-field:active {
+  transform: none;
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  filter: brightness(0.92);
+}
+
+.ddp-addrow .ddp-edit-fields.is-active {
+  background: rgba(var(--krc-accent-orange-rgb), 0.92);
+  color: var(--krc-on-accent);
+}
+
+.ddp-addrow .ddp-edit-fields.is-active:hover,
+.ddp-addrow .ddp-edit-fields.is-active:active {
+  background: rgba(var(--krc-accent-orange-rgb), 1);
+  color: var(--krc-on-accent);
+}
+
+.ddp-add-field-menu {
+  position: fixed;
+  z-index: var(--krc-z-popover);
+  display: flex;
+  min-width: 112px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  box-shadow: var(--krc-shadow-floating);
+}
+
+.ddp-add-field-menu[hidden] {
+  display: none;
+}
+
+.ddp-add-field-option {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-bottom: 1px solid var(--krc-border-subtle);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.ddp-add-field-option:last-child {
+  border-bottom: 0;
+}
+
+.ddp-add-field-option:hover {
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+}
+
+.ddp-add-field-option:active {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}

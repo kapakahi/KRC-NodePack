@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.claude/
+
+# RemoteWorkflow API JSON files dropped in by users
+/data/remote_workflows/*.json
+
+# Fallback user dir (used when ComfyUI is absent, e.g. local dev-test runs)
+/.krc_user/

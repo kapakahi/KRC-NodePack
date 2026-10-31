@@ -1,0 +1,73 @@
+/* compact Options modal body */
+.wb-options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.wb-options-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-xl);
+  background: rgba(var(--krc-bg-deep-rgb), 0.28);
+}
+
+.wb-options-title {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.wb-options-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.wb-options-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wb-modal-btn {
+  height: 25px;
+  min-width: 0;
+  padding: 0 6px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-2xs);
+  letter-spacing: 0.35px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background var(--krc-dur-fast), color var(--krc-dur-fast), transform var(--krc-dur-fast), border-color var(--krc-dur-fast);
+}
+
+.wb-modal-btn:hover:not(:disabled) {
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+}
+
+.wb-modal-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.wb-modal-btn.is-delete:hover:not(:disabled),
+.wb-modal-btn.is-confirming {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+.wb-modal-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}

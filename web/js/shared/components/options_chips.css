@@ -1,0 +1,538 @@
+/* KRC shared components: options_chips.css (part of components.css, which @imports the
+   parts in order; the cascade depends on that order). The Options modal switch toggle and
+   cells, the + COLLECTION control, chip pills and the chip editor, list section headers,
+   the range slider. */
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-switch-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 24px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  text-transform: uppercase;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-switch-label:empty {
+  display: none;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-switch-label {
+  font-size: var(--krc-font-xs);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-switch-track {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-bg-element);
+  box-shadow: inset 0 0 0 1px var(--krc-border-edit);
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-text-secondary);
+  transition: transform var(--krc-dur-base) ease, background var(--krc-dur-base) ease;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-switch-toggle.is-on {
+  color: var(--krc-text-primary);
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-switch-toggle.is-on .krc-switch-track {
+  background: rgba(var(--krc-accent-green-rgb), 0.62);
+  box-shadow: var(--krc-on-ring);
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-switch-toggle.is-on .krc-switch-knob {
+  background: var(--krc-text-primary);
+  transform: translateX(14px);
+}
+
+/* Shared Options modal cells. */
+:is(.krc-modal-overlay, .krc-options-host) :is(.krc-options-editor, .krc-options-troubleshoot) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-description {
+  margin: -2px 0 4px 2px;
+  color: var(--krc-text-muted);
+  font: 700 var(--krc-font-2xs)/1.25 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.7px;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-reset {
+  align-self: flex-start;
+  width: auto;
+  min-width: 104px;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  font: 650 var(--krc-font-3xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-reset:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+:is(.krc-modal-overlay, .krc-options-host) .krc-options-reset.is-confirming {
+  min-width: 118px;
+  background: rgba(var(--krc-accent-red-rgb), 0.72);
+  color: var(--krc-text-primary);
+}
+
+/* + COLLECTION control (shared info panel). Membership lives in the external Collections
+   store — this is add/remove for the selected model or LoRA. The popover reuses the
+   per-node .krc-config-menu base (positioning/bg); these rules add the checkable rows +
+   the inline "new collection" creator. See COLLECTIONS_GAMEPLAN.md step 4. */
+.krc-node .krc-collection-row {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.krc-node .krc-collection-menu-wrap {
+  min-width: 0;
+}
+.krc-node .krc-action-button.krc-collection-button {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 18px;
+  min-width: 0;
+  padding: 0 7px;
+  overflow: hidden;
+  font: 500 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.krc-node .krc-collection-button.is-member {
+  color: var(--krc-text-primary);
+  box-shadow: inset 0 0 0 1px var(--krc-border-subtle);
+}
+.krc-node .krc-collection-menu {
+  min-width: 150px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+/* Grid, not flex: the row is itself a grid item of the .krc-config-menu popover, and a nested
+   flex row refused to grant the grow-item (the name) any width — it collapsed to 0, clipping the
+   name and shoving the check left. A grid track (name | check | view) sizes the name track
+   deterministically via minmax(0,1fr), so the name fills the remaining width and truncates. */
+.krc-node .krc-collection-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--krc-radius-sm);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+}
+.krc-node .krc-collection-item:hover {
+  background: var(--krc-bg-element);
+  color: var(--krc-text-primary);
+}
+.krc-node .krc-collection-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--krc-font-xs);
+  text-transform: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.krc-node .krc-collection-check {
+  width: 12px;
+  text-align: center;
+  color: var(--krc-accent-green);
+}
+/* Eye "view" button, right of the check — jump to this collection in the viewer. */
+.krc-node .krc-collection-view {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-xs);
+  background: transparent;
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+}
+.krc-node .krc-collection-view:hover {
+  color: var(--krc-text-primary);
+  background: var(--krc-bg-surface);
+}
+.krc-node .krc-collection-item.is-checked .krc-collection-name {
+  color: var(--krc-text-primary);
+}
+.krc-node .krc-collection-create {
+  padding: 2px;
+}
+.krc-node .krc-collection-input {
+  width: 100%;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-sm);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-primary);
+  font: inherit;
+  font-size: var(--krc-font-xs);
+}
+
+/* Shared chip pill visuals (lifted from Prompt Vault's .krc-pm scope so the collection
+   chip strip in Model Library gets the same chips — COLLECTIONS_GAMEPLAN.md step 5). The
+   strip CONTAINER layout stays per-node (PV's 150px strip vs ML's rail-height); only these
+   pill rules are shared. PV still matches them (it is .krc-node.krc-pm). */
+.krc-node .krc-chip { position:relative; border:0; font:inherit; cursor:pointer; white-space:nowrap; }
+.krc-node .krc-chip-split {
+  position:relative;
+  display:inline-flex;
+  max-width:100%;
+  min-width:0;
+  overflow:hidden;
+  border-radius:var(--krc-radius-pill);
+  background:var(--krc-chip-bg,var(--krc-bg-deep));
+}
+.krc-node .krc-chip-split[data-card-color]:not([data-card-color=""]) {
+  background:linear-gradient(0deg,var(--krc-card-color-soft),var(--krc-card-color-soft)),var(--krc-chip-bg,var(--krc-bg-deep));
+  box-shadow:inset 0 0 0 1px var(--krc-card-color-border);
+}
+.krc-node .krc-chip-split .krc-chip {
+  position:relative;
+  z-index:var(--krc-z-chip);
+  min-width:0;
+  border-radius:var(--krc-radius-pill) 0 0 var(--krc-radius-pill);
+  background:transparent;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.krc-node .krc-chip-notch {
+  display:grid;
+  place-items:center;
+  width:14px;
+  min-width:14px;
+  padding:0;
+  border:0;
+  border-left:1px solid var(--krc-border-subtle);
+  border-radius:0 var(--krc-radius-pill) var(--krc-radius-pill) 0;
+  background:transparent;
+  color:var(--krc-text-muted);
+  cursor:pointer;
+  font:700 var(--krc-font-base)/1 Inter,ui-sans-serif,system-ui,sans-serif;
+}
+.krc-node .krc-chip:hover,
+.krc-node .krc-chip:focus-visible,
+.krc-node .krc-chip-notch:hover,
+.krc-node .krc-chip-notch:focus-visible {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+.krc-node .krc-chip-split.is-active {
+  background: var(--krc-chip-active-bg, var(--krc-bg-deeper));
+  box-shadow: inset 0 0 0 var(--krc-selection-ring-width, 2px) var(--krc-chip-active-ring, transparent);
+}
+.krc-node .krc-chip.is-active,
+.krc-node .krc-chip-split.is-active {
+  box-shadow: var(--krc-selection-ring);
+}
+.krc-node .krc-chip.is-active::after,
+.krc-node .krc-chip-split.is-active::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:var(--krc-z-card-overlay);
+  pointer-events:none;
+  border-radius:inherit;
+  box-shadow: var(--krc-selection-ring);
+}
+.krc-node .krc-chip-split.is-active[data-card-color]:not([data-card-color=""]) {
+  background:linear-gradient(0deg,var(--krc-card-color-soft),var(--krc-card-color-soft)),var(--krc-chip-active-bg,var(--krc-bg-deeper));
+  box-shadow: var(--krc-selection-ring);
+}
+.krc-node .krc-chip-split.is-active .krc-chip {
+  color:var(--krc-chip-active-text);
+}
+/* Pinned categories float to the top; bold their label so the pin reads at a
+   glance without relying on position alone. */
+.krc-node .krc-chip-split.is-pinned .krc-chip-main {
+  font-weight:700;
+}
+.krc-node .krc-chip.is-active:hover,
+.krc-node .krc-chip.is-active:focus-visible {
+  background: var(--krc-chip-active-bg, var(--krc-bg-deeper));
+}
+
+/* Model Library collection viewer: the chip strip that replaces the folder rail in collection
+   mode (COLLECTIONS_GAMEPLAN.md step 5). Reuses the shared .krc-chip-list-* structure + the
+   pill rules above; only the container sizing/background is ML-specific (its height is set
+   inline to the folder-tree height so the two modes swap without a layout jump). */
+.krc-model-library .krc-collection-strip {
+  display: block;
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  padding: 0;
+}
+.krc-model-library .krc-collection-strip > .krc-chip-list-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-element);
+  pointer-events: none;
+}
+.krc-model-library .krc-collection-strip > .krc-chip-list-scroll {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--krc-radius-lg);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.krc-model-library .krc-collection-exit-chip {
+  color: var(--krc-text-muted);
+}
+.krc-model-library .krc-collection-empty-note {
+  align-self: center;
+  padding: 0 6px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  line-height: 1.35;
+}
+
+/* The collection chip editor now uses the shared .krc-chip-editor (chip_strip.js chipEditor) —
+   same layout as Prompt Vault's category editor. The .krc-collection-strip scroll uses the shared
+   .is-editing rule; no ML-specific editor CSS needed. COLLECTIONS_GAMEPLAN.md step 5. */
+
+/* Shared inline chip editor (chip_strip.js chipEditor) — the notch-opened editor used by BOTH
+   Prompt Vault categories and Collections. Grid: [input]/[message]/[attrs]/[actions], with the
+   actions row split into --krc-chip-editor-cols equal columns (= action count), so a 5-action
+   PV editor and a 3-action collection editor share one layout. Generalized from PV's original
+   .krc-category-* rules. COLLECTIONS_GAMEPLAN.md step 5 (exact PV chip system, shared). */
+.krc-node :where(.krc-chip-list, .krc-chip-list-scroll).is-editing {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+.krc-node .krc-chip-editor {
+  display: grid;
+  grid-template-columns: repeat(var(--krc-chip-editor-cols, 3), minmax(0, 1fr));
+  grid-template-rows: 30px 20px 22px 24px;
+  align-items: stretch;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+}
+.krc-node .krc-chip-editor-input {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font: 500 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+.krc-node .krc-chip-editor-message {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 8px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-message-shade);
+  color: var(--krc-text-muted);
+  font: 500 var(--krc-font-xs)/1.15 Inter, ui-sans-serif, system-ui, sans-serif;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.krc-node .krc-chip-editor-message.is-warning {
+  color: var(--krc-text-secondary);
+  background: rgba(var(--krc-accent-gold-rgb), 0.16);
+}
+.krc-node .krc-chip-editor-message.is-danger {
+  color: var(--krc-text-primary);
+  background: rgba(var(--krc-accent-red-rgb), 0.18);
+}
+.krc-node .krc-chip-editor-attrs {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.krc-node .krc-chip-editor-attr-toggles {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+.krc-node .krc-chip-editor-attrs .krc-icon-button {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 22px;
+}
+.krc-node .krc-chip-editor-swatches {
+  justify-content: flex-end;
+  overflow: hidden;
+  margin-left: auto;
+}
+.krc-node .krc-chip-editor-action {
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  /* Lifted a step above the panel so the neutral actions read as buttons. */
+  background: var(--krc-action-wash), var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 600 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+.krc-node .krc-chip-editor-action.is-save {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+.krc-node .krc-chip-editor-action:hover,
+.krc-node .krc-chip-editor-action:focus-visible {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+.krc-node .krc-chip-editor-action.is-save:hover,
+.krc-node .krc-chip-editor-action.is-save:focus-visible {
+  background: rgba(var(--krc-accent-green-rgb), 0.88);
+  color: var(--krc-on-accent);
+}
+.krc-node .krc-chip-editor-action.is-delete:hover,
+.krc-node .krc-chip-editor-action.is-danger:hover {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+/* Section headers in the shared virtualized list (opt-in grouped mode — e.g. the collection
+   viewer clusters members by model type). Positioned absolutely by library_browser.js (top/height
+   inline); this is the label styling. Full width, sits just above its cluster's cards. */
+.krc-node .krc-lora-list.is-virtualized .krc-virtual-section-header {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 2px 4px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* Range slider (shared/numeric_popover.js adds `krc-range`): a KRC track + thumb in
+   the switch's colours, never the browser's own slider. The fill left of the thumb
+   comes from --krc-range-fill (0..100%), which the popover keeps in sync. */
+input.krc-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input.krc-range:focus {
+  outline: none;
+}
+
+input.krc-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--krc-radius-pill);
+  background: linear-gradient(
+    to right,
+    rgba(var(--krc-accent-green-rgb), 0.62) var(--krc-range-fill, 0%),
+    var(--krc-bg-element) var(--krc-range-fill, 0%)
+  );
+  box-shadow: inset 0 0 0 1px var(--krc-border-edit);
+}
+
+input.krc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-text-primary);
+  box-shadow: var(--krc-shadow-range-thumb);
+}
+
+input.krc-range::-moz-range-track {
+  height: 4px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-bg-element);
+  box-shadow: inset 0 0 0 1px var(--krc-border-edit);
+}
+
+input.krc-range::-moz-range-progress {
+  height: 4px;
+  border-radius: var(--krc-radius-pill);
+  background: rgba(var(--krc-accent-green-rgb), 0.62);
+}
+
+input.krc-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-text-primary);
+  box-shadow: var(--krc-shadow-range-thumb);
+}
+
+input.krc-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--krc-accent-purple-a);
+}
+
+input.krc-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px var(--krc-accent-purple-a);
+}

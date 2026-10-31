@@ -1,0 +1,79 @@
+.wb-preset-btn.krc-action-button.is-delete:hover:not(:disabled) {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+.wb-preset-btn.krc-action-button.is-save:hover:not(:disabled) {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.wb-preset-btn.krc-action-button.is-save:active:not(:disabled) {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  filter: brightness(0.9);
+}
+
+/* preset selection row: dropdown + modified badge + cycle arrows */
+.wb-preset-row {
+  display: grid;
+  grid-template-columns: minmax(70px, 3fr) minmax(0, 7fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  min-width: 0;
+}
+
+.wb-preset-prefix-wrap,
+.wb-preset-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* The preset control is now the shared searchable picker
+   (shared/searchable_select.js + .krc-preset-* in components.css); it just
+   needs to fill the row beside the modified badge. */
+.wb-preset-prefix-wrap .krc-preset-picker,
+.wb-preset-select-wrap .krc-preset-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.wb-cycle.krc-icon-button {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: var(--krc-font-2xs);
+}
+
+/* Status badge slot — holds the shared .krc-status-badge (Modified / Stale),
+   rebuilt by preset_controls.js; empty and zero-width when the preset is clean. */
+.wb-status-slot {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+/* preset action buttons (top), with a grouping divider below */
+.wb-preset-actions {
+  display: flex;
+  gap: 3px;
+  min-width: 0;
+  margin-top: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--krc-border-subtle);
+}
+
+.wb-preset-btn.krc-action-button {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--krc-border-subtle);
+  height: 18px;
+  padding: 0 4px;
+  font-size: var(--krc-font-2xs);
+  letter-spacing: 0.3px;
+}

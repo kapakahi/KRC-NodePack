@@ -1,0 +1,97 @@
+/* chips */
+.krc-pm .krc-chip-list { align-content:flex-start; height:150px; max-height:150px; background:var(--krc-chip-list-wash),var(--krc-bg-element); }
+.krc-pm[data-krc-theme="native"] .krc-chip-list { background:var(--krc-native-chip-shade); }
+.krc-pm .krc-chip-list-shell {
+  display:block;
+  position:relative;
+  width:calc(100% + var(--krc-browser-scrollbar-nudge));
+  height:150px;
+  max-height:150px;
+  overflow:visible;
+  padding:0;
+}
+.krc-pm .krc-chip-list-bg {
+  position:absolute;
+  inset:0 var(--krc-browser-scrollbar-nudge) 0 0;
+  border-radius:var(--krc-radius-lg);
+  background:var(--krc-bg-element);
+  pointer-events:none;
+}
+.krc-pm[data-krc-theme="native"] .krc-chip-list-bg {
+  background:var(--krc-native-chip-shade);
+}
+.krc-pm .krc-chip-list-shell > .krc-chip-list-scroll {
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-wrap:wrap;
+  align-content:flex-start;
+  gap:6px;
+  width:100%;
+  height:100%;
+  max-height:none;
+  min-width:0;
+  padding:5px;
+  padding-right:calc(5px + var(--krc-browser-scrollbar-nudge));
+  border-radius:var(--krc-radius-lg);
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+.krc-pm .krc-action-button.is-delete:hover:not(:disabled),
+.krc-pm .krc-thumb-action.is-delete:hover:not(:disabled) {
+  background:var(--krc-accent-red);
+  color:var(--krc-on-accent);
+}
+
+/* Body children: search, optional Portal profile picker, chips, list, footer.
+   Only the card list receives the flexible row; chips keep their fixed height. */
+.krc-pm .krc-browser-body { display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:7px; flex:1 1 auto; min-height:0; }
+.krc-pm .krc-browser-body.has-profile-picker { grid-template-rows:auto auto auto minmax(0,1fr) auto; }
+.krc-pm .krc-footer { padding-top:2px; }
+
+/* card list */
+.krc-pm .krc-lora-card { padding-right:32px; }
+.krc-pm .krc-lora-card.is-selected {
+  background:var(--krc-bg-element);
+}
+.krc-pm .krc-lora-card.is-selected[data-card-color]:not([data-card-color=""]) {
+  background:linear-gradient(0deg,var(--krc-card-color-soft),var(--krc-card-color-soft)),var(--krc-bg-element);
+}
+.krc-pm .krc-lora-card.is-dragging {
+  border-color:var(--krc-accent-green);
+  opacity:0.58;
+}
+.krc-pm .krc-lora-list.is-grid .krc-lora-card { padding-right:var(--krc-browser-card-padding); }
+/* Thumb-list uses the shared fixed thumb/card tokens so text and badge flow
+   cannot move the image box or alter row height. */
+.krc-pm .krc-lora-list.is-thumb .krc-lora-card { padding-right:32px; }
+.krc-pm .krc-lora-list.is-thumb .krc-lora-body { display:flex; flex-direction:column; gap:4px; height:var(--krc-browser-thumb-height); min-height:0; overflow:hidden; }
+.krc-pm .krc-lora-list.is-thumb .krc-card-meta { display:flex; align-items:center; gap:5px; min-width:0; overflow:hidden; }
+.krc-pm .krc-lora-list.is-thumb .krc-card-meta .krc-badge-row { flex:0 0 auto; flex-wrap:nowrap; margin-top:0; }
+.krc-pm .krc-lora-list.is-list .krc-card-meta { display:flex; align-items:center; gap:5px; min-width:0; }
+.krc-pm .krc-lora-list.is-list .krc-card-meta .krc-badge-row { flex:0 0 auto; margin-top:0; }
+.krc-pm .krc-lora-thumb { font-size:var(--krc-font-2xl); }
+.krc-pm .krc-lora-body { min-width:0; }
+.krc-pm .krc-lora-name { color:var(--krc-text-primary); font-size:var(--krc-font-base); line-height:1.25; hyphens:auto; overflow-wrap:break-word; word-break:normal; white-space:normal; }
+.krc-pm .krc-lora-sub { color:var(--krc-text-muted); font-size:var(--krc-font-xs); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.krc-pm .krc-card-meta { min-width:0; }
+.krc-pm .krc-card-fav { color:var(--krc-text-muted); font-size:var(--krc-font-sm); }
+.krc-pm .krc-card-fav.is-on { color:var(--krc-accent-gold); }
+.krc-pm .krc-badge-row { margin-top:2px; }
+.krc-pm .krc-card-badge.is-json { background:rgba(var(--krc-accent-blue-b-rgb),0.88); }
+.krc-pm .krc-card-badge.is-draft { background:rgba(var(--krc-status-draft-rgb),0.92); }
+.krc-node.krc-pm { --krc-action-button-width:58px; --krc-action-button-padding:0; --krc-action-button-font:500 9px/1 Inter,ui-sans-serif,system-ui,sans-serif; --krc-action-button-letter-spacing:0.25px; }
+.krc-node.krc-pm .krc-action-button.is-danger { font:500 var(--krc-font-2xs)/1 Inter,ui-sans-serif,system-ui,sans-serif; letter-spacing:0.1px; }
+.krc-pm .krc-io-wrap { position:relative; width:24px; height:24px; }
+.krc-pm .krc-io-button { display:grid; place-items:center; width:24px; height:24px; padding:0; border:0; border-radius:var(--krc-radius-lg);
+  background:var(--krc-control-bg,var(--krc-bg-element)); color:var(--krc-text-secondary); cursor:pointer; font:inherit; font-size:var(--krc-font-md); }
+.krc-pm .krc-io-button:hover { background:var(--krc-control-hover-bg,var(--krc-bg-deeper)); color:var(--krc-text-primary); }
+.krc-pm .krc-icon-button { font-size:var(--krc-font-base); }
+.krc-pm .krc-action-button.is-danger { background:var(--krc-danger-armed-bg); color:var(--krc-on-accent); }
+
+/* Stale record: the save button becomes a blue SYNC (push this node's version up
+   as the global one). Higher specificity than the shared green .krc-save-button. */
+.krc-pm .krc-save-button.is-sync,
+.krc-pm .krc-save-button.is-sync:hover {
+  background:rgba(var(--krc-status-sync-rgb),0.92); color:var(--krc-on-accent);
+}

@@ -1,0 +1,195 @@
+black
+white
+red
+blue
+green
+yellow
+orange
+purple
+pink
+brown
+grey
+silver
+gold
+beige
+tan
+cream
+ivory
+maroon
+crimson
+scarlet
+burgundy
+navy
+azure
+cobalt
+cyan
+teal
+turquoise
+emerald
+forest green
+lime
+olive
+chartreuse
+mint
+lavender
+violet
+indigo
+magenta
+fuchsia
+rose
+salmon
+peach
+coral
+apricot
+amber
+mustard
+saffron
+ochre
+sienna
+umber
+sepia
+rust
+brick red
+wine red
+chocolate
+espresso
+charcoal
+slate
+ash grey
+stone grey
+steel blue
+sky blue
+ice blue
+sand
+khaki
+linen
+bone
+snow white
+jet black
+onyx
+pearl
+bronze
+copper
+brass
+platinum
+chrome
+gunmetal
+midnight blue
+sea green
+ocean blue
+grass green
+sunset orange
+sunflower yellow
+dusty pink
+dusty blue
+dusty green
+muted red
+muted blue
+muted purple
+muted yellow
+neon red
+neon blue
+neon green
+neon pink
+neon yellow
+ultraviolet
+electric blue
+deep cyan
+bright cyan
+aqua blue
+deep green
+spring green
+kelly green
+hunter green
+pistachio
+seafoam
+jade green
+bottle green
+basil green
+fern green
+apple green
+acid green
+neon lime
+fluorescent green
+lemon lime
+canary yellow
+sunshine yellow
+butter yellow
+golden yellow
+honey yellow
+banana yellow
+saffron yellow
+amber gold
+marigold orange
+tangerine
+mandarin orange
+burnt orange
+pumpkin orange
+rust orange
+terracotta orange
+copper orange
+brick orange
+tomato red
+fire engine red
+cherry red
+ruby red
+garnet red
+wine red
+oxblood
+mahogany
+claret
+plum purple
+grape purple
+eggplant purple
+amethyst purple
+royal purple
+deep violet
+electric purple
+hot pink
+bubblegum pink
+carnation pink
+rose pink
+blush pink
+salmon pink
+coral pink
+peach pink
+apricot peach
+sand beige
+desert beige
+warm beige
+cool beige
+stone beige
+light grey
+medium grey
+dark grey
+slate grey
+smoke grey
+ash grey
+cloud white
+milky white
+off white
+paper white
+chalk white
+jet black
+void black
+ink black
+obsidian black
+midnight black
+steel grey
+iron grey
+metallic silver
+brushed silver
+platinum white
+champagne gold
+rose gold
+antique gold
+bronze brown
+copper brown
+sepia brown
+espresso brown
+walnut brown
+caramel brown
+toffee brown
+mocha brown
+sand brown
+clay brown

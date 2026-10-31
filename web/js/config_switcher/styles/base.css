@@ -1,0 +1,598 @@
+.krc-node.ddp-wrap {
+  contain: layout;
+  width: 100%;
+  height: auto !important;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.krc-node.ddp-wrap {
+  position: relative;
+  contain: layout paint;
+  overflow: hidden;
+}
+
+.krc-node.ddp-wrap.is-editing-fields {
+  overflow: visible;
+}
+
+.krc-canvas-dragging .lg-node:has(.ddp-wrap),
+.krc-canvas-dragging .ddp-wrap {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.krc-canvas-dragging .ddp-wrap {
+  overflow: hidden !important;
+}
+
+.lg-node:has(.ddp-wrap) {
+  --min-node-width: 600px !important;
+  width: max(var(--node-width), 600px) !important;
+  min-width: 600px !important;
+}
+
+.lg-node:has(.ddp-wrap) > [class*="bg-node-component-header-surface"] {
+  width: max(var(--node-width), 600px) !important;
+  min-width: 600px !important;
+}
+
+.lg-node:has(.ddp-wrap) .lg-node-widget:has(.ddp-wrap) {
+  margin-top: 0 !important;
+}
+
+.lg-node:has(.ddp-wrap) .lg-node-widgets {
+  gap: 0 !important;
+  row-gap: 0 !important;
+}
+
+.lg-node:has(.ddp-wrap) .lg-node-widget:has(.ddp-wrap) ~ .lg-node-widget {
+  display: none !important;
+}
+
+.ddp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--krc-radius-2xl);
+  box-sizing: border-box;
+  background: var(--krc-bg-col);
+}
+
+.ddp-panel {
+  min-height: 100%;
+}
+
+.ddp-wrap.is-empty-start .ddp-panel {
+  min-height: 92px;
+}
+
+.ddp-panel,
+.ddp-fields {
+  contain: layout paint;
+}
+
+.ddp-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ddp-bar,
+.ddp-addrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ddp-addrow {
+  justify-content: flex-end;
+}
+
+/* The loaded preset's "Group · Name": a plain label taking the space left of the buttons,
+   cut with an ellipsis before they ever shrink. */
+.ddp-addrow .ddp-preset-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 2px;
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.ddp-addrow .ddp-preset-label.is-missing {
+  color: var(--krc-text-muted);
+  font-style: italic;
+}
+
+.ddp-bar[hidden],
+.ddp-fields[hidden],
+.ddp-addrow[hidden],
+.ddp-empty-state[hidden] {
+  display: none;
+}
+
+.ddp-bar {
+  justify-content: space-between;
+}
+
+.ddp-config-status-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ddp-empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 76px;
+}
+
+.ddp-empty-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ddp-empty-options-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ddp-input {
+  min-width: 0;
+  border: 1px solid var(--krc-border-edit);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-secondary);
+  font: inherit;
+  outline: none;
+  transition: border-color var(--krc-dur-fast), color var(--krc-dur-fast);
+}
+
+.ddp-input {
+  flex: 1;
+}
+
+.ddp-input {
+  padding: 4px 6px;
+}
+
+.ddp-input::placeholder {
+  color: var(--krc-text-muted);
+}
+
+.ddp-input:focus {
+  border-color: var(--krc-accent-purple-a);
+  color: var(--krc-text-primary);
+}
+
+.ddp-model-drop {
+  --ddp-model-card-width: 324px;
+  min-width: 0;
+  border-radius: var(--krc-radius-xl);
+  transition: box-shadow var(--krc-dur-fast);
+}
+
+.ddp-model-drop.is-drop-ok {
+  box-shadow: 0 0 0 1px var(--krc-accent-green);
+}
+
+.ddp-model-drop.is-drop-bad {
+  box-shadow: 0 0 0 1px var(--krc-accent-red);
+}
+
+/* Raw STRING input while a Prompt Vault card hovers over it. */
+.ddp-string-input.is-drop-ok {
+  box-shadow: 0 0 0 1px var(--krc-accent-green);
+}
+
+.ddp-model-drop.is-disabled {
+  opacity: 0.55;
+}
+
+.ddp-model-card,
+.ddp-model-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 14px;
+  align-items: center;
+  gap: var(--krc-browser-card-gap);
+  width: min(100%, var(--ddp-model-card-width, 324px));
+  max-width: 100%;
+  min-width: 0;
+  height: var(--krc-browser-thumb-card-height, 66px);
+  min-height: var(--krc-browser-thumb-card-height, 66px);
+  border: 1px solid transparent;
+  border-radius: var(--krc-browser-card-radius, var(--krc-radius-lg));
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  padding: var(--krc-browser-thumb-offset, 1px) 0 var(--krc-browser-thumb-offset, 1px) var(--krc-browser-thumb-body-left, 82px);
+  overflow: hidden;
+  text-align: left;
+  box-sizing: border-box;
+  transition: border-color var(--krc-dur-fast), background var(--krc-dur-fast), color var(--krc-dur-fast);
+}
+
+.krc-node .krc-lora-card.ddp-model-card,
+.krc-node .krc-lora-card.ddp-model-option,
+.krc-node .ddp-model-card,
+.krc-node .ddp-model-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: var(--krc-browser-card-gap);
+  width: min(100%, var(--ddp-model-card-width, 324px));
+  max-width: 100%;
+  min-width: 0;
+  height: var(--krc-browser-thumb-card-height, 66px);
+  min-height: var(--krc-browser-thumb-card-height, 66px);
+  border: 1px solid transparent;
+  border-radius: var(--krc-browser-card-radius, var(--krc-radius-lg));
+  padding: var(--krc-browser-thumb-offset, 1px) 0 var(--krc-browser-thumb-offset, 1px) var(--krc-browser-thumb-body-left, 82px);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.krc-node .krc-lora-card.ddp-model-card.krc-card-has-notch,
+.krc-node .krc-lora-card.ddp-model-option.krc-card-has-notch {
+  grid-template-columns: minmax(0, 1fr) 14px;
+  width: min(100%, var(--ddp-model-card-width, 324px));
+}
+
+.ddp-model-card[data-card-color]:not([data-card-color=""]),
+.ddp-model-option[data-card-color]:not([data-card-color=""]) {
+  border-color: var(--krc-card-color-border);
+  background: linear-gradient(0deg, var(--krc-card-color-soft), var(--krc-card-color-soft)), var(--krc-bg-element);
+}
+
+.ddp-model-card:hover:not(.is-disabled),
+.ddp-model-option:hover {
+  border-color: var(--krc-border-strong);
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-model-card[data-card-color]:not([data-card-color=""]):hover:not(.is-disabled),
+.ddp-model-option[data-card-color]:not([data-card-color=""]):hover {
+  border-color: var(--krc-card-color-border);
+  background: linear-gradient(0deg, var(--krc-card-color-soft), var(--krc-card-color-soft)), var(--krc-control-hover-bg, var(--krc-bg-deeper));
+}
+
+.ddp-model-card.is-empty {
+  color: var(--krc-text-muted);
+}
+
+.ddp-model-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: var(--krc-browser-thumb-left, 8px);
+  display: grid;
+  place-items: center;
+  width: var(--krc-browser-thumb-width, 64px);
+  height: var(--krc-browser-thumb-height, 64px);
+  border-radius: var(--krc-radius-md);
+  overflow: hidden;
+  /* Match the shared card thumb well (PV/LL/ML .krc-lora-thumb), which sits a
+     shade darker than the card body instead of blending into it. */
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  line-height: 1;
+}
+
+/* Pinned to the frame, like the shared card thumb, so Thumbnail framing shows. */
+.ddp-model-thumb > img,
+.ddp-model-thumb > video {
+  position: absolute;
+  inset: 0;
+}
+
+.ddp-model-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+.ddp-model-card .krc-lora-body,
+.ddp-model-option .krc-lora-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  height: var(--krc-browser-thumb-height, 64px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ddp-model-card .krc-lora-name,
+.ddp-model-option .krc-lora-name {
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-base);
+  font-weight: 500;
+  line-height: 1.25;
+  hyphens: auto;
+  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
+  overflow: hidden;
+}
+
+.ddp-model-card .krc-card-meta,
+.ddp-model-option .krc-card-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 18px;
+  overflow: hidden;
+}
+
+.ddp-model-card .krc-badge-row,
+.ddp-model-option .krc-badge-row {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.ddp-model-card .krc-badge-star,
+.ddp-model-option .krc-badge-star {
+  flex: 0 0 auto;
+  color: var(--krc-accent-gold);
+  font-size: var(--krc-font-base);
+  line-height: 1;
+}
+
+.ddp-model-card .krc-nsfw-badge,
+.ddp-model-option .krc-nsfw-badge {
+  flex: 0 0 auto;
+  background: rgba(var(--krc-accent-red-rgb), 0.9);
+  font-size: var(--krc-font-2xs);
+}
+
+.ddp-model-card .krc-lora-sub,
+.ddp-model-option .krc-lora-sub {
+  flex: 1 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 18px;
+  padding: 1px 0;
+  border: 0;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddp-model-option-remove {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 14px;
+  min-width: 14px;
+  border-left: 1px solid var(--krc-border-subtle);
+  background: var(--krc-control-shade);
+  color: var(--krc-text-muted);
+}
+
+.ddp-model-option-remove {
+  margin: calc(-1 * var(--krc-browser-thumb-offset, 1px)) 0 calc(-1 * var(--krc-browser-thumb-offset, 1px)) 0;
+  padding: 0;
+  border-width: 0 0 0 1px;
+  border-radius: 0 var(--krc-browser-card-radius, var(--krc-radius-lg)) var(--krc-browser-card-radius, var(--krc-radius-lg)) 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-md);
+  line-height: 1;
+}
+
+.ddp-model-option-remove:hover {
+  color: var(--krc-text-primary);
+}
+
+.ddp-model-menu {
+  position: fixed;
+  z-index: var(--krc-z-field-menu);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow: auto;
+  /* Extra right padding leaves a gutter between the cards' remove button and the
+     scrollbar, so the scrollbar doesn't sit on top of the remove hit target. */
+  padding: 5px 13px 5px 13px;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-col);
+  box-shadow: var(--krc-shadow-floating);
+  box-sizing: border-box;
+}
+
+.ddp-model-option {
+  grid-template-columns: 1fr 14px;
+}
+
+.ddp-model-option.is-selected {
+  border-color: var(--krc-accent-green);
+}
+
+.ddp-model-option.is-selected[data-card-color]:not([data-card-color=""]) {
+  background: linear-gradient(0deg, var(--krc-card-color-soft), var(--krc-card-color-soft)), var(--krc-bg-col);
+}
+
+.ddp-model-menu-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.ddp-model-clear {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-shade);
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  line-height: 1;
+}
+
+.ddp-model-clear:hover {
+  border-color: var(--krc-border-strong);
+  color: var(--krc-text-primary);
+}
+
+/* Armed confirm state: one more click clears the selection. */
+.ddp-model-clear.is-confirming,
+.ddp-model-clear.is-confirming:hover {
+  border-color: var(--krc-accent-red);
+  color: var(--krc-accent-red);
+}
+
+.ddp-model-empty {
+  padding: 10px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+  text-align: center;
+}
+
+.ddp-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  line-height: 1;
+  transition: background var(--krc-dur-fast), color var(--krc-dur-fast), border-color var(--krc-dur-fast), transform var(--krc-dur-fast);
+}
+
+.ddp-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.ddp-icon {
+  font-size: var(--krc-font-base);
+}
+
+.ddp-remove-glyph {
+  display: inline-block;
+  transform: translate(0.5px, -1px); /* dialed in via glyph tuner */
+}
+
+.ddp-icon:hover {
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+}
+
+.ddp-remove {
+  color: var(--krc-text-muted);
+}
+
+.ddp-remove:hover {
+  border-color: var(--krc-border-subtle);
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-remove.is-confirming {
+  border-color: transparent;
+  background: var(--krc-danger-armed-bg);
+  color: var(--krc-on-accent);
+}
+
+.ddp-remove.is-confirming:hover {
+  background: var(--krc-danger-armed-hover-bg);
+  color: var(--krc-on-accent);
+}
+
+.ddp-icon:active {
+  transform: translateY(1px);
+}
+
+.ddp-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Optional list view for model/prompt field cards (per-node, set from the
+   Options modal -> Appearance). CS styles its own card skin (.ddp-model-card),
+   so the compact list look is bespoke here rather than inherited from the shared
+   browser list view. Two flavors set on the .ddp-model-field host:
+     .is-list                -> compact row, tiny thumbnail kept
+     .is-list.is-list-text   -> compact row, thumbnail hidden
+   Card height mirrors --krc-browser-list-card-min-height (34px); the matching
+   node-height math is DDP_MODEL_FIELD_LIST_H in config.js. The .krc-node prefix
+   raises specificity above the base .krc-node .krc-lora-card.ddp-model-card rule.
+   --------------------------------------------------------------------------- */
+.ddp-model-field.is-list {
+  min-height: 38px; /* 34px list card + .ddp-field 2px padding top/bottom */
+}
+
+.krc-node .ddp-model-field.is-list .ddp-model-card {
+  height: var(--krc-browser-list-card-min-height, 34px);
+  min-height: var(--krc-browser-list-card-min-height, 34px);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Fill the shorter row and vertically center the two text lines. */
+.krc-node .ddp-model-field.is-list .ddp-model-card .krc-lora-body {
+  height: auto;
+  gap: 1px;
+  justify-content: center;
+}
+
+/* Both lines stay single-line with ellipsis — never wrap in the compact row. */
+.krc-node .ddp-model-field.is-list .ddp-model-card .krc-lora-name {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.krc-node .ddp-model-field.is-list .ddp-model-card .krc-card-meta,
+.krc-node .ddp-model-field.is-list .ddp-model-card .krc-lora-sub {
+  min-height: 0;
+}
+
+/* Tiny-thumbnail flavor: shrink the thumb to the shared list-thumb width, let it
+   fill the row height, and inset the body just past it. */
+.krc-node .ddp-model-field.is-list:not(.is-list-text) .ddp-model-card {
+  padding-left: calc(var(--krc-browser-thumb-left, 8px) + var(--krc-browser-list-thumb-width, 32px) + 6px);
+}
+
+.krc-node .ddp-model-field.is-list:not(.is-list-text) .ddp-model-thumb {
+  top: 50%;
+  bottom: auto;
+  height: var(--krc-browser-list-thumb-width, 32px);
+  width: var(--krc-browser-list-thumb-width, 32px);
+}
+
+/* Text-only flavor: drop the thumbnail and reclaim its gutter. */
+.krc-node .ddp-model-field.is-list.is-list-text .ddp-model-card {
+  padding-left: var(--krc-browser-thumb-left, 8px);
+}
+
+.krc-node .ddp-model-field.is-list.is-list-text .ddp-model-thumb {
+  display: none;
+}

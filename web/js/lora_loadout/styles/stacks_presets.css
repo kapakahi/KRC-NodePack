@@ -1,0 +1,706 @@
+.krc-lora-stacker .krc-stack-column {
+  display: grid;
+  /* Fixed, never stretched (cards keep one size — project rule): preset panel 118 + two
+     stacks of 268 = padding 8 + header 24 + 6 x (slot card 34 + gap 4) + padding 8.
+     Column = 668. Mirrors KRC_SLOT_CARD_HEIGHT (shared/node_limits.js) and
+     DOM_MIN_HEIGHT (lora_loadout/constants.js). */
+  grid-template-rows: auto 268px 268px;
+  gap: 7px;
+  align-content: start;
+  align-self: start;
+  height: 668px;
+  max-height: 668px;
+  min-height: 0;
+  overflow: visible;
+}
+
+.krc-lora-stacker .krc-stack {
+  display: grid;
+  grid-template-rows: 24px repeat(6, 34px);
+  gap: 4px;
+  height: auto;
+  min-height: 268px;
+}
+
+/* No divider under a stack's header row (the preset panel keeps its title line). */
+.krc-lora-stacker .krc-stack > .krc-panel-header {
+  border-bottom: 0;
+}
+
+/* Fixed 118 (its content measures 98): with the two 268 stacks the column is exactly
+   668, bottom-aligned with Prompt Vault. The spare room sits under the preset buttons. */
+.krc-lora-stacker .krc-preset-panel {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  height: 118px;
+  min-height: 118px;
+  max-height: 118px;
+  overflow: visible;
+  position: relative;
+  z-index: var(--krc-z-preset-panel);
+}
+
+.krc-lora-stacker .krc-preset-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* Preset link indicator (PRESET_LINK_GAMEPLAN.md step 5): a plug glyph after "Preset". */
+.krc-lora-stacker .krc-preset-link {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--krc-text-muted);
+}
+
+.krc-lora-stacker .krc-preset-link-glyph,
+.krc-lora-stacker .krc-preset-link-glyph svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
+/* Closer to the title than the title row's 7px gap. */
+.krc-lora-stacker .krc-preset-link-slot {
+  display: inline-flex;
+  align-items: center;
+  margin-left: -3px;
+}
+
+.krc-lora-stacker .krc-preset-link-slot:empty {
+  display: none;
+}
+
+/* Following: the linked preset drives this node. */
+.krc-lora-stacker .krc-preset-link.is-following {
+  color: var(--krc-accent-green);
+}
+
+/* Linked but not driving: Auto off, no preset for this loadout, or PV muted. */
+.krc-lora-stacker .krc-preset-link.is-paused,
+.krc-lora-stacker .krc-preset-link.is-no-entry,
+.krc-lora-stacker .krc-preset-link.is-inactive {
+  opacity: 0.55;
+}
+
+.krc-lora-stacker .krc-preset-link.is-missing {
+  color: var(--krc-accent-red);
+}
+
+.krc-lora-stacker .krc-stack-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.krc-lora-stacker .krc-switch-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 20px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  text-transform: uppercase;
+}
+
+.krc-lora-stacker .krc-switch-label:empty {
+  display: none;
+}
+
+.krc-lora-stacker .krc-switch-track {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-bg-element);
+  box-shadow: inset 0 0 0 1px var(--krc-border-edit);
+}
+
+.krc-lora-stacker .krc-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-text-secondary);
+  transition: transform var(--krc-dur-base) ease, background var(--krc-dur-base) ease;
+}
+
+.krc-lora-stacker .krc-switch-toggle.is-on {
+  color: var(--krc-text-primary);
+}
+
+.krc-lora-stacker .krc-switch-toggle.is-on .krc-switch-track {
+  background: rgba(var(--krc-accent-green-rgb), 0.62);
+  box-shadow: var(--krc-on-ring);
+}
+
+.krc-lora-stacker .krc-switch-toggle.is-on .krc-switch-knob {
+  background: var(--krc-text-primary);
+  transform: translateX(14px);
+}
+
+.krc-lora-stacker .krc-info-missing .krc-missing-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+}
+
+.krc-lora-stacker .krc-missing-hero {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+}
+
+.krc-lora-stacker .krc-missing-hero .krc-info-thumb {
+  opacity: 0.75;
+  filter: grayscale(0.4);
+}
+
+/* Position context so the description can lock to the thumbnail's height:
+   the thumbnail's square aspect-ratio drives the row height, and the absolutely
+   positioned description fills its cell and scrolls. */
+.krc-lora-stacker .krc-missing-desc-cell {
+  position: relative;
+  align-self: stretch;
+  min-width: 0;
+}
+
+.krc-lora-stacker .krc-missing-desc {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-secondary);
+  font: 500 var(--krc-font-sm)/1.4 Inter, ui-sans-serif, system-ui, sans-serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.krc-lora-stacker .krc-missing-desc.is-empty {
+  color: var(--krc-text-muted);
+  font-style: italic;
+}
+
+.krc-lora-stacker .krc-missing-name {
+  font: 700 var(--krc-font-base)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--krc-text-primary);
+}
+
+.krc-lora-stacker .krc-missing-path {
+  font: 500 var(--krc-font-sm)/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--krc-accent-red);
+  word-break: break-all;
+  background: rgba(var(--krc-accent-red-rgb), 0.12);
+  border-radius: var(--krc-radius-xs);
+  padding: 4px 6px;
+}
+
+.krc-lora-stacker .krc-missing-meta,
+.krc-lora-stacker .krc-missing-id {
+  font: 500 var(--krc-font-xs)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--krc-text-muted);
+  word-break: break-all;
+}
+
+.krc-lora-stacker .krc-missing-note {
+  font: 500 var(--krc-font-xs)/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--krc-text-muted);
+  font-style: italic;
+}
+
+.krc-lora-stacker .krc-missing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 8px 8px;
+}
+
+.krc-lora-stacker .krc-missing-actions .krc-action-button {
+  flex: 1 1 auto;
+}
+
+.krc-lora-stacker .krc-missing-actions .is-danger {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}
+
+/* ============================================================================
+   Preset slot, rendered as the shared list-card (.krc-card-slot). Reuses
+   model_card's DOM — [enable] [thumb(abs)] [body: name + badge row] [strength+
+   remove group] [notch] — and mirrors the browser list-card look (one slot-
+   height tall, two rows, single-line title, optional portrait thumbnail) so the
+   two can't drift. Enable/strength/remove keep their existing control styles
+   (.krc-enabled / .krc-strength / .krc-slot-remove).
+   ========================================================================== */
+/* Compound with .krc-lora-card (0,4,0) so this beats the base
+   .krc-lora-card / .krc-lora-card.krc-card-has-notch grid+padding regardless of
+   stylesheet load order — the Model Library modal re-injects components.css on
+   open, which would otherwise flip an equal-specificity tie and revert the slot
+   to the base card grid (a big rightward nudge). */
+.krc-node.krc-lora-stacker .krc-card-slot.krc-lora-card {
+  --krc-slot-enable-col: 16px;
+  --krc-slot-col-gap: 5px;
+  --krc-list-lead-offset: calc(var(--krc-slot-enable-col) + var(--krc-slot-col-gap));
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--krc-slot-enable-col) minmax(0, 1fr) auto 14px;
+  align-items: center;
+  align-content: center;
+  column-gap: var(--krc-slot-col-gap);
+  height: 100%;
+  min-height: var(--krc-browser-list-card-min-height);
+  padding: 0;
+  border: 1px solid var(--krc-card-edge);
+  border-radius: var(--krc-browser-card-radius);
+  background: var(--krc-bg-element);
+  overflow: hidden;
+  cursor: grab;
+}
+
+/* Title stays on ONE line (ellipsis; full text on hover) — badge row is row 2. */
+.krc-node.krc-lora-stacker .krc-card-slot .krc-lora-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot .krc-card-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Trailing group: strength + remove, before the notch. */
+.krc-node.krc-lora-stacker .krc-card-slot .krc-slot-trailing {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Nudge just the enable checkbox right within its (fixed-width) column, so the
+   thumb/title/badge/strength stay exactly where they are. */
+.krc-node.krc-lora-stacker .krc-card-slot .krc-enabled {
+  margin-left: 3px;
+}
+
+/* Optional square thumbnail (driven by the same listThumbs toggle). Anchored
+   past the enable checkbox via the lead offset; body inset to clear it. */
+.krc-node.krc-lora-stacker .krc-card-slot .krc-lora-thumb {
+  display: none;
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot.krc-list-thumbs .krc-lora-thumb {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  left: var(--krc-list-lead-offset);
+  /* Keep the standard list thumbnail height, centered even in taller slots. */
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--krc-browser-list-thumb-width);
+  height: var(--krc-browser-list-thumb-width);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--krc-radius-xs);
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot.krc-list-thumbs .krc-lora-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--krc-thumbnail-fit, cover);
+  object-position: var(--krc-thumbnail-position, 50% 25%);
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot.krc-list-thumbs .krc-lora-body {
+  padding-left: calc(var(--krc-browser-list-thumb-width) + 6px);
+}
+
+/* Notch spans the full card height (row is short; stretch+margin won't reach). */
+.krc-node.krc-lora-stacker .krc-card-slot .krc-card-notch-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: auto;
+  margin: 0;
+}
+
+/* Slot states. Card color rides the shared .krc-lora-card[data-card-color] rule
+   since the slot is also a .krc-lora-card. */
+.krc-node.krc-lora-stacker .krc-card-slot.is-disabled .krc-lora-body,
+.krc-node.krc-lora-stacker .krc-card-slot.is-disabled .krc-lora-thumb {
+  opacity: 0.45;
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot.is-empty {
+  grid-template-columns: 1fr;
+  place-items: center;
+  border: 1px dashed var(--krc-border-edit);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-muted);
+  cursor: default;
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot.is-dragging {
+  border-color: var(--krc-accent-green);
+  opacity: 0.58;
+  cursor: grabbing;
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot.is-drop-target {
+  border-color: var(--krc-accent-green);
+  background: linear-gradient(0deg, rgba(var(--krc-accent-green-rgb), 0.24), rgba(var(--krc-accent-green-rgb), 0.24)), var(--krc-bg-element);
+  box-shadow: var(--krc-drop-ok-ring);
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot.is-drop-reject {
+  border-color: var(--krc-accent-red);
+  background: linear-gradient(0deg, rgba(var(--krc-accent-red-rgb), 0.22), rgba(var(--krc-accent-red-rgb), 0.22)), var(--krc-bg-element);
+  box-shadow: var(--krc-drop-reject-ring);
+}
+
+/* Badge-row-off mode (LL preset slots only): drop row 2 and let the title wrap
+   to two lines — the "old slot" feel. */
+.krc-node.krc-lora-stacker .krc-card-slot.krc-no-badges .krc-card-meta {
+  display: none;
+}
+
+.krc-node.krc-lora-stacker .krc-card-slot.krc-no-badges .krc-lora-name {
+  white-space: normal;
+  text-overflow: clip;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.krc-lora-stacker .krc-enabled {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-xs);
+  appearance: none;
+  background: var(--krc-bg-deep);
+  cursor: pointer;
+}
+
+.krc-lora-stacker .krc-enabled:checked {
+  border-color: var(--krc-accent-green);
+  background: var(--krc-accent-green);
+  box-shadow: var(--krc-check-ring);
+}
+
+.krc-lora-stacker .krc-enabled:checked::after {
+  content: "";
+  width: 4px;
+  height: 8px;
+  border: solid var(--krc-text-primary);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.krc-lora-stacker .krc-enabled:focus-visible {
+  outline: 1px solid var(--krc-accent-green);
+  outline-offset: 2px;
+}
+
+.krc-lora-stacker .krc-strength {
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--krc-hairline);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-secondary);
+  text-align: center;
+  font-size: var(--krc-font-xs);
+  font-weight: 500;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.krc-lora-stacker .krc-strength:hover,
+.krc-lora-stacker .krc-strength:focus-visible {
+  color: var(--krc-text-primary);
+  background: var(--krc-hover-wash);
+  outline: none;
+}
+
+.krc-strength-popover {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: var(--krc-z-popover);
+  display: grid;
+  gap: 8px;
+  width: 238px;
+  min-width: 0;
+  max-width: calc(100vw - 16px);
+  height: auto;
+  min-height: 0;
+  padding: 8px;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-popup-bg, var(--krc-bg-deep));
+  color: var(--krc-text-primary);
+  font: var(--krc-font-base)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  box-shadow: var(--krc-shadow-popover);
+  overflow: hidden;
+}
+
+.krc-strength-popover * {
+  box-sizing: border-box;
+}
+
+.krc-strength-value-input {
+  width: 100%;
+  height: 26px;
+  box-sizing: border-box;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font: inherit;
+  font-size: var(--krc-font-base);
+  text-align: center;
+}
+
+.krc-strength-value-input:focus {
+  border-color: var(--krc-accent-green);
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(var(--krc-accent-green-rgb), 0.28);
+}
+
+.krc-strength-slider-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
+  align-items: center;
+  gap: 6px;
+}
+
+.krc-strength-slider {
+  width: 100%;
+}
+
+.krc-strength-nudge {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xl-plus);
+  line-height: 1;
+}
+
+.krc-strength-nudge:hover,
+.krc-strength-nudge:focus-visible {
+  color: var(--krc-text-primary);
+  background: var(--krc-hover-wash);
+  outline: none;
+}
+
+.krc-lora-stacker .krc-slot-remove {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-control-compact-bg, var(--krc-bg-deep));
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font-size: var(--krc-font-base);
+  line-height: 16px;
+}
+
+.krc-lora-stacker .krc-slot-remove:hover {
+  color: var(--krc-text-primary);
+  background: var(--krc-remove-hover-wash);
+}
+
+.krc-lora-stacker .krc-slot-remove-glyph {
+  display: inline-block;
+  transform: translate(0.25px, -0.75px); /* dialed in via glyph tuner */
+}
+
+.krc-lora-stacker .krc-preset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 6fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* One column: the preset picker is its only child, and an empty second column still
+   added a column gap, so the picker sat 12px from the ▲ button instead of the row's 6px. */
+.krc-lora-stacker .krc-preset-select-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* The searchable preset picker (.krc-preset-picker/-search-*/-menu/-option) now
+   lives in shared/components.css under .krc-node so WordBank shares it. Only the
+   LoRA-Loadout-specific surrounding layout stays here. */
+
+.krc-lora-stacker .krc-preset-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;          /* hold intrinsic width in the tight mini header */
+  flex-wrap: nowrap;
+}
+
+.krc-lora-stacker .krc-preset-controls > * {
+  flex: 0 0 auto;
+}
+
+.krc-lora-stacker .krc-preset-modified-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  margin-right: 4px;
+}
+
+.krc-lora-stacker.is-mini .krc-preset-panel > .krc-panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+}
+
+.krc-lora-stacker.is-mini .krc-preset-title {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.krc-lora-stacker.is-mini .krc-preset-controls {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.krc-lora-stacker.is-mini .krc-preset-modified-slot {
+  margin-right: 2px;
+}
+
+.krc-lora-stacker.is-mini .krc-preset-controls .krc-config-button {
+  width: 22px;
+  height: 22px;
+  font-size: var(--krc-font-base);
+}
+
+.krc-lora-stacker .krc-preset-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.krc-lora-stacker .krc-preset-warning {
+  margin-top: 5px;
+  padding: 6px 8px;
+  border-radius: var(--krc-radius-sm);
+  border-left: 3px solid var(--krc-accent-red);
+  background: rgba(var(--krc-accent-red-rgb), 0.92);
+  color: var(--krc-on-accent);
+  font: 700 var(--krc-font-sm)/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: help;
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button.krc-action-button {
+  flex: 1 1 0;
+  height: 15px;
+  min-width: 0;
+  padding: 0 2px;
+  font: 500 var(--krc-font-3xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="new"] {
+  flex: 1 1 0;
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="save"],
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="delete"] {
+  flex: 1 1 0;
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="rename"] {
+  flex: 1 1 0;
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="duplicate"] {
+  flex: 1 1 0;
+}
+
+.krc-lora-stacker .krc-preset-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="save"]:hover:not(:disabled) {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="save"]:active:not(:disabled) {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  filter: brightness(0.9);
+}
+
+/* Stale SYNC state on the save button stays blue through hover/active (the green
+   save-hover rule above would otherwise win on specificity). */
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="save"].is-sync,
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="save"].is-sync:hover:not(:disabled) {
+  background: rgba(var(--krc-status-sync-rgb), 0.92);
+  color: var(--krc-on-accent);
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="save"].is-sync:active:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.krc-node.krc-lora-stacker .krc-preset-button[data-action="delete"]:hover:not(:disabled) {
+  background: var(--krc-accent-red);
+  color: var(--krc-on-accent);
+}

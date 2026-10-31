@@ -1,0 +1,35 @@
+/* Info Panel pages — the shared shell for non-item pages (model_library/info_page.js):
+   Fetch, Stats. Token-only. */
+
+/* Header + one scrolling body instead of the item panel's 5-row grid. */
+.krc-model-library .krc-info.krc-info-page {
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.krc-model-library .krc-info-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding: 2px 8px 10px;
+  overflow-y: auto;
+}
+
+.krc-model-library .krc-info-page-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 9px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deep);
+}
+
+.krc-model-library .krc-info-page-section-title {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}

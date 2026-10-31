@@ -1,0 +1,82 @@
+/* Subtle draggable A/B resize handle: a small line (~save button width) that
+   fills the space between Prompt B's label and the Append button and centers
+   itself there. Lives in the gap between the two boxes. */
+.krc-pm .krc-prompt-divider { flex:1 1 auto; align-self:stretch; min-width:0; display:flex; align-items:center; justify-content:center; cursor:row-resize; touch-action:none; }
+.krc-pm .krc-prompt-divider::before { content:""; width:58px; height:2px; border-radius:var(--krc-radius-3xs); background:var(--krc-border-edit); opacity:0.6; transition:opacity var(--krc-dur-base) ease, background var(--krc-dur-base) ease; }
+.krc-pm .krc-prompt-divider:hover::before,
+.krc-pm .krc-prompt-divider.is-dragging::before { opacity:1; background:var(--krc-text-muted); }
+
+.krc-pm .krc-text-field { display:flex; flex-direction:column; min-height:0; }
+.krc-pm .krc-text-field.is-large { flex:1 1 auto; }
+.krc-pm .krc-text-field.is-large .krc-prompt-wrap { flex:1 1 auto; display:flex; min-height:0; }
+.krc-pm .krc-text-field.is-notes .krc-prompt-wrap { flex:1 1 auto; display:flex; min-height:0; }
+.krc-pm .krc-prompt-b-controls,
+.krc-pm .krc-prompt-a-controls { display:flex; align-items:center; justify-content:flex-end; gap:5px; margin-left:auto; }
+.krc-pm .krc-inline-action.is-icon { min-width:22px; padding:0 5px; font-size:var(--krc-font-base); }
+.krc-pm .krc-inline-action:disabled { opacity:0.4; cursor:default; }
+.krc-pm .krc-inline-action {
+  display:grid;
+  place-items:center;
+  height:16px;
+  min-width:34px;
+  padding:0 6px;
+  border:0;
+  border-radius:var(--krc-radius-sm);
+  background:var(--krc-control-bg,var(--krc-bg-element));
+  color:var(--krc-text-secondary);
+  cursor:pointer;
+  font:600 var(--krc-font-3xs)/1 Inter,ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:0.35px;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.krc-pm .krc-inline-action:hover,
+.krc-pm .krc-inline-action:focus-visible {
+  background:var(--krc-control-hover-bg,var(--krc-bg-deeper));
+  color:var(--krc-text-primary);
+}
+.krc-pm .krc-inline-action.is-on {
+  background:var(--krc-accent-green);
+  color:var(--krc-on-accent);
+}
+.krc-pm .krc-prompt-input-pill { display:flex; align-items:center; height:16px; }
+.krc-pm .krc-prompt-input-pill .krc-inline-action {
+  height:16px;
+  border-radius:0;
+}
+.krc-pm .krc-prompt-input-pill .krc-prompt-input-toggle {
+  flex:1 1 auto;
+  min-width:34px;
+  border-radius:var(--krc-radius-sm) 0 0 var(--krc-radius-sm);
+}
+.krc-pm .krc-prompt-input-pill .krc-prompt-input-target {
+  flex:0 0 auto;
+  min-width:18px;
+  padding:0 5px;
+  border-left:1px solid var(--krc-border-subtle);
+  border-radius:0 var(--krc-radius-sm) var(--krc-radius-sm) 0;
+}
+.krc-pm .krc-prompt-wrap { position:relative; min-width:0; }
+.krc-pm .krc-prompt-controls {
+  position:absolute;
+  right:5px;
+  top:5px;
+  display:flex;
+  flex-direction:column;   /* clear stacked above copy → narrow top-right column */
+  align-items:center;
+  justify-content:flex-end;
+  gap:4px;
+  pointer-events:auto;
+}
+.krc-pm .krc-prompt { min-height:0; height:100%; }
+.krc-pm .krc-description { min-height:0; height:100%; }
+/* Box comes from the shared .krc-icon-button.is-compact variant; only the glyph
+   size is local. */
+.krc-pm .krc-prompt-tool { color:var(--krc-text-secondary); font-size:var(--krc-font-3xs); font-weight:700; line-height:1; padding-bottom:2px; }
+.krc-pm .krc-prompt-clear { font-size:0; font-weight:500; }
+.krc-pm .krc-prompt-clear::before { content:"×"; display:block; color:var(--krc-text-muted); font-size:var(--krc-font-xs); line-height:1; transform:translateY(-0.5px); }
+.krc-pm .krc-prompt-clear.is-confirming { background:rgba(var(--krc-accent-red-rgb),0.9); color:var(--krc-on-accent); font-size:0; font-weight:800; }
+.krc-pm .krc-prompt-clear.is-confirming::before { content:"✕"; color:var(--krc-text-primary); font-size:var(--krc-font-xs); transform:none; }
+.krc-pm .krc-prompt-clear.is-confirming:hover {
+  background:var(--krc-danger-shaded-bg);
+}

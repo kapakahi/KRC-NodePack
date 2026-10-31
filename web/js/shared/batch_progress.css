@@ -1,0 +1,164 @@
+/* KRC shared batch-progress view (batch_progress.js) — embeddable, token-only.
+   DOM port of the KRC Editor's BatchProgress.svelte styles. */
+
+.krc-bp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Author display rules would otherwise beat the UA [hidden] rule. */
+.krc-bp [hidden] {
+  display: none !important;
+}
+
+.krc-bp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.krc-bp-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-base);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-bp-chips {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.krc-bp-chip {
+  padding: 1px 7px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.krc-bp-chip.is-ok { color: var(--krc-accent-green); }
+.krc-bp-chip.is-warn { color: var(--krc-accent-orange); }
+.krc-bp-chip.is-fail { color: var(--krc-accent-red); }
+
+.krc-bp-bar {
+  position: relative;
+  height: 7px;
+  overflow: hidden;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-bg-deeper);
+}
+
+.krc-bp-fill {
+  width: 0;
+  height: 100%;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-accent-green);
+  transition: width var(--krc-dur-slower) ease;
+}
+
+/* Indeterminate: a sweeping segment until the total is known. */
+.krc-bp-bar.is-indeterminate .krc-bp-fill {
+  position: absolute;
+  top: 0;
+  left: -34%;
+  width: 34%;
+  transition: none;
+  animation: krc-bp-sweep 1.15s ease-in-out infinite;
+}
+
+@keyframes krc-bp-sweep {
+  0% { left: -34%; }
+  100% { left: 100%; }
+}
+
+.krc-bp-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs-plus);
+}
+
+.krc-bp-meta-pct {
+  color: var(--krc-text-secondary);
+  font-weight: 700;
+}
+
+.krc-bp-current,
+.krc-bp-timing {
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs-plus);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-bp-timing {
+  color: var(--krc-text-muted);
+}
+
+.krc-bp-log {
+  height: 180px;
+  min-height: 0;
+  padding: 6px 8px;
+  overflow-y: auto;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deeper);
+  font: var(--krc-font-xs-plus)/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.krc-bp-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--krc-text-secondary);
+  white-space: nowrap;
+}
+
+.krc-bp-line.is-dim { color: var(--krc-text-muted); }
+.krc-bp-idx { flex: none; color: var(--krc-text-muted); }
+.krc-bp-sym { flex: none; width: 1ch; text-align: center; }
+
+/* Name takes the slack and truncates rather than wrapping. */
+.krc-bp-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  text-overflow: ellipsis;
+}
+
+.krc-bp-text { flex: none; color: var(--krc-text-muted); }
+.krc-bp-line.is-ok .krc-bp-sym { color: var(--krc-accent-green); }
+.krc-bp-line.is-cached .krc-bp-sym { color: var(--krc-text-muted); }
+.krc-bp-line.is-warn .krc-bp-sym { color: var(--krc-accent-orange); }
+.krc-bp-line.is-fail .krc-bp-sym,
+.krc-bp-line.is-fail .krc-bp-text { color: var(--krc-accent-red); }
+
+.krc-bp-note {
+  color: var(--krc-accent-orange);
+  font-size: var(--krc-font-xs-plus);
+}
+
+.krc-bp-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.krc-bp-cancel:not(:disabled) {
+  border-color: var(--krc-accent-red);
+  color: var(--krc-accent-red);
+}

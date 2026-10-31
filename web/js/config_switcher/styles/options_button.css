@@ -1,0 +1,24 @@
+/* All-purpose Options button — matches the 27×27 button in WordBank etc. */
+.ddp-addrow .ddp-io,
+.ddp-empty-state .ddp-io {
+  display: grid;
+  place-items: center;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-lg);
+  transition: background var(--krc-dur-fast), color var(--krc-dur-fast);
+}
+
+.ddp-addrow .ddp-io:hover,
+.ddp-empty-state .ddp-io:hover {
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+}

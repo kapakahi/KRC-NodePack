@@ -1,0 +1,110 @@
+/* Import and Export — the Portal's home-menu Info Panel page
+   (model_library/transfer_page.js). One section card per node; each line is a kind of
+   file: name + hint, optional picker, EXPORT / IMPORT, then the last dates. Token-only. */
+
+.krc-model-library .krc-transfer-line {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 9px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deeper);
+}
+
+.krc-model-library .krc-transfer-line + .krc-transfer-line {
+  margin-top: 6px;
+}
+
+.krc-model-library .krc-transfer-line-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.krc-model-library .krc-transfer-line-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-transfer-line-label {
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-base);
+  font-weight: 700;
+}
+
+.krc-model-library .krc-transfer-line-hint {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-model-library .krc-transfer-line-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.krc-model-library .krc-transfer-line-controls .krc-transfer-picker {
+  width: 150px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.krc-model-library .krc-transfer-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-model-library .krc-transfer-date-sep {
+  color: var(--krc-text-muted);
+}
+
+.krc-model-library .krc-transfer-date.is-never {
+  color: var(--krc-text-muted);
+}
+
+.krc-model-library .krc-transfer-date[title] {
+  cursor: help;
+}
+
+.krc-model-library .krc-transfer-line.is-busy {
+  opacity: 0.65;
+}
+
+/* The KRC bundle card (UNIFIED_BUNDLE_GAMEPLAN.md): Export… / Import…, then Undo last import. */
+.krc-model-library .krc-transfer-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.krc-model-library .krc-transfer-undo .krc-options-reset {
+  align-self: center;
+}
+
+/* History: one compact line per section, its name then its dates. */
+.krc-model-library .krc-transfer-history-line {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+  padding: 6px 9px;
+}
+
+.krc-model-library .krc-transfer-history-line + .krc-transfer-history-line {
+  margin-top: 4px;
+}
+
+/* A KRC bundle dragged over the page: the whole page is the drop target. */
+.krc-model-library .krc-transfer-page.is-bundle-drop {
+  box-shadow: var(--krc-selection-ring);
+}

@@ -1,0 +1,66 @@
+/*
+ * Shared hash-field "extracting SHA256" glow. Used by both the LoRA Loadout and Model
+ * Library InfoPanels (via shared/stabilize_glow.js) so an in-flight identity
+ * stabilization looks identical in both. Colour is tokenized (--krc-stabilize-glow) so a
+ * theme swap can retint it; the fallback keeps it working before any token is defined.
+ */
+
+@keyframes krc-sha-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--krc-stabilize-glow-off, rgba(123, 216, 143, 0));
+  }
+  50% {
+    box-shadow: 0 0 9px 2px var(--krc-stabilize-glow, rgba(123, 216, 143, 0.6));
+  }
+}
+
+.krc-sha.is-stabilizing {
+  animation: krc-sha-glow 1.25s ease-in-out infinite;
+  border-radius: var(--krc-radius-md);
+  outline: 1px solid var(--krc-stabilize-glow, rgba(123, 216, 143, 0.6));
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .krc-sha.is-stabilizing {
+    animation: none;
+    box-shadow: 0 0 9px 2px var(--krc-stabilize-glow, rgba(123, 216, 143, 0.6));
+  }
+}
+
+/*
+ * Browser card "stabilizing" pip (shared by LoRA Loadout + Model Library cards): leads the
+ * card's badge row while its content hash is computed in the background, centred on the
+ * badge pills' line. Same green token as the InfoPanel glow so the two read as one state.
+ * The glow is a tight shadow so the meta row's overflow clip never cuts it.
+ */
+@keyframes krc-stabilize-dot {
+  0%,
+  100% {
+    opacity: 0.4;
+    box-shadow: 0 0 0 0 var(--krc-stabilize-glow-off, rgba(123, 216, 143, 0));
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 4px 1px var(--krc-stabilize-glow, rgba(123, 216, 143, 0.6));
+  }
+}
+
+.krc-card-stabilize-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin: 0 1px 0 2px;
+  border-radius: 50%;
+  background: var(--krc-stabilize-glow, rgba(123, 216, 143, 0.9));
+  animation: krc-stabilize-dot 1.25s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .krc-card-stabilize-dot {
+    animation: none;
+    opacity: 1;
+    box-shadow: 0 0 4px 1px var(--krc-stabilize-glow, rgba(123, 216, 143, 0.6));
+  }
+}

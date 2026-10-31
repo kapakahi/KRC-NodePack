@@ -1,0 +1,881 @@
+/* KRC shared components: controls.css (part of components.css, which @imports the parts in
+   order; the cascade depends on that order). Searchable select, icon / action / favorite
+   buttons, the loading ring, the view toggle, modified and status badges, SAVE / SYNC,
+   colour swatches, the pin glyph, filter buttons. */
+
+/* Searchable single-select picker (shared/searchable_select.js). A button
+   showing the current value opens a filterable option list. Used by the LoRA
+   LoRA Loadout preset picker and the WordBank preset picker; text is sized to the
+   .krc-node base (12px) for one consistent control across nodes. */
+.krc-node .krc-preset-picker {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  isolation: isolate;
+  min-width: 0;
+}
+
+.krc-node .krc-preset-picker.is-open {
+  z-index: var(--krc-z-preset-picker);
+}
+
+.krc-node .krc-preset-search-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 26px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 500 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+}
+
+.krc-node .krc-preset-search-button:hover,
+.krc-node .krc-preset-search-button:focus-visible,
+.krc-node .krc-preset-picker.is-open .krc-preset-search-button {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.krc-node .krc-preset-search-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-node .krc-preset-search-arrow {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+  line-height: 1;
+}
+
+.krc-node .krc-preset-menu,
+body > .krc-preset-menu.is-portal-menu {
+  position: absolute;
+  z-index: var(--krc-z-preset-menu);
+  top: calc(100% + 4px);
+  left: 0;
+  width: 300px;
+  min-width: 300px;
+  max-width: calc(100vw - 32px);
+  display: grid;
+  gap: 4px;
+  padding: 5px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-popup-bg, rgb(var(--krc-bg-col-rgb)));
+  box-shadow: var(--krc-shadow-menu), inset 0 0 0 1px var(--krc-border-subtle);
+}
+
+.krc-node .krc-preset-menu.is-fixed,
+body > .krc-preset-menu.is-portal-menu.is-fixed {
+  position: fixed;
+  z-index: var(--krc-z-popover);
+}
+
+.krc-node .krc-preset-menu[hidden],
+body > .krc-preset-menu.is-portal-menu[hidden] {
+  display: none;
+}
+
+.krc-node .krc-preset-search-input,
+body > .krc-preset-menu.is-portal-menu .krc-preset-search-input {
+  width: 100%;
+  height: 24px;
+  min-width: 0;
+  padding: 0 7px;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: rgb(var(--krc-bg-deep-rgb));
+  color: var(--krc-text-primary);
+  font: 500 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  outline: none;
+}
+
+.krc-node .krc-preset-option-list,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option-list {
+  display: block;
+  max-height: 336px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.krc-node .krc-preset-option,
+.krc-node .krc-preset-empty,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option,
+body > .krc-preset-menu.is-portal-menu .krc-preset-empty {
+  display: block;
+  width: 100%;
+  min-height: 24px;
+  min-width: 0;
+  margin-bottom: 2px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: transparent;
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 500 var(--krc-font-base)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A muted option (e.g. the neutral "--none--" default) reads de-emphasized at rest.
+   Placed before the hover / active / selected blocks so those still brighten it to
+   normal on interaction — dimmed, not disabled. */
+.krc-node .krc-preset-option.is-muted,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option.is-muted {
+  color: var(--krc-text-muted);
+}
+
+.krc-node .krc-preset-search-label.is-muted {
+  color: var(--krc-text-muted);
+}
+
+.krc-node .krc-preset-option-group,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option-group {
+  margin: 7px 0 2px;
+  padding: 0 7px;
+  color: var(--krc-text-muted);
+  font: 700 var(--krc-font-2xs)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.7px;
+}
+
+.krc-node .krc-preset-option-group:first-child,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option-group:first-child {
+  margin-top: 2px;
+}
+
+.krc-node .krc-preset-option.is-grouped,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option.is-grouped {
+  padding-left: 18px;
+}
+
+.krc-node .krc-preset-option:last-child,
+.krc-node .krc-preset-empty:last-child,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option:last-child,
+body > .krc-preset-menu.is-portal-menu .krc-preset-empty:last-child {
+  margin-bottom: 0;
+}
+
+.krc-node .krc-preset-empty,
+body > .krc-preset-menu.is-portal-menu .krc-preset-empty {
+  cursor: default;
+  color: var(--krc-text-muted);
+}
+
+.krc-node .krc-preset-option:hover,
+.krc-node .krc-preset-option.is-active,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option:hover,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option.is-active {
+  background: rgb(var(--krc-bg-deeper-rgb));
+  color: var(--krc-text-primary);
+}
+
+.krc-node .krc-preset-option.is-selected,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option.is-selected {
+  box-shadow: var(--krc-selection-ring);
+  color: var(--krc-text-primary);
+}
+
+/* A row with an action notch (searchable_select optionMenu, e.g. the preset group
+   pickers): the label truncates, the "⋯" notch sits at the end. The notch shows on the
+   hovered / highlighted row, while its menu is open, and always on touch screens. */
+.krc-node .krc-preset-option.has-menu,
+.ddp-preset-prefix-wrap .krc-preset-option.has-menu,
+body > .krc-preset-menu.is-portal-menu .krc-preset-option.has-menu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 3px;
+}
+
+.krc-preset-option.has-menu .krc-preset-option-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.krc-preset-option .krc-preset-option-notch {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: 700 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  opacity: 0;
+}
+
+.krc-preset-option:hover .krc-preset-option-notch,
+.krc-preset-option.is-active .krc-preset-option-notch,
+.krc-preset-option .krc-preset-option-notch:focus-visible,
+.krc-preset-option .krc-preset-option-notch[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.krc-preset-option .krc-preset-option-notch:hover,
+.krc-preset-option .krc-preset-option-notch[aria-expanded="true"] {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--krc-text-primary);
+}
+
+@media (hover: none) {
+  .krc-preset-option .krc-preset-option-notch {
+    opacity: 1;
+  }
+}
+
+/* The notch's menu: a menu-select menu (base.css) whose destructive entries read red. */
+body > .krc-menu-select-menu .krc-menu-select-option.is-danger {
+  color: var(--krc-accent-red, #d96d6d);
+}
+
+.krc-node .krc-icon-button,
+.krc-node .krc-refresh-button,
+.krc-node .krc-view-toggle button {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: var(--krc-radius-xl);
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--krc-control-compact-bg, rgba(var(--krc-bg-deeper-rgb), 0.45));
+  color: inherit;
+  cursor: pointer;
+  line-height: 0;
+}
+
+/* Compact icon-button variant (e.g. the in-textarea prompt copy/clear buttons).
+   More specific than the base size rule, so it wins without load-order tricks.
+   Box only — each button sets its own glyph font-size. */
+.krc-node .krc-icon-button.is-compact {
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  padding: 0;
+  border-radius: var(--krc-radius-xs);
+  line-height: 1;
+}
+
+.krc-node .krc-refresh-button {
+  color: var(--krc-text-secondary);
+  font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols", sans-serif;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.krc-node .krc-refresh-glyph {
+  display: block;
+  font-size: var(--krc-font-2xl-plus);
+  line-height: 1;
+  -webkit-text-stroke: 0.6px currentColor;
+}
+
+/* The ⟳ glyph's ink sits high-left in its em-box, so place-items:center leaves it
+   looking off-center; nudge it down/right. Scoped to :not(.is-loading) so the loading
+   ring (which replaces the glyph) stays perfectly centered. */
+.krc-node .krc-refresh-button:not(.is-loading) .krc-refresh-glyph {
+  transform: translate(1.5px, 1px);
+}
+
+/* Loading: a centered CSS ring instead of a spinning ⟳ character (a glyph rotates
+   around its em-box, not its ink, so it wobbles). Same treatment as the fetch glyph. */
+@keyframes krc-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+.krc-node .krc-refresh-button.is-loading .krc-refresh-glyph {
+  width: 13px;
+  height: 13px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  -webkit-text-stroke: 0;
+  opacity: 0.85;
+  animation: krc-refresh-spin 0.7s linear infinite;
+}
+
+.krc-node .krc-view-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.krc-node .krc-view-icon {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  color: currentColor;
+}
+
+.krc-node .krc-view-icon.is-grid::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--krc-radius-hair);
+  background: currentColor;
+  box-shadow: 7px 0 0 currentColor, 0 7px 0 currentColor, 7px 7px 0 currentColor;
+}
+
+.krc-node .krc-view-icon.is-list::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 12px;
+  height: 2px;
+  border-radius: var(--krc-radius-pill);
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor, 0 8px 0 currentColor;
+}
+
+.krc-node .krc-view-icon.is-thumb::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 5px;
+  height: 10px;
+  border-radius: var(--krc-radius-hair);
+  background: currentColor;
+}
+
+.krc-node .krc-view-icon.is-thumb::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 8px;
+  width: 5px;
+  height: 2px;
+  border-radius: var(--krc-radius-pill);
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor, 0 8px 0 currentColor;
+}
+
+.krc-node .krc-action-button,
+.krc-node .krc-save-button,
+.krc-modal-overlay .krc-save-button {
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  color: var(--krc-text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  font-synthesis: none;
+  text-transform: uppercase;
+}
+
+.krc-node .krc-favorite-button {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  justify-self: start;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.krc-node .krc-card-color-button {
+  position: relative;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.krc-node .krc-card-color-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* One InfoPanel attribute row for Models, Prompts and sibling Portal modes.
+   Lock the boxes and glyph font so provider styles cannot shrink or resize them. */
+.krc-node .krc-info-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.krc-node .krc-info-actions > button {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: var(--krc-control-compact-bg, rgba(var(--krc-bg-deeper-rgb), 0.45));
+  font-family: inherit;
+  font-size: var(--krc-font-base);
+  font-weight: inherit;
+}
+
+/* Browser selection shares the icon-button box; only its placement/state differs. */
+.krc-node .krc-panel-header > .krc-selection-actions {
+  flex: 1 1 auto;
+}
+
+.krc-node .krc-selection-actions > .krc-browser-selection-button {
+  flex: 0 0 22px;
+  margin-left: auto;
+}
+
+.krc-node .krc-selection-actions > .krc-browser-selection-button.is-after-action {
+  margin-left: 0;
+}
+
+.krc-node .krc-browser-selection-button.is-active.is-selection-ready {
+  color: var(--krc-accent-green);
+}
+
+.krc-node .krc-modified-badge {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-height: 14px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--krc-radius-pill);
+  background: rgba(var(--krc-accent-orange-rgb), 0.92);
+  color: var(--krc-on-accent);
+  font-size: var(--krc-font-3xs);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.krc-node .krc-info-modified-slot .krc-modified-badge,
+.krc-node .krc-preset-modified-badge {
+  position: relative;
+  align-self: center;
+  height: 22px;
+  min-width: 66px;
+  padding: 0 8px;
+  border-radius: var(--krc-radius-lg);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.45px;
+}
+
+.krc-node .krc-modified-badge .is-hover {
+  display: none;
+}
+
+.krc-node button.krc-modified-badge:hover {
+  background: rgba(var(--krc-accent-red-rgb), 0.92);
+}
+
+.krc-node button.krc-modified-badge:hover .is-default {
+  display: none;
+}
+
+.krc-node button.krc-modified-badge:hover .is-hover {
+  display: inline;
+}
+
+/*
+ * Local-status badges (LOCAL_STATUS_AND_DRAFT_GAMEPLAN.md): Modified / Stale /
+ * Draft. Same pill + hover-to-discard behaviour as the discardable modified
+ * badge, but the fill is driven by the is-* modifier so the three read as one
+ * family that only changes color + label. Hover shifts to the shared discard
+ * (red) affordance and swaps the label to "Discard".
+ */
+.krc-node .krc-status-badge {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  align-self: center;
+  height: 22px;
+  min-width: 66px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  color: var(--krc-text-primary);
+  font: inherit;
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.krc-node .krc-status-badge.is-modified {
+  background: rgba(var(--krc-status-modified-rgb), 0.92);
+}
+
+.krc-node .krc-status-badge.is-stale {
+  background: rgba(var(--krc-status-stale-rgb), 0.92);
+  /* Yellow fill wants dark text for contrast; hover flips back to light. */
+  color: var(--krc-bg-deeper);
+}
+
+.krc-node .krc-status-badge.is-draft {
+  background: rgba(var(--krc-status-draft-rgb), 0.92);
+}
+
+.krc-node .krc-status-badge.is-missing {
+  background: rgba(var(--krc-status-discard-rgb), 0.92);
+}
+
+/* Conflict: a click asks which version to keep (not a discard), so no red hover; it
+   brightens instead. */
+.krc-node .krc-status-badge.is-conflict,
+.krc-node button.krc-status-badge.is-conflict:hover {
+  background: rgba(var(--krc-status-conflict-rgb), 0.92);
+  color: var(--krc-on-accent);
+}
+
+.krc-node button.krc-status-badge.is-conflict:hover {
+  filter: brightness(1.12);
+}
+
+.krc-node .krc-status-badge .is-hover {
+  display: none;
+}
+
+.krc-node button.krc-status-badge:hover {
+  background: rgba(var(--krc-status-discard-rgb), 0.92);
+  color: var(--krc-on-accent);
+}
+
+.krc-node button.krc-status-badge:hover .is-default {
+  display: none;
+}
+
+.krc-node button.krc-status-badge:hover .is-hover {
+  display: inline;
+}
+
+/* The green BROWSE pill (LoRA Loadout, Config Switcher, the Loadout Kit): opens the KRC
+   Portal. One definition for every node; the canvas menu entry and the sidebar button
+   draw the same look outside a node (krc_browser_menu.css, krc_sidebar_button.css). */
+.krc-node .krc-browse-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 58px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  cursor: pointer;
+  font: 700 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background var(--krc-dur-base) ease, color var(--krc-dur-base) ease, transform var(--krc-dur-instant) ease, filter var(--krc-dur-base) ease;
+}
+
+.krc-node .krc-browse-button:hover {
+  filter: brightness(1.12);
+}
+
+.krc-node .krc-browse-button:active {
+  filter: brightness(0.9);
+  transform: translateY(1px);
+}
+
+.krc-node .krc-browse-button.is-active {
+  box-shadow: var(--krc-pressed-ring);
+}
+
+/*
+ * SAVE / SYNC colour modifiers on the shared action button. SAVE is soft green
+ * (the ordinary "make this the global version" push); SYNC is soft blue (push a
+ * stale node's version up). A node toggles them on its one save button, so only
+ * its meaning changes.
+ */
+.krc-node .krc-action-button.is-save {
+  background: rgba(var(--krc-status-save-rgb), 0.90);
+  color: var(--krc-on-accent);
+}
+
+.krc-node .krc-action-button.is-sync {
+  background: rgba(var(--krc-status-sync-rgb), 0.92);
+  color: var(--krc-on-accent);
+}
+
+.krc-node .krc-favorite-button.is-on {
+  border-color: var(--krc-border-subtle);
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-accent-gold);
+}
+
+.krc-node .krc-favorite-button.krc-nsfw-button.is-on {
+  border-color: var(--krc-border-subtle);
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-accent-red);
+}
+
+.krc-node .krc-favorite-button.krc-pin-button.is-on {
+  border-color: var(--krc-border-subtle);
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-secondary);
+}
+
+/* Shared color-swatch chips (buildColorSwatches) — used by the Prompt Vault
+   category config and the LoRA Loadout folder config. */
+.krc-node .krc-swatches {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.krc-node .krc-swatch {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-swatch, var(--krc-bg-deep));
+  box-shadow: inset 0 0 0 1px var(--krc-border-subtle);
+  cursor: pointer;
+}
+
+.krc-node .krc-swatch:hover,
+.krc-node .krc-swatch:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--krc-text-muted);
+}
+
+.krc-node .krc-swatch.is-active {
+  box-shadow: var(--krc-selection-ring);
+}
+
+.krc-node .krc-swatch.is-none::before {
+  content: "";
+  width: 8px;
+  height: 2px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-text-muted);
+}
+
+:where(.krc-node, body > .krc-card-context-menu) .krc-pin-glyph {
+  position: relative;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  transform: rotate(35deg);
+}
+
+:where(.krc-node, body > .krc-card-context-menu) .krc-pin-glyph::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  width: 6px;
+  height: 5px;
+  border-radius: var(--krc-radius-3xs) var(--krc-radius-3xs) var(--krc-radius-hair) var(--krc-radius-hair);
+  background: currentColor;
+}
+
+:where(.krc-node, body > .krc-card-context-menu) .krc-pin-glyph::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 5px;
+  width: 2px;
+  height: 6px;
+  border-radius: var(--krc-radius-pill);
+  background: currentColor;
+}
+
+.krc-node :is(.krc-icon-button.is-pin, .krc-favorite-button.krc-pin-button).is-on {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-secondary);
+}
+
+.krc-node :is(.krc-icon-button.is-pin, .krc-favorite-button.krc-pin-button).is-on .krc-pin-glyph::before {
+  background: var(--krc-accent-red);
+}
+
+.krc-node :is(.krc-icon-button.is-pin, .krc-favorite-button.krc-pin-button).is-on .krc-pin-glyph::after {
+  background: var(--krc-text-muted);
+}
+
+.krc-node .krc-action-button {
+  width: var(--krc-action-button-width);
+  height: var(--krc-action-button-height);
+  padding: var(--krc-action-button-padding);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  font: var(--krc-action-button-font);
+  letter-spacing: var(--krc-action-button-letter-spacing);
+  text-align: var(--krc-action-button-text-align);
+  white-space: var(--krc-action-button-white-space);
+}
+
+.krc-node .krc-save-button,
+.krc-modal-overlay .krc-save-button {
+  width: var(--krc-save-button-width, 58px);
+  height: var(--krc-save-button-height, 24px);
+  padding: 0;
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  font: 500 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.35px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.krc-node .krc-icon-button,
+.krc-node .krc-refresh-button,
+.krc-node .krc-view-toggle button,
+.krc-node .krc-action-button,
+.krc-node .krc-save-button,
+.krc-modal-overlay .krc-save-button,
+.krc-node .krc-favorite-button,
+.krc-node .krc-search-clear,
+.krc-node .krc-thumb-action,
+.krc-node .krc-io-button,
+.krc-node .krc-slot-remove,
+.krc-node .krc-chip-add {
+  transition: background var(--krc-dur-base) ease, color var(--krc-dur-base) ease, transform var(--krc-dur-instant) ease, filter var(--krc-dur-base) ease;
+}
+
+.krc-node .krc-icon-button:hover:not(:disabled),
+.krc-node .krc-refresh-button:hover:not(:disabled),
+.krc-node .krc-view-toggle button:hover:not(:disabled),
+.krc-node .krc-action-button:hover:not(:disabled),
+.krc-node .krc-favorite-button:hover:not(:disabled),
+.krc-node .krc-thumb-action:hover:not(:disabled),
+.krc-node .krc-io-button:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.krc-node .krc-search-clear:hover {
+  color: var(--krc-text-primary);
+}
+
+.krc-node .krc-icon-button:active:not(:disabled),
+.krc-node .krc-refresh-button:active:not(:disabled),
+.krc-node .krc-view-toggle button:active:not(:disabled),
+.krc-node .krc-action-button:active:not(:disabled),
+.krc-node .krc-favorite-button:active:not(:disabled),
+.krc-node .krc-thumb-action:active:not(:disabled),
+.krc-node .krc-io-button:active:not(:disabled),
+.krc-node .krc-slot-remove:active:not(:disabled),
+.krc-node .krc-chip-add:active {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  transform: translateY(1px);
+}
+
+.krc-node .krc-search-clear:active:not(:disabled) {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  transform: translateY(-50%) translateY(1px);
+}
+
+.krc-node .krc-save-button:hover:not(:disabled),
+.krc-modal-overlay .krc-save-button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.krc-node .krc-save-button:active:not(:disabled),
+.krc-modal-overlay .krc-save-button:active:not(:disabled) {
+  filter: brightness(0.9);
+  transform: translateY(1px);
+}
+
+.krc-modal-overlay .krc-save-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.krc-node .krc-icon-button.is-active,
+.krc-node .krc-view-toggle button.is-active {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.krc-node .krc-icon-button.krc-favorite-filter-button.is-active,
+.krc-node .krc-icon-button.is-fav.is-on {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-accent-gold);
+}
+
+.krc-node .krc-icon-button.krc-nsfw-filter-button.is-active,
+.krc-node .krc-icon-button.krc-nsfw-button.is-active,
+.krc-node .krc-icon-button.is-nsfw.is-on {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-accent-red);
+}
+
+.krc-node .krc-icon-button.krc-card-color-filter-button.is-active {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+}
+
+.krc-node .krc-icon-button.krc-nsfw-filter-button,
+.krc-node .krc-icon-button.krc-nsfw-button,
+.krc-node .krc-icon-button.krc-card-color-filter-button,
+.krc-node .krc-icon-button.is-nsfw,
+.krc-node .krc-favorite-button.krc-nsfw-button {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.krc-node .krc-card-color-filter-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.krc-node .krc-card-color-filter-glyph {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--krc-card-filter-color, conic-gradient(#d96d6d, #d8b84f, #7b9e87, #4f7a9e, #8a8f98, #d96d6d));
+  box-shadow: var(--krc-swatch-glyph-ring);
+}
+
+.krc-node .krc-card-color-button[data-card-color=""] .krc-card-color-filter-glyph,
+.krc-node .krc-card-color-filter-button[data-card-color="__none__"] .krc-card-color-filter-glyph {
+  filter: grayscale(1) saturate(0.25);
+  opacity: 0.42;
+}

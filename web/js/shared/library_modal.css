@@ -1,0 +1,507 @@
+/* Shared library browse modal — viewport-anchored singleton portal.
+   Chrome + hosted provider root use KRC theme tokens; the portal is stamped with
+   the opener's palette (data-krc-theme) so it follows the node's Options theme,
+   and the detached provider root (no own data-krc-theme) inherits it. */
+
+.krc-library-modal {
+  box-sizing: border-box;
+  position: fixed;
+  z-index: var(--krc-z-popover);
+  display: flex;
+  flex-direction: column;
+  /* Collapsed = hug the 340px browser column (+ 8px frame each side + 1px borders). */
+  width: 358px;
+  height: min(760px, calc(100vh - 96px));
+  background: var(--krc-popup-bg, var(--krc-bg-deep));
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-2xl);
+  box-shadow: var(--krc-shadow-library);
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  transition: width var(--krc-dur-slow) ease;
+}
+
+.krc-library-modal[hidden] {
+  display: none;
+}
+
+/* Info revealed — the info column fills its 1fr track, and the modal is sized so
+   that track lands at a comfortable ~540px: 340 browser + 8 gap + 540 info + 16
+   frame + 2 borders = 906px. Symmetric 8px frame on both sides. To resize the info
+   column, change only this width (the track follows). */
+.krc-library-modal.is-info-open {
+  width: 906px;
+}
+
+.krc-library-modal-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  cursor: move;
+  user-select: none;
+  border-bottom: 1px solid var(--krc-border-subtle);
+}
+
+/* The portal's name, centred in the header (over the free space, never taking clicks);
+   hidden while the Portal is just the browser (no room, and it would sit on the tabs). */
+.krc-library-modal-brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font: 700 var(--krc-font-xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--krc-text-secondary);
+}
+
+.krc-library-modal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.krc-library-modal-title {
+  font: 700 var(--krc-font-xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--krc-text-secondary);
+}
+
+.krc-library-modal-tab {
+  height: 18px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 600 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-transform: uppercase;
+}
+
+.krc-library-modal-tab.is-active {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.krc-library-modal-info-btn {
+  height: 18px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-primary);
+  cursor: pointer;
+  font: 600 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-library-modal-info-btn:hover {
+  background: var(--krc-control-hover-bg);
+}
+
+.krc-library-modal-info-btn.is-active {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.krc-library-modal-close {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-primary);
+  cursor: pointer;
+  font: 700 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-library-modal-close:hover {
+  background: var(--krc-control-hover-bg);
+}
+
+.krc-library-modal-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* The detached provider panel fills the body (framed 8px); its own layout is
+   absolute inset:0 within this positioned root. Override the node's border-bleed
+   (base .krc-model-library uses width:calc(100% + 2px) + margin-left:-1px, which
+   would otherwise win over inset and spill the root past the modal's right edge). */
+.krc-library-modal-body > .krc-model-library.is-detached,
+.krc-library-modal-body > .krc-pm.is-detached {
+  position: absolute;
+  inset: 8px;
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+/* Info column collapsed by default: only the 340px browser shows. */
+.krc-library-modal .krc-model-library.is-detached .krc-lora-layout {
+  grid-template-columns: 340px;
+}
+.krc-library-modal .krc-model-library.is-detached .krc-info {
+  display: none;
+}
+
+/* Prompt Vault provider — same 340px browser + 1fr info shape (.krc-pm-grid /
+   .krc-info-panel). Collapsed by default. */
+.krc-library-modal .krc-pm.is-detached .krc-pm-grid {
+  grid-template-columns: 340px;
+}
+.krc-library-modal .krc-pm.is-detached .krc-info-panel {
+  display: none;
+}
+.krc-library-modal.is-info-open .krc-pm.is-detached .krc-pm-grid {
+  grid-template-columns: 340px minmax(0, 1fr);
+}
+.krc-library-modal.is-info-open .krc-pm.is-detached .krc-info-panel {
+  display: flex;
+  min-width: 0;
+}
+
+/* Info revealed. */
+.krc-library-modal.is-info-open .krc-model-library.is-detached .krc-lora-layout {
+  grid-template-columns: 340px minmax(0, 1fr);
+}
+.krc-library-modal.is-info-open .krc-model-library.is-detached .krc-info {
+  display: grid;
+  /* Let the info column shrink to its track and reflow instead of overflowing
+     (default min-width:auto clips a min-content wider than the track). This makes
+     the item exactly fill the 1fr track — no cap slack — so frames stay symmetric. */
+  min-width: 0;
+}
+
+/* A KRC pack's Portal mode (public API 1.14, registerLibraryProvider): the same shape as
+   the built-in modes, by contract classes. The mode's root is .krc-portal-mode (filling the
+   body, framed 8px), its two columns live in .krc-portal-mode-grid (the 340px browser, then
+   .krc-portal-mode-info), and the info column shows only while the Portal's info is open. */
+.krc-library-modal-body > .krc-portal-mode {
+  position: absolute;
+  inset: 8px;
+  /* The inset sizes it: reset any explicit size (a mode's root is usually .krc-node, which
+     sets width: 100% and would push it 16px past the body, as the built-in modes reset too). */
+  width: auto;
+  height: auto;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.krc-library-modal .krc-portal-mode-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 340px;
+  gap: 8px;
+  min-height: 0;
+}
+.krc-library-modal .krc-portal-mode-info {
+  display: none;
+}
+/* The browser header's controls (renderLibraryBrowser's .krc-browser-actions): one centred
+   row, as in the built-in modes (their rules are scoped to their own node classes). */
+.krc-library-modal .krc-portal-mode .krc-browser-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.krc-library-modal.is-info-open .krc-portal-mode-grid {
+  grid-template-columns: 340px minmax(0, 1fr);
+}
+.krc-library-modal.is-info-open .krc-portal-mode-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Pick mode (Card API pickCard): the button that hands the selected card back. */
+.krc-library-modal-pick-btn {
+  height: 18px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-accent-gold);
+  color: var(--krc-bg-deeper);
+  cursor: pointer;
+  font: 700 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-library-modal-pick-btn:hover {
+  filter: brightness(1.1);
+}
+
+.krc-library-modal-pick-btn[hidden] {
+  display: none;
+}
+
+.krc-library-modal:not(.is-info-open) .krc-library-modal-brand {
+  display: none;
+}
+
+/* The header's Home: a glyph-only button left of the tabs (a CSS house). */
+.krc-library-modal-home {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-element);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+}
+
+.krc-library-modal-home:hover,
+.krc-library-modal-home:focus-visible {
+  color: var(--krc-text-primary);
+}
+
+.krc-library-modal-home.is-active {
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.krc-portal-house-glyph {
+  position: relative;
+  display: block;
+  width: 12px;
+  height: 11px;
+}
+
+.krc-portal-house-glyph::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.krc-portal-house-glyph::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 2px;
+  width: 8px;
+  height: 5px;
+  border: 2px solid currentColor;
+  border-top: 0;
+}
+
+/* The Home mode (model_library/home_provider.js): the KRC menu cards in the browser column
+   (Model Library card styles, so a .krc-model-library wrapper reset to fill it), the Home
+   page in the info column. */
+.krc-library-modal .krc-portal-home-browser {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.krc-library-modal .krc-portal-home-menu.krc-model-library {
+  flex: 1;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.krc-library-modal .krc-portal-home-menu .krc-home-menu {
+  flex: 1;
+  min-height: 0;
+}
+
+.krc-library-modal .krc-portal-home-info {
+  border-radius: var(--krc-radius-2xl);
+  background: var(--krc-bg-col);
+}
+
+/* The Home page: the logo block centred on the page, Recently added and the dimmed counts
+   bottom-aligned. Equal outer rows centre the logo; the bottom row never shrinks under its
+   tiles, so when they're taller than the space below the centre the top row gives way and
+   the logo moves up instead of being overlapped. */
+.krc-portal-home-page {
+  display: grid;
+  flex: 1;
+  grid-template-rows: minmax(0, 1fr) auto 1fr;
+  min-height: 0;
+  padding: 14px 16px 10px;
+  overflow: hidden;
+}
+
+.krc-portal-home-page[hidden],
+.krc-portal-home-pages[hidden],
+.krc-portal-recent[hidden] {
+  display: none;
+}
+
+.krc-portal-home-center {
+  display: grid;
+  grid-row: 2;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  color: var(--krc-text-secondary);
+}
+
+/* Recently added: four equal columns of one row (they scale with the column, never
+   rearrange). Each image fits whole in an invisible square, sitting on its bottom edge so
+   the titles line up; no frame, no crop. */
+.krc-portal-recent {
+  display: grid;
+  flex: none;
+  gap: 8px;
+}
+
+.krc-portal-recent-label {
+  color: var(--krc-text-muted);
+  font: 600 var(--krc-font-2xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.krc-portal-recent-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.krc-portal-recent-tile {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.krc-portal-recent-frame {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.krc-node .krc-portal-recent-img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+}
+
+.krc-node .krc-portal-recent-img img,
+.krc-node .krc-portal-recent-img video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--krc-radius-lg);
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.krc-portal-recent-title {
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font: 600 var(--krc-font-xs)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: center;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-portal-recent-tile:hover .krc-portal-recent-title {
+  color: var(--krc-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.krc-portal-home-bottom {
+  display: grid;
+  grid-row: 3;
+  align-self: end;
+  gap: 10px;
+}
+
+.krc-portal-home-stats {
+  flex: none;
+  color: var(--krc-text-muted);
+  font: 500 var(--krc-font-2xs)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+  opacity: 0.8;
+  text-align: center;
+}
+
+/* A page a menu card opened: the Model Library's Info Panel, lent to Home. Reset the node
+   root's border-bleed sizing; the page fills the column. */
+.krc-library-modal .krc-portal-home-pages.krc-model-library {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+}
+
+/* Hidden (Home showing), it must leave the column: the rule above outranks the plain
+   [hidden] one, and would otherwise take half the column as an empty box. */
+.krc-library-modal .krc-portal-home-pages.krc-model-library[hidden] {
+  display: none;
+}
+
+.krc-library-modal.is-info-open .krc-portal-home-pages.krc-model-library.is-detached .krc-info {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.krc-portal-home-version {
+  color: var(--krc-text-secondary);
+  font: 500 var(--krc-font-sm)/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-portal-home-link {
+  color: var(--krc-text-muted);
+  font: 600 var(--krc-font-xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.krc-portal-home-link:hover {
+  color: var(--krc-text-primary);
+}
+
+/* The placeholder KRC logo, drawn in CSS: a rounded tile with a geometric K (a bar and a
+   chevron), in dimmed white. */
+/* The KRC wordmark: the pack's own type (Inter, else the system UI font), no image. */
+.krc-portal-logo {
+  color: var(--krc-text-secondary);
+  font: 800 56px/1 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0.06em;
+  /* the trailing letter-spacing would push the word off centre */
+  margin-right: -0.06em;
+  opacity: 0.75;
+  user-select: none;
+}

@@ -1,0 +1,63 @@
+.krc-model-library .krc-empty-note {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 16px;
+  color: var(--krc-text-muted);
+  text-align: center;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+
+.krc-model-library .krc-scan-note {
+  overflow: hidden;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Subtle reassurance while a refresh runs over already-visible cards — a gentle
+   opacity breathe, not a spinner. Honest, not noisy. */
+.krc-model-library .krc-scan-note.is-refreshing {
+  animation: krc-scan-note-breathe 1.4s ease-in-out infinite;
+}
+
+@keyframes krc-scan-note-breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.krc-model-library .krc-footer-count-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Match the visible-count readout: same dimmed white, size and font (both
+   inherit from .krc-footer). Clickable, but styled as plain text — only a
+   pointer cursor and a subtle brighten on hover hint at it. */
+.krc-model-library .krc-duplicate-note {
+  flex: 0 0 auto;
+  color: var(--krc-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.krc-model-library .krc-duplicate-note:hover {
+  color: var(--krc-text-secondary);
+}
+
+/* Modal content lives in a body-level overlay (outside .krc-model-library), so
+   these stay unscoped like the shared .krc-duplicate-path-row styles. */
+.krc-duplicate-group + .krc-duplicate-group {
+  margin-top: 10px;
+}
+
+.krc-duplicate-group-name {
+  margin-bottom: 3px;
+  color: var(--krc-text-primary);
+  font-weight: 600;
+  font-size: var(--krc-font-base);
+}

@@ -1,0 +1,179 @@
+/* Design tokens (the --krc-* palette) now live in shared/design_tokens.css. */
+
+.krc-lora-stacker {
+  position: relative;
+  min-width: 980px;
+  height: 100%;
+  min-height: 600px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--krc-text-primary);
+  letter-spacing: 0;
+  overflow: hidden;
+}
+
+.lg-node.krc-ll-shell,
+.lg-node:has(.krc-lora-stacker:not(.is-mini)) {
+  --min-node-width: 1162px !important;
+  width: clamp(1162px, var(--node-width), 3528px) !important;
+  min-width: 1162px !important;
+  max-width: 3528px !important;
+  max-height: 1771px !important;
+}
+
+.lg-node.krc-ll-shell > [class*="bg-node-component-header-surface"],
+.lg-node:has(.krc-lora-stacker:not(.is-mini)) > [class*="bg-node-component-header-surface"] {
+  width: clamp(1162px, var(--node-width), 3528px) !important;
+  min-width: 1162px !important;
+  max-width: 3528px !important;
+}
+
+.lg-node:has(.krc-lora-stacker.is-mini) {
+  --min-node-width: 356px !important;
+  width: max(var(--node-width), 356px) !important;
+  min-width: 356px !important;
+}
+
+.lg-node:has(.krc-lora-stacker.is-mini) > [class*="bg-node-component-header-surface"] {
+  width: max(var(--node-width), 356px) !important;
+  min-width: 356px !important;
+}
+
+.lg-node:has(.krc-lora-stacker:not(.is-mini)) .lg-node-widgets > .lg-node-widget:not(:has(.krc-lora-stacker:not(.is-mini))) {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.lg-node:has(.krc-lora-stacker.is-mini) .lg-node-widgets > .lg-node-widget:not(:has(.krc-lora-stacker.is-mini)) {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.lg-node:has(.krc-lora-stacker:not(.is-mini)) .lg-node-widget:has(.krc-lora-stacker:not(.is-mini)),
+.lg-node:has(.krc-lora-stacker:not(.is-mini)) .lg-node-widget:has(.krc-lora-stacker:not(.is-mini)) > .flex.flex-col,
+.lg-node:has(.krc-lora-stacker:not(.is-mini)) .krc-lora-stacker:not(.is-mini) {
+  min-height: 668px !important;
+}
+
+.lg-node:has(.krc-lora-stacker.is-mini) .lg-node-widget:has(.krc-lora-stacker.is-mini),
+.lg-node:has(.krc-lora-stacker.is-mini) .lg-node-widget:has(.krc-lora-stacker.is-mini) > .flex.flex-col,
+.lg-node:has(.krc-lora-stacker.is-mini) .krc-lora-stacker.is-mini {
+  min-height: 668px !important;
+}
+
+.lg-node:has(.krc-lora-stacker:not(.is-mini)) .lg-node-widget:has(.krc-lora-stacker:not(.is-mini)) > .flex.flex-col,
+.lg-node:has(.krc-lora-stacker:not(.is-mini)) .krc-lora-stacker:not(.is-mini) {
+  height: var(--krc-dom-h, 668px) !important;
+  flex: 0 0 var(--krc-dom-h, 668px) !important;
+}
+
+.lg-node:has(.krc-lora-stacker.is-mini) .lg-node-widget:has(.krc-lora-stacker.is-mini) > .flex.flex-col,
+.lg-node:has(.krc-lora-stacker.is-mini) .krc-lora-stacker.is-mini {
+  height: 668px !important;
+  flex: 0 0 668px !important;
+}
+
+.krc-lora-stacker:not(.is-mini) {
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  margin: -1px;
+}
+
+.krc-lora-stacker.is-mini {
+  contain: layout paint;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  margin: -1px;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.krc-canvas-dragging .lg-node:has(.krc-lora-stacker.is-mini),
+.krc-canvas-dragging .krc-lora-stacker.is-mini {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.krc-lora-stacker.is-mini,
+.krc-lora-stacker.is-mini * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.krc-lora-stacker .krc-lora-layout {
+  display: grid;
+  grid-template-areas: "browser stacks info";
+  grid-template-columns: 340px 340px minmax(0, 1fr);
+  gap: 8px;
+  /* Prefer the JS-set definite height so the chain resolves even when the
+     frontend doesn't give the DOM-widget root a definite height (Chrome's Node
+     2.0 build); falls back to 100% (old canvas frontend). */
+  height: var(--krc-dom-h, 100%);
+}
+
+.krc-lora-stacker .krc-lora-layout.is-info-before-stacks {
+  grid-template-areas: "browser info stacks";
+  grid-template-columns: 340px minmax(0, 1fr) 340px;
+}
+
+.krc-lora-stacker .krc-lora-layout > .krc-browser {
+  grid-area: browser;
+}
+
+.krc-lora-stacker .krc-lora-layout > .krc-stack-column {
+  grid-area: stacks;
+}
+
+.krc-lora-stacker .krc-lora-layout > .krc-info {
+  grid-area: info;
+}
+
+/* At most 340, never wider than the root: the root clips (overflow hidden), and in the
+   classic canvas it is only 338 wide (widget 336 + 2), so a fixed 340 column lost 1px
+   off each side and the panels' rounded corners. Card widths follow their container. */
+.krc-lora-stacker .krc-lora-mini-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 340px);
+  justify-content: center;
+  height: 100%;
+}
+
+.krc-lora-stacker .krc-panel {
+  overflow: hidden;
+}
+
+.krc-lora-stacker .krc-panel-header {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.krc-lora-stacker .krc-browser-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.krc-lora-stacker .krc-browser .krc-panel-header > span {
+  display: none;
+}
+
+.krc-lora-stacker .krc-browser .krc-panel-header {
+  justify-content: flex-start;
+}
+
+.krc-lora-stacker .krc-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+

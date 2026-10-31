@@ -1,0 +1,384 @@
+/* ConfigSwitcher Options modal: preset manager + archive controls. */
+.ddp-options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: min(420px, calc(100vw - 64px));
+}
+
+/* Filled cell — mirrors the shared .krc-modal-section so ConfigSwitcher's
+   Options dialog matches the rest of the pack. */
+.ddp-options-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-xl);
+  background: rgba(var(--krc-bg-deep-rgb), 0.28);
+}
+
+.ddp-options-title {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.55px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.ddp-preset-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 3fr) minmax(0, 7fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ddp-initial-load-row {
+  grid-template-columns: minmax(96px, 3fr) minmax(0, 7fr) auto auto;
+}
+
+.ddp-preset-prefix-wrap,
+.ddp-preset-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-picker,
+.ddp-preset-select-wrap .krc-preset-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  isolation: isolate;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-picker.is-open,
+.ddp-preset-select-wrap .krc-preset-picker.is-open {
+  z-index: var(--krc-z-preset-picker);
+}
+
+.ddp-preset-prefix-wrap .krc-preset-search-button,
+.ddp-preset-select-wrap .krc-preset-search-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 26px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 500 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-search-button:hover,
+.ddp-preset-prefix-wrap .krc-preset-search-button:focus-visible,
+.ddp-preset-prefix-wrap .krc-preset-picker.is-open .krc-preset-search-button,
+.ddp-preset-select-wrap .krc-preset-search-button:hover,
+.ddp-preset-select-wrap .krc-preset-search-button:focus-visible,
+.ddp-preset-select-wrap .krc-preset-picker.is-open .krc-preset-search-button {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-preset-prefix-wrap .krc-preset-search-label,
+.ddp-preset-select-wrap .krc-preset-search-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-search-arrow,
+.ddp-preset-select-wrap .krc-preset-search-arrow {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+  line-height: 1;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-menu,
+.ddp-preset-select-wrap .krc-preset-menu {
+  position: absolute;
+  z-index: var(--krc-z-preset-menu);
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  width: 300px;
+  min-width: 300px;
+  max-width: calc(100vw - 32px);
+  gap: 4px;
+  padding: 5px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-popup-bg, rgb(var(--krc-bg-col-rgb)));
+  box-shadow: var(--krc-shadow-menu), inset 0 0 0 1px var(--krc-border-subtle);
+}
+
+.ddp-preset-prefix-wrap .krc-preset-menu[hidden],
+.ddp-preset-select-wrap .krc-preset-menu[hidden] {
+  display: none;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-search-input,
+.ddp-preset-select-wrap .krc-preset-search-input {
+  width: 100%;
+  height: 24px;
+  min-width: 0;
+  padding: 0 7px;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: rgb(var(--krc-bg-deep-rgb));
+  color: var(--krc-text-primary);
+  font: 500 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  outline: none;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-option-list,
+.ddp-preset-select-wrap .krc-preset-option-list {
+  display: block;
+  max-height: 336px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-option,
+.ddp-preset-prefix-wrap .krc-preset-empty,
+.ddp-preset-select-wrap .krc-preset-option,
+.ddp-preset-select-wrap .krc-preset-empty {
+  display: block;
+  width: 100%;
+  min-height: 24px;
+  min-width: 0;
+  margin-bottom: 2px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: transparent;
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 500 var(--krc-font-base)/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-option:last-child,
+.ddp-preset-prefix-wrap .krc-preset-empty:last-child,
+.ddp-preset-select-wrap .krc-preset-option:last-child,
+.ddp-preset-select-wrap .krc-preset-empty:last-child {
+  margin-bottom: 0;
+}
+
+.ddp-preset-prefix-wrap .krc-preset-empty,
+.ddp-preset-select-wrap .krc-preset-empty {
+  cursor: default;
+  color: var(--krc-text-muted);
+}
+
+.ddp-preset-prefix-wrap .krc-preset-option:hover,
+.ddp-preset-prefix-wrap .krc-preset-option.is-active,
+.ddp-preset-select-wrap .krc-preset-option:hover,
+.ddp-preset-select-wrap .krc-preset-option.is-active {
+  background: rgb(var(--krc-bg-deeper-rgb));
+  color: var(--krc-text-primary);
+}
+
+.ddp-preset-prefix-wrap .krc-preset-option.is-selected,
+.ddp-preset-select-wrap .krc-preset-option.is-selected {
+  box-shadow: var(--krc-selection-ring);
+  color: var(--krc-text-primary);
+}
+
+.ddp-preset-cycle.krc-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-2xs);
+  transition: background var(--krc-dur-fast), color var(--krc-dur-fast), transform var(--krc-dur-fast);
+}
+
+.ddp-preset-cycle.krc-icon-button:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-preset-cycle.krc-icon-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ddp-preset-actions {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ddp-preset-btn.krc-action-button {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0;
+  transition: background var(--krc-dur-fast), color var(--krc-dur-fast), border-color var(--krc-dur-fast), transform var(--krc-dur-fast);
+}
+
+.ddp-preset-btn.krc-action-button:hover:not(:disabled) {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.ddp-preset-btn.krc-action-button.is-save:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgba(var(--krc-accent-green-rgb), 0.88);
+  color: var(--krc-on-accent);
+}
+
+.ddp-preset-btn.krc-action-button:active:not(:disabled) {
+  transform: translateY(1px);
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.ddp-preset-btn.krc-action-button.is-delete.is-confirming,
+.ddp-preset-btn.krc-action-button.is-delete:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--krc-danger-armed-soft-bg);
+  color: var(--krc-on-accent);
+}
+
+.ddp-preset-cycle:disabled,
+.ddp-preset-btn.krc-action-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.ddp-preset-mod-slot {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.ddp-preset-mod-slot:empty {
+  display: none;
+}
+
+.ddp-preset-mod-slot .krc-preset-modified-badge {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  height: 22px;
+  min-width: 66px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: rgba(var(--krc-accent-orange-rgb), 0.92);
+  color: var(--krc-on-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ddp-preset-mod-slot .krc-preset-modified-badge .is-hover {
+  display: none;
+}
+
+.ddp-preset-mod-slot .krc-preset-modified-badge:hover {
+  background: rgba(var(--krc-accent-red-rgb), 0.92);
+  color: var(--krc-on-accent);
+}
+
+.ddp-preset-mod-slot .krc-preset-modified-badge.is-stale {
+  background: rgba(var(--krc-status-stale-rgb), 0.92);
+  color: var(--krc-bg-deeper);
+}
+
+.ddp-preset-mod-slot .krc-preset-modified-badge.is-missing {
+  background: rgba(var(--krc-accent-red-rgb), 0.92);
+}
+
+/* Conflict: magenta, and a click asks which to keep, so the hover brightens, not red. */
+.ddp-preset-mod-slot .krc-preset-modified-badge.is-conflict,
+.ddp-preset-mod-slot .krc-preset-modified-badge.is-conflict:hover {
+  background: rgba(var(--krc-status-conflict-rgb), 0.92);
+  color: var(--krc-on-accent);
+}
+
+.ddp-preset-mod-slot .krc-preset-modified-badge.is-conflict:hover {
+  filter: brightness(1.12);
+}
+
+.ddp-preset-mod-slot .krc-preset-modified-badge:hover .is-default {
+  display: none;
+}
+
+.ddp-preset-mod-slot .krc-preset-modified-badge:hover .is-hover {
+  display: inline;
+}
+
+/* Model & prompt card-view toggles (Appearance section). Two mutually-exclusive
+   switches (Tiny thumbnail / Text-only); both off = the default tall card. */
+.ddp-card-view-subtitle {
+  margin-top: 4px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.55px;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: var(--krc-text-soft-opacity);
+}
+
+.ddp-card-view-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ddp-card-view-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.ddp-card-view-label {
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+}
+
+/* Text-only is a sub-option of list mode — dim its label while list mode is off
+   (the toggle itself dims via .ddp-bool-toggle:disabled). */
+.ddp-card-view-row.is-disabled .ddp-card-view-label {
+  opacity: 0.45;
+}

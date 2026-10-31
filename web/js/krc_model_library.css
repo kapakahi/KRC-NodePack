@@ -1,0 +1,14 @@
+/* Shared sheets: ?v= must match SHARED_STYLE_VERSION in shared/stylesheets.js
+   so every KRC node fetches each shared file once (one URL, one CSSOM copy). */
+@import url("./shared/design_tokens.css?v=1.6.68");
+@import url("./shared/themes.css?v=1.6.68");
+@import url("./shared/components.css?v=1.6.68");
+@import url("./model_library/styles/base.css?v=1.4.2-ui26-consistency");
+@import url("./model_library/styles/browser.css?v=grid-1.6.67-home-svg");
+@import url("./model_library/styles/info_panel.css?v=info-actions-1.4.2-ui87");
+@import url("./model_library/styles/footer.css?v=1.4.2-ui14");
+@import url("./model_library/styles/info_page.css?v=1.4.2-ui2");
+@import url("./model_library/styles/civitai_fetch.css?v=1.4.2-ui7");
+@import url("./model_library/styles/stats_page.css?v=1.4.2-ui2-clickable");
+@import url("./model_library/styles/transfer_page.css?v=1.4.4-home-svg");
+@import url("./model_library/styles/options_page.css?v=1.4.3-network-hosts");

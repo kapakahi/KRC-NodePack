@@ -1,0 +1,108 @@
+/* Stats — the home-menu Info Panel page (model_library/stats_page.js). Cells sit on a
+   section card (--krc-bg-deep), so they use the deeper tone. Token-only. */
+
+.krc-model-library .krc-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.krc-model-library .krc-stats-cell {
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deeper);
+}
+
+.krc-model-library .krc-stats-value {
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-2xl);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.krc-model-library .krc-stats-label {
+  margin-top: 3px;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.krc-model-library .krc-stats-sub {
+  margin-top: 3px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-model-library .krc-stats-type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.krc-model-library .krc-stats-type-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deeper);
+}
+
+.krc-model-library .krc-stats-type-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-base);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-stats-type-count {
+  min-width: 28px;
+  padding: 2px 7px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-count-bg);
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+  text-align: center;
+}
+
+.krc-model-library .krc-stats-empty {
+  padding: 8px;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+}
+
+/* A health cell with a matching search is a button: same card, a hover lift and a
+   pointer; a click goes to HOME with that search. */
+.krc-model-library button.krc-stats-cell {
+  display: block;
+  width: 100%;
+  border: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.krc-model-library .krc-stats-cell.is-clickable:hover,
+.krc-model-library .krc-stats-cell.is-clickable:focus-visible {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  box-shadow: var(--krc-selection-ring);
+}
+
+/* "Your KRC": the Presets list's heading under the totals. */
+.krc-model-library .krc-stats-subtitle {
+  margin: 10px 0 5px;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}

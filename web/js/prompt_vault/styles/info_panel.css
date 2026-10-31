@@ -1,0 +1,111 @@
+/* info panel */
+.krc-pm .krc-info-empty { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:16px; text-align:center; }
+.krc-pm .krc-info-empty .krc-action-button { min-width:72px; }
+.krc-pm .krc-info-body { display:grid; grid-template-columns:auto 1fr; gap:10px; flex:1 1 auto; min-height:0; overflow:auto; }
+.krc-pm .krc-info-left { display:grid; align-content:start; gap:5px; width:160px; min-width:0; }
+.krc-pm .krc-info-thumb { align-self:center; }
+/* Rows: LL preset (auto) · Prompt A (fr) · Prompt B (fr). JS sets grid-template-rows
+   inline from the stored split ratio; these are the pre-JS fallbacks. The 100px
+   mins keep at least ~3 lines of each prompt box visible (see PROMPT_MIN_PX). */
+.krc-pm .krc-info-right { display:grid; grid-template-rows:auto minmax(100px,1fr) minmax(100px,0.55fr); gap:7px; min-width:0; min-height:0; }
+
+/* LL preset field: prefix filter (30%) + preset picker (70%) + paste button. The
+   3/7 flex ratio splits the space left after the fixed-width paste glyph; min-width:0
+   lets the pickers shrink instead of overflowing the narrow right column. */
+.krc-pm .krc-pv-preset-field { min-width:0; }
+/* The LL field and any Loadout Kit preset rows (e.g. RefMod, opt-in per node) share the
+   right column's first row; same gap as the column so a kit row reads like the LL one.
+   Without kit rows this is just the LL field, laid out exactly as before. */
+.krc-pm .krc-pv-preset-stack { display:grid; gap:7px; min-width:0; }
+.krc-pm .krc-pv-preset-row { display:flex; align-items:stretch; gap:6px; min-width:0; }
+.krc-pm .krc-pv-preset-row .krc-preset-prefix-picker { flex:3 1 0; min-width:0; }
+.krc-pm .krc-pv-preset-row .krc-preset-select-wrap { flex:7 1 0; min-width:0; }
+.krc-pm .krc-pv-preset-paste {
+  flex:0 0 auto;
+  align-self:stretch;
+  padding-bottom:2px;
+  font-size:var(--krc-font-xl);
+  font-weight:800;
+  line-height:1;
+}
+.krc-pm .krc-pv-preset-paste-glyph {
+  display:inline-block;
+  transform:translate(0,-2px); /* dialed in via glyph tuner */
+}
+
+.krc-pm .krc-favorite-button { font-size:var(--krc-font-md); }
+.krc-pm .krc-switch-toggle { display:inline-flex; align-items:center; gap:7px; height:20px; border:0; padding:0; background:transparent;
+  color:var(--krc-text-secondary); cursor:pointer; font:inherit; font-size:var(--krc-font-xs); text-transform:uppercase; }
+.krc-pm .krc-switch-row-right { display:grid; grid-template-columns:1fr auto; align-items:center; gap:7px; color:var(--krc-text-secondary);
+  font:inherit; font-size:var(--krc-font-xs); text-transform:uppercase; }
+.krc-pm .krc-switch-label:empty { display:none; }
+.krc-pm .krc-switch-track { position:relative; width:30px; height:16px; border-radius:var(--krc-radius-pill); background:var(--krc-bg-element); box-shadow:inset 0 0 0 1px var(--krc-border-edit); }
+.krc-pm .krc-switch-knob { position:absolute; top:3px; left:3px; width:10px; height:10px; border-radius:var(--krc-radius-pill); background:var(--krc-text-secondary); transition:transform var(--krc-dur-base) ease,background var(--krc-dur-base) ease; }
+.krc-pm .krc-switch-toggle.is-on { color:var(--krc-text-primary); }
+.krc-pm .krc-switch-toggle.is-on .krc-switch-track { background:rgba(var(--krc-accent-green-rgb),0.62); box-shadow:var(--krc-on-ring); }
+.krc-pm .krc-switch-toggle.is-on .krc-switch-knob { background:var(--krc-text-primary); transform:translateX(14px); }
+
+.krc-pm .krc-replace-tools {
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+.krc-pm .krc-replace-actions {
+  --krc-action-button-width:100%;
+  --krc-action-button-height:18px;
+  --krc-action-button-padding:0 7px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:6px;
+  min-width:0;
+  width:100%;
+}
+.krc-pm .krc-replace-apply {
+  min-width:0;
+  max-width:none;
+  font-size:var(--krc-font-2xs);
+  line-height:1;
+}
+.krc-pm .krc-replace-feedback {
+  min-height:12px;
+  color:var(--krc-text-muted);
+  font-size:var(--krc-font-2xs);
+  line-height:12px;
+  opacity:0;
+  transition:opacity var(--krc-dur-slower) ease;
+}
+.krc-pm .krc-replace-feedback.is-visible {
+  opacity:1;
+}
+.krc-pm .krc-replace-feedback.is-fading {
+  opacity:0;
+}
+
+/* Preset sync menu (⇄ on a preset row): body-level, on the shared floating menu look
+   (components.css `body > .krc-menu-select-menu`). One line per loadout: its title and
+   what it has active; loadouts with unsaved edits are listed but disabled. */
+body > .krc-menu-select-menu.krc-pv-sync-menu { min-width:220px; max-width:320px; }
+body > .krc-pv-sync-menu .krc-pv-sync-menu-head {
+  padding:6px 8px 3px;
+  color:var(--krc-text-muted, rgba(255, 255, 255, 0.5));
+  font:700 var(--krc-font-3xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing:0.7px;
+  text-transform:uppercase;
+}
+body > .krc-pv-sync-menu .krc-pv-sync-option { display:grid; gap:2px; text-align:left; }
+body > .krc-pv-sync-menu .krc-pv-sync-option-title {
+  overflow:hidden;
+  color:var(--krc-text-primary, #fff);
+  font-weight:600;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+body > .krc-pv-sync-menu .krc-pv-sync-option-detail {
+  overflow:hidden;
+  color:var(--krc-text-muted, rgba(255, 255, 255, 0.55));
+  font-size:var(--krc-font-xs);
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+body > .krc-pv-sync-menu .krc-pv-sync-option:disabled { cursor:default; opacity:0.45; }
+body > .krc-pv-sync-menu .krc-pv-sync-option:disabled:hover { background:transparent; }

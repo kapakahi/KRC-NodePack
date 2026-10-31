@@ -1,0 +1,73 @@
+import { SEARCH_FIELD_ALIASES } from "./constants.js";
+import { parseSearchToken as sharedParseSearchToken } from "../shared/search.js";
+import { modelPresenceText } from "../shared/model_search_fields.js";
+
+export function parseJsonArray(value, fallback = []) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function browserLabel(lora, nameMode = "title") {
+  if (nameMode === "filename") {
+    return lora.filename || lora.display_name || "";
+  }
+  return lora.hasName ? lora.display_name : lora.filename || lora.display_name || "";
+}
+
+export function parseSearchToken(token, aliases = SEARCH_FIELD_ALIASES) {
+  return sharedParseSearchToken(token, aliases);
+}
+
+export function searchFieldText(lora, field, nameMode = "title") {
+  switch (field) {
+    case "active":
+      return browserLabel(lora, nameMode).toLowerCase();
+    case "title":
+      return (lora.display_name || lora.filename || "").toLowerCase();
+    case "filename":
+      return (lora.filename || "").toLowerCase();
+    case "model":
+      return (lora.baseModel || "").toLowerCase();
+    case "category":
+      return (lora.category || "").toLowerCase();
+    case "creator":
+      return (lora.creator?.username || "").toLowerCase();
+    case "folder":
+      return (lora.folder || "root").toLowerCase();
+    case "has":
+      return modelPresenceText(lora, true);
+    case "missing":
+      return modelPresenceText(lora, false);
+    case "version":
+      return (lora.version || "").toLowerCase();
+    case "trained":
+      return (Array.isArray(lora.trainedWords) ? lora.trainedWords.join(" ") : "").toLowerCase();
+    case "tag":
+      return (Array.isArray(lora.tags) ? lora.tags.join(" ") : "").toLowerCase();
+    case "badge":
+      return (lora.customBadge || "").toLowerCase();
+    case "civitai":
+      // civitai:none — checked, no Civitai match (derived from the Civitai cache).
+      return lora.civitaiNotFoundAt ? "none nomatch notfound" : "";
+    default:
+      return "";
+  }
+}
+
+export function modelFolderMatch(lora, folder = "", folders = []) {
+  if (!folders.length || !folder) return true;
+  if (folder === "__model_home__") return false;
+  const row = folders.find((item) => item.name === folder);
+  const modelType = row?.modelType || "";
+  if (modelType && lora.modelType !== modelType) return false;
+  if (row?.kind === "type") return true;
+  if (row?.kind === "root") return (lora.folder || "") === "";
+  if (row?.kind === "folder") return lora.folder === row.folder;
+  if (folder === "loras") return lora.modelType === "lora";
+  if (folder === "__root__") return (lora.folder || "") === "";
+  return lora.folder === folder;
+}

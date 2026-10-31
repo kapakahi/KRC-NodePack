@@ -1,0 +1,305 @@
+.krc-model-library .krc-browser {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.krc-model-library .krc-folder-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  height: 160px;
+  padding-bottom: 5px;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-base);
+  overflow: auto;
+}
+
+.krc-model-library .krc-folder-shell {
+  display: grid;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--krc-border-subtle);
+}
+
+.krc-model-library .krc-folder-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: var(--krc-radius-lg);
+  cursor: pointer;
+}
+
+.krc-model-library .krc-folder-color-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--krc-swatch-border);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-folder-color, var(--krc-empty-swatch-bg));
+  cursor: pointer;
+}
+
+.krc-model-library .krc-folder-color-button[data-card-color=""]::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-swatch-empty-mark);
+}
+
+.krc-model-library .krc-folder-color-button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.krc-model-library .krc-folder-color-button.is-home {
+  border-color: transparent;
+  background: transparent;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xl-plus);
+  font-weight: 900;
+  line-height: 1;
+  opacity: 1;
+}
+
+.krc-model-library .krc-folder-home-glyph {
+  display: block;
+  transform: translate(0, -4px) scale(1.12);
+  transform-origin: center;
+}
+
+.krc-model-library .krc-folder-color-button.is-home::after {
+  display: none;
+}
+
+.krc-model-library .krc-folder-row.is-active,
+.krc-model-library .krc-folder-row:hover {
+  background: var(--krc-list-active-bg);
+  color: var(--krc-text-primary);
+}
+
+.krc-model-library .krc-folder-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-folder-label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-folder-row.is-promoted .krc-folder-label-text {
+  font-size: var(--krc-font-md);
+  font-weight: 700;
+}
+
+.krc-model-library .krc-folder-pin-mark {
+  flex: 0 0 auto;
+  font-size: var(--krc-font-2xs);
+  line-height: 1;
+  opacity: 0.85;
+}
+
+/* In-cell folder config panel (expands under a folder row): pin toggle + the
+   shared color-swatch chips, mirroring Prompt Vault's category attributes. */
+.krc-model-library .krc-folder-color-button.is-open {
+  box-shadow: 0 0 0 2px var(--krc-text-muted);
+}
+
+.krc-model-library .krc-folder-config {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 1px 0 3px;
+  padding: 5px 7px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+}
+
+.krc-model-library .krc-folder-config .krc-swatches {
+  margin-left: auto;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.krc-model-library .krc-folder-count {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: var(--krc-radius-pill);
+  background: var(--krc-count-bg);
+  text-align: center;
+}
+
+.krc-model-library .krc-home-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--krc-browser-list-gap, 6px);
+  overflow: auto;
+}
+
+.krc-model-library .krc-home-menu .krc-home-menu-card {
+  flex: 0 0 var(--krc-browser-thumb-card-height);
+  width: calc(100% - var(--krc-browser-scrollbar-nudge));
+}
+
+.krc-model-library .krc-home-menu .krc-home-menu-thumb {
+  background:
+    var(--krc-thumb-wash),
+    var(--krc-bg-deep);
+  color: var(--krc-text-secondary);
+}
+
+.krc-model-library .krc-home-menu .krc-home-menu-glyph {
+  color: currentColor;
+}
+
+.krc-model-library .krc-home-menu .krc-gear-glyph {
+  transform: scale(1.45);
+}
+
+/* Collections, Refresh, Fetch, Import and Export: an inline SVG (home_menu.js). */
+.krc-model-library .krc-home-menu .krc-home-menu-svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.krc-model-library .krc-home-menu .krc-home-menu-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.krc-model-library .krc-home-stats-glyph {
+  display: block;
+  width: 5px;
+  height: 19px;
+  border-radius: var(--krc-radius-2xs) var(--krc-radius-2xs) var(--krc-radius-hair) var(--krc-radius-hair);
+  background: currentColor;
+  box-shadow:
+    -8px 8px 0 currentColor,
+    8px 4px 0 currentColor;
+}
+
+.krc-model-library .krc-home-menu .krc-home-menu-card.is-disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.krc-model-library .krc-home-menu .krc-home-menu-card:focus-visible {
+  outline: var(--krc-selection-ring-width, 3px) solid var(--krc-accent-green);
+  outline-offset: 1px;
+}
+
+.krc-model-library .krc-lora-card.is-dragging {
+  border-color: var(--krc-accent-green);
+  opacity: 0.58;
+}
+
+.krc-model-library .krc-lora-list.is-thumb .krc-lora-body {
+  height: var(--krc-browser-thumb-height);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.krc-model-library .krc-lora-list.is-thumb .krc-card-meta {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  overflow: hidden;
+}
+
+.krc-model-library .krc-lora-list.is-thumb .krc-badge-row {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.krc-model-library .krc-lora-list.is-thumb .krc-lora-sub {
+  flex: 1 1 auto;
+}
+
+.krc-model-library .krc-lora-name {
+  overflow: hidden;
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-base);
+  font-weight: 500;
+}
+
+.krc-model-library .krc-lora-name {
+  hyphens: auto;
+  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
+}
+
+.krc-model-library .krc-lora-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-badge-star {
+  flex: 0 0 auto;
+  color: var(--krc-accent-gold);
+  font-size: var(--krc-font-base);
+  line-height: 1;
+}
+
+.krc-model-library .krc-nsfw-badge {
+  flex: 0 0 auto;
+  font-size: var(--krc-font-2xs);
+}
+
+/* Subtitle now holds the text directly (was .krc-lora-meta wrapping a
+   .krc-lora-meta-text span); fold the span's clipping in and match PV's
+   canonical single-line .krc-lora-sub. */
+.krc-model-library .krc-lora-sub {
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 18px;
+  padding: 1px 0;
+  border: 0;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* List view: badges and label share one row (badges, then label). */
+.krc-model-library .krc-lora-list.is-list .krc-card-meta {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.krc-model-library .krc-lora-list.is-list .krc-lora-sub {
+  flex: 1 1 auto;
+}
+
+.krc-model-library .krc-duplicate-badge {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  background: rgba(var(--krc-accent-gold-rgb), 0.95);
+  color: rgb(var(--krc-black-rgb));
+}

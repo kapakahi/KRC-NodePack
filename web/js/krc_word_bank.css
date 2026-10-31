@@ -1,0 +1,10 @@
+/* Shared sheets: ?v= must match SHARED_STYLE_VERSION in shared/stylesheets.js
+   so every KRC node fetches each shared file once (one URL, one CSSOM copy). */
+@import url("./shared/design_tokens.css?v=1.6.68");
+@import url("./shared/themes.css?v=1.6.68");
+@import url("./shared/components.css?v=1.6.68");
+@import url("./word_bank/styles/base.css?v=1.6.4-dom-selects");
+@import url("./word_bank/styles/rows.css?v=1.6.5-row-26");
+@import url("./word_bank/styles/footer.css?v=1.6.5-row-26");
+@import url("./word_bank/styles/options_modal.css?v=1.6.4-dom-selects");
+@import url("./word_bank/styles/preset_controls.css?v=1.6.5-row-26");

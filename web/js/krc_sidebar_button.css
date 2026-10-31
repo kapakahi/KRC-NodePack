@@ -1,0 +1,30 @@
+/* The BROWSE button under Templates in ComfyUI's left toolbar (krc_sidebar_button.js).
+   The button carries the Templates button's own classes (size, hover, selected); this
+   only draws the green BROWSE pill inside it, like Config Switcher's BROWSE button. The
+   toolbar isn't inside a KRC node, so tokens come from :root, with literal fallbacks for
+   a not-yet-loaded token sheet. Versioned by STYLE_VERSION in the .js. */
+/* The pill sizes to its text and never shrinks under it (in the toolbar's flex button a
+   fixed min-width let it shrink to 44px while BROWSE ran past the green); the text is
+   small and tight enough to fit the narrow toolbar. */
+.krc-sidebar-button .krc-sidebar-mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: max-content;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--krc-radius-md, 5px);
+  background: var(--krc-accent-green, rgb(123, 158, 135));
+  color: var(--krc-on-accent, #fff);
+  font: 700 8px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.krc-sidebar-button:hover .krc-sidebar-mark,
+.krc-sidebar-button:focus-visible .krc-sidebar-mark {
+  filter: brightness(1.1);
+}

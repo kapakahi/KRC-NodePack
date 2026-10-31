@@ -1,0 +1,1311 @@
+/*
+ * KRC shared modal — the pack-wide popup dialog primitive.
+ *
+ * The single standard for KRC NodePack "Options" popups (and any future
+ * dialog): a centered panel over a dimmed backdrop, with a header (title + ×),
+ * a scrollable body slot, and an optional footer action row. Built by
+ * shared/modal.js; every color resolves through the --krc-* tokens so the modal
+ * recolors with the active palette (global via :root, or per-node via a
+ * data-krc-theme attribute stamped on the overlay).
+ *
+ * Extracted from the ConfigSwitcher "Fill from..." picker (now in
+ * config_switcher/styles/), which remains the reference look. Class names are krc-modal-* to
+ * match the krc-node convention.
+ */
+@import url("./design_tokens.css");
+@import url("./themes.css");
+
+.krc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--krc-z-popover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--krc-modal-scrim);
+  color: var(--krc-text-secondary);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--krc-font-base);
+  font-weight: 500;
+}
+
+.krc-modal-overlay.is-undimmed {
+  background: transparent;
+}
+
+.krc-modal-overlay *,
+.krc-modal-overlay *::before,
+.krc-modal-overlay *::after {
+  box-sizing: border-box;
+}
+
+.krc-modal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 570px;
+  max-width: 92vw;
+  max-height: 80vh;
+  padding: 12px;
+  border-radius: var(--krc-radius-2xl);
+  background: var(--krc-bg-col);
+  box-shadow: var(--krc-shadow-modal);
+  overflow: hidden;
+}
+
+/* Opt-in user-resizable panel (bottom-right drag handle). The starting size
+   comes from the inline width/height; these bounds let it grow/shrink. */
+.krc-modal-panel.is-resizable {
+  resize: both;
+  min-width: 420px;
+  min-height: 320px;
+  max-width: 96vw;
+  max-height: 92vh;
+}
+
+/* Header ------------------------------------------------------------------- */
+.krc-modal-head,
+.krc-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.krc-modal-panel.is-draggable .krc-modal-head {
+  cursor: move;
+  user-select: none;
+}
+
+.krc-modal-panel.is-draggable .krc-modal-x {
+  cursor: pointer;
+}
+
+.krc-modal-panel.is-moving {
+  pointer-events: auto;
+}
+
+.krc-modal-header-badge-slot {
+  display: flex;
+  flex: 0 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.krc-modal-title {
+  flex: 1;
+  font-size: var(--krc-font-sm);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.krc-modal-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding-bottom: 3px;
+  font-size: var(--krc-font-lg);
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  transition: background var(--krc-dur-fast), color var(--krc-dur-fast), border-color var(--krc-dur-fast);
+}
+
+.krc-modal-x:hover {
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+}
+
+/* Body slot ---------------------------------------------------------------- */
+.krc-modal-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Footer buttons ----------------------------------------------------------- */
+.krc-modal-btn {
+  height: var(--krc-save-button-height, 24px);
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  padding: 0 10px;
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  transition: background var(--krc-dur-fast), color var(--krc-dur-fast), transform var(--krc-dur-fast);
+}
+
+.krc-modal-btn:hover {
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+}
+
+.krc-modal-btn:active {
+  transform: translateY(1px);
+}
+
+.krc-modal-btn.is-confirming {
+  background: var(--krc-danger-armed-bg);
+  color: var(--krc-on-accent);
+}
+
+.krc-modal-btn.is-confirming:hover {
+  background: var(--krc-danger-armed-hover-bg);
+  color: var(--krc-on-accent);
+}
+
+.krc-modal-btn-primary {
+  flex: 1;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  padding: 6px;
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: filter var(--krc-dur-fast), background var(--krc-dur-fast), transform var(--krc-dur-fast);
+}
+
+.krc-modal-btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.krc-modal-btn-primary:active {
+  transform: translateY(1px);
+  background: var(--krc-bg-deeper);
+}
+
+/* openKrcConfirm({danger: true}): the confirm button is red, not green. Armed (the
+   two-step confirm, first click done) it brightens and gets a ring. */
+.krc-modal-btn-primary.is-danger {
+  background: var(--krc-accent-red);
+}
+
+.krc-modal-btn-primary.is-danger.is-confirming {
+  background: var(--krc-danger-armed-hover-bg);
+  box-shadow: 0 0 0 1px var(--krc-on-accent) inset;
+}
+
+.krc-modal-btn:disabled,
+.krc-modal-btn-primary:disabled {
+  cursor: default;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Shared text-entry controls ------------------------------------------------ */
+.krc-text-entry {
+  min-width: 0;
+}
+
+.krc-text-entry-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.krc-text-entry-input {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 28px 0 8px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-primary);
+  font: inherit;
+  font-size: var(--krc-font-sm);
+  outline: none;
+}
+
+.krc-text-entry-input::placeholder {
+  color: var(--krc-text-muted);
+  opacity: var(--krc-placeholder-opacity);
+}
+
+.krc-text-entry-input:focus {
+  border-color: var(--krc-border-strong, var(--krc-accent-blue));
+  background: var(--krc-bg-element);
+}
+
+.krc-text-entry-clear {
+  position: absolute;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: transparent;
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: 700 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.krc-text-entry-clear:hover,
+.krc-text-entry-clear:focus-visible {
+  background: var(--krc-control-hover-bg, rgba(var(--krc-white-rgb), 0.08));
+  color: var(--krc-text-primary);
+}
+
+.krc-text-entry.is-invalid .krc-text-entry-input {
+  border-color: var(--krc-accent-red);
+}
+
+.krc-text-entry-message {
+  min-height: 13px;
+  padding-top: 3px;
+  color: var(--krc-accent-red);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-text-entry-submit {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  appearance: none;
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+  cursor: pointer;
+  font: 800 var(--krc-font-base)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  transition: filter var(--krc-dur-fast), background var(--krc-dur-fast), transform var(--krc-dur-fast);
+}
+
+.krc-text-entry-submit:hover,
+.krc-text-entry-submit:focus-visible {
+  filter: brightness(1.1);
+}
+
+.krc-text-entry-submit:active {
+  transform: translateY(1px);
+  background: var(--krc-bg-deeper);
+}
+
+.krc-text-entry-submit:disabled {
+  cursor: default;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.krc-text-entry-dialog {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.krc-text-entry-dialog-label {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.krc-text-entry-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--krc-border-subtle);
+}
+
+.krc-preset-name-dialog {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.krc-preset-name-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.krc-preset-name-label {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.krc-preset-name-dialog .krc-preset-picker {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  isolation: isolate;
+}
+
+.krc-modal-overlay .krc-preset-search-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: 500 var(--krc-font-sm)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: left;
+}
+
+.krc-modal-overlay .krc-preset-search-button:hover,
+.krc-modal-overlay .krc-preset-search-button:focus-visible,
+.krc-modal-overlay .krc-preset-picker.is-open .krc-preset-search-button {
+  background: var(--krc-control-hover-bg, var(--krc-bg-deeper));
+  color: var(--krc-text-primary);
+}
+
+.krc-modal-overlay .krc-preset-search-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-modal-overlay .krc-preset-search-arrow {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+  line-height: 1;
+}
+
+.krc-preset-name-new-group[hidden] {
+  display: none;
+}
+
+.krc-preset-name-preview {
+  min-height: 16px;
+  color: var(--krc-text-muted);
+  font: 500 var(--krc-font-xs)/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  opacity: var(--krc-preview-text-opacity);
+  overflow-wrap: anywhere;
+}
+
+.krc-preset-name-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.krc-modal-btn-danger {
+  background: var(--krc-danger-armed-bg);
+  color: var(--krc-on-accent);
+  border-color: transparent;
+}
+
+.krc-modal-btn-danger:hover {
+  background: var(--krc-danger-armed-hover-bg);
+  color: var(--krc-on-accent);
+}
+
+/* Labeled option list for choice dialogs (e.g. import Merge/Replace). */
+.krc-modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.krc-modal-option {
+  padding: 8px 10px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+}
+
+.krc-modal-option-label {
+  margin-bottom: 2px;
+  color: var(--krc-text-primary);
+  font-weight: 600;
+  font-size: var(--krc-font-base);
+}
+
+.krc-modal-option-desc {
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+  line-height: 1.4;
+}
+
+.krc-more-info-foot {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.krc-modal-modified-slot {
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.krc-modal-header-badge-slot.krc-modal-modified-slot {
+  flex: 0 1 auto;
+}
+
+.krc-modal-modified-slot:empty {
+  display: none;
+}
+
+.krc-modal-modified-slot .krc-modified-badge {
+  position: relative;
+  height: 22px;
+  min-width: 66px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: rgba(var(--krc-accent-orange-rgb), 0.92);
+  color: var(--krc-on-accent);
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  font: inherit;
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.krc-modal-modified-slot .krc-modified-badge .is-hover {
+  display: none;
+}
+
+.krc-modal-modified-slot button.krc-modified-badge:hover {
+  background: rgba(var(--krc-accent-red-rgb), 0.92);
+}
+
+.krc-modal-modified-slot button.krc-modified-badge:hover .is-default {
+  display: none;
+}
+
+.krc-modal-modified-slot button.krc-modified-badge:hover .is-hover {
+  display: inline;
+}
+
+/* Modal cell (the pack-wide Options sub-section) --------------------------- */
+/* Bordered, filled, rounded box grouping related controls, with a small
+   uppercase title. The shared standard so every node's Options dialog reads
+   the same; node-local equivalents (.wb-options-section, .ddp-options-section)
+   mirror these values. Omit the title for a header-less cell (e.g. I/O). */
+.krc-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-xl);
+  background: rgba(var(--krc-bg-deep-rgb), 0.28);
+}
+
+.krc-modal-section-title {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+/* Shared IMPORT/EXPORT buttons (the pack-wide I/O control) ----------------- */
+/* Neutral utility styling: a solid gray (--krc-io-btn-bg, darker on hover)
+   held constant across every palette so I/O reads as a quiet utility and never
+   tints or goes translucent (e.g. under Native). Compact and right-aligned:
+   both buttons share one fixed width sized to the glyph + the wider "IMPORT"
+   label, so the pair matches exactly and hugs the right edge of the dialog
+   instead of stretching across it. */
+.krc-io-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.krc-io-row-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.krc-io-btn {
+  width: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-io-btn-bg);
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  transition: background var(--krc-dur-fast), border-color var(--krc-dur-fast), color var(--krc-dur-fast), transform var(--krc-dur-fast);
+}
+
+.krc-io-btn:hover {
+  background: var(--krc-io-btn-bg-hover);
+  color: var(--krc-text-primary);
+}
+
+.krc-io-btn:active {
+  transform: translateY(1px);
+}
+
+.krc-io-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.krc-io-btn-glyph {
+  font-size: var(--krc-font-lg);
+  line-height: 1;
+  color: var(--krc-text-muted);
+}
+
+.krc-io-btn:hover .krc-io-btn-glyph {
+  color: var(--krc-text-primary);
+}
+
+.krc-io-btn-label {
+  line-height: 1;
+}
+
+/* I/O rows led by a line of text (shared/transfer/node_transfer_row.js and item-level
+   imports such as Prompt Vault's category), stacked in one cell. */
+.krc-io-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.krc-io-row-text {
+  min-width: 0;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+}
+
+/* Labeled field row (e.g. the per-node palette picker) -------------------- */
+.krc-modal-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 3px 1px;
+}
+
+.krc-modal-field-label {
+  flex: none;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.krc-modal-field .krc-modal-select {
+  flex: 1;
+}
+
+/* Reusable read-only text rows for lightweight information dialogs. -------- */
+.krc-modal-text-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.krc-more-info-body {
+  flex: 1;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.krc-more-info-scroll {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.krc-modal-text-section {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.krc-modal-text-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.krc-modal-text-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.krc-more-info-prompts-column,
+.krc-more-info-metadata-section,
+.krc-more-info-prompts-section {
+  min-height: 0;
+}
+
+.krc-more-info-metadata-section {
+  display: grid;
+  flex: 1;
+  grid-template-rows: auto repeat(6, auto) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.krc-more-info-prompts-section {
+  display: grid;
+  flex: 1;
+  grid-template-rows: auto minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr);
+}
+
+.krc-more-info-prompts-section .krc-modal-text-row {
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.krc-more-info-tags-row {
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.krc-modal-text-section-title {
+  padding: 1px 1px 0;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.krc-modal-text-row {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  min-width: 0;
+  min-height: 0;
+  padding: 5px 6px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+}
+
+.krc-modal-text-row:not(.is-block) {
+  align-items: center;
+}
+
+.krc-modal-text-row.is-block {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.krc-modal-text-row.is-block.is-edit,
+.krc-more-info-body .krc-modal-text-row.is-block {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.krc-modal-text-row.is-prominent {
+  background: var(--krc-bg-deep);
+}
+
+.krc-modal-text-row.is-edit {
+  background: var(--krc-bg-deep);
+  cursor: text;
+}
+
+.krc-modal-text-label {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.krc-modal-text-value {
+  display: block;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--krc-text-secondary);
+  font: inherit;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-modal-text-row.is-block .krc-modal-text-value {
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.45;
+  text-overflow: clip;
+  white-space: pre-wrap;
+}
+
+.krc-more-info-body .krc-modal-text-row {
+  overflow: hidden;
+}
+
+.krc-modal-text-row.is-prominent .krc-modal-text-value {
+  max-height: 170px;
+  color: var(--krc-text-primary);
+}
+
+.krc-more-info-body .krc-modal-text-row.is-block .krc-modal-text-value {
+  height: 100%;
+  max-height: none;
+  overflow: auto;
+}
+
+.krc-more-info-description-row .krc-modal-text-value,
+.krc-more-info-description-row .krc-modal-edit-control {
+  height: 118px;
+  min-height: 118px;
+  max-height: 118px;
+}
+
+.krc-more-info-description-row {
+  gap: 2px;
+  padding-block: 3px;
+}
+
+.krc-more-info-trained-row .krc-modal-text-value,
+.krc-more-info-trained-row .krc-modal-edit-control {
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+}
+
+.krc-more-info-tags-row .krc-modal-text-value,
+.krc-more-info-tags-row .krc-modal-edit-control {
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+}
+
+.krc-more-info-prompt-row .krc-modal-text-value,
+.krc-more-info-prompt-row .krc-modal-edit-control {
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+}
+
+.krc-more-info-notes-row .krc-modal-text-value,
+.krc-more-info-notes-row .krc-modal-edit-control {
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+}
+
+.krc-modal-edit-control {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--krc-text-primary);
+  font: inherit;
+  line-height: 1.35;
+  margin: 0;
+  outline: none;
+  padding: 0;
+}
+
+textarea.krc-modal-edit-control {
+  appearance: none;
+  vertical-align: top;
+  resize: none;
+}
+
+.krc-modal-edit-control:focus {
+  color: var(--krc-text-primary);
+}
+
+.krc-modal-text-row:not(.is-block) .krc-modal-edit-control {
+  height: auto;
+  padding-block: 0;
+}
+
+.krc-modal-meta-grid {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--krc-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--krc-font-2xs);
+  opacity: var(--krc-meta-opacity, 0.68);
+}
+
+.krc-modal-meta-grid-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 12px;
+  min-width: 0;
+}
+
+.krc-modal-meta-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.krc-modal-meta-cell.is-right {
+  display: inline;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.krc-modal-meta-text {
+  min-width: 0;
+}
+
+.krc-modal-meta-copy {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--krc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  line-height: 1;
+  opacity: var(--krc-meta-opacity, 0.68);
+}
+
+.krc-modal-meta-copy:hover {
+  color: var(--krc-text-primary);
+}
+
+@media (max-width: 640px) {
+  .krc-modal-text-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Reusable content primitives (select / scroll list) ----------------------- */
+.krc-modal-select {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid var(--krc-border-edit);
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-secondary);
+  font: inherit;
+  outline: none;
+  transition: border-color var(--krc-dur-fast), color var(--krc-dur-fast);
+}
+
+.krc-modal-select:focus {
+  border-color: var(--krc-accent-purple-a);
+  color: var(--krc-text-primary);
+}
+
+/* A dialog's dropdown is a menuSelect (shared/browser_controls.js), never a native
+   <select>: this button + its body-portaled .krc-menu-select-menu (components.css). */
+.krc-modal-select.krc-menu-select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  height: 27px;
+  padding: 0 8px;
+  cursor: pointer;
+  font-size: var(--krc-font-sm);
+  text-align: left;
+}
+
+.krc-modal-select.krc-menu-select:hover {
+  color: var(--krc-text-primary);
+}
+
+.krc-modal-select .krc-menu-select-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The More Info NSFW rating row: a menu in the value column, not a text field. */
+.krc-more-info-nsfw-row.is-edit {
+  cursor: default;
+}
+
+.krc-more-info-nsfw-row .krc-modal-select {
+  justify-self: start;
+  min-width: 120px;
+}
+
+.krc-modal-select .krc-menu-select-arrow {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+  line-height: 1;
+}
+
+.krc-modal-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 120px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deep);
+}
+
+.krc-modal-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+  border-radius: var(--krc-radius-md);
+  cursor: pointer;
+}
+
+.krc-modal-row:hover {
+  background: var(--krc-bg-element);
+}
+
+.krc-modal-row.hidden {
+  display: none;
+}
+
+.krc-modal-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-clean-metadata-row {
+  cursor: default;
+}
+
+.krc-clean-metadata-name {
+  flex: 0 0 190px;
+  color: var(--krc-text-primary);
+  font-weight: 600;
+}
+
+.krc-clean-metadata-path {
+  flex: 1;
+  min-width: 0;
+  color: var(--krc-text-muted);
+}
+
+/* HuggingFace import modal (More Info → Import from HF) */
+.krc-hf-import-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.krc-hf-import-hint {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+  line-height: 1.4;
+}
+
+/* KRC bundle Export / Import dialogs (shared/transfer/bundle_dialogs.js) ------------- */
+/* A section line: its label + hint on the left, its count then its switch on the
+   right (an option line: label + description, then its switch); a picker
+   section lists its categories / banks under it. Mode cards are selectable options
+   (the selection ring; red when the choice is Overwrite). */
+.krc-bundle-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.krc-bundle-section {
+  padding: 6px 8px;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-bg-deep);
+}
+
+.krc-bundle-section.is-off .krc-bundle-section-label,
+.krc-bundle-section.is-off .krc-bundle-section-hint,
+.krc-bundle-section.is-off .krc-bundle-section-count {
+  opacity: var(--krc-meta-opacity);
+}
+
+.krc-bundle-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.krc-bundle-section-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.krc-bundle-section-name.is-clickable,
+.krc-bundle-option-text.is-clickable {
+  cursor: pointer;
+}
+
+/* A bare switch at the row's right: its own width, not the modal switch's 100%. */
+.krc-modal-overlay .krc-bundle-section-head > .krc-switch-toggle,
+.krc-modal-overlay .krc-bundle-option > .krc-switch-toggle {
+  flex: none;
+  width: auto;
+}
+
+.krc-bundle-section-hint {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+}
+
+.krc-bundle-section-count {
+  flex: none;
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-sm);
+  white-space: nowrap;
+}
+
+.krc-bundle-subset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 140px;
+  margin-top: 6px;
+  overflow: auto;
+}
+
+.krc-bundle-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 5px;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-control-bg);
+  color: var(--krc-text-secondary);
+  font: inherit;
+  font-size: var(--krc-font-sm);
+  cursor: pointer;
+}
+
+.krc-bundle-check:hover {
+  background: var(--krc-control-hover-bg);
+}
+
+.krc-bundle-check.is-checked {
+  color: var(--krc-text-primary);
+}
+
+.krc-bundle-check-box {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--krc-border-strong);
+  border-radius: var(--krc-radius-md);
+  font-size: var(--krc-font-2xs);
+  line-height: 1;
+}
+
+.krc-bundle-check.is-checked .krc-bundle-check-box {
+  border-color: var(--krc-accent-green);
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.krc-bundle-subset-empty {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-bundle-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.krc-bundle-option-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.krc-bundle-option-desc,
+.krc-bundle-preview-hint,
+.krc-bundle-preview-empty {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-xs);
+  line-height: 1.4;
+}
+
+.krc-bundle-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.krc-bundle-mode {
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.krc-bundle-mode.is-selected {
+  box-shadow: var(--krc-selection-ring);
+}
+
+.krc-bundle-mode.is-danger.is-selected {
+  box-shadow: inset 0 0 0 var(--krc-selection-ring-width) var(--krc-accent-red);
+}
+
+.krc-bundle-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.krc-bundle-preview-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px 60px 44px minmax(0, 1.3fr);
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+  font-size: var(--krc-font-sm);
+}
+
+.krc-bundle-preview-row.is-head {
+  background: none;
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.krc-bundle-preview-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-bundle-preview-row .is-skipped {
+  color: var(--krc-accent-red);
+}
+
+.krc-bundle-preview-row .is-muted {
+  color: var(--krc-text-muted);
+}
+
+.krc-bundle-preview-hint.is-error {
+  color: var(--krc-accent-red);
+}
+
+.krc-bundle-import {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A section's / option's label (the switch sits at the row's right): the look the
+   switch's own label had. */
+.krc-bundle-section-label {
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-xs);
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* A bundle section this machine can't import (e.g. a kit that isn't installed). */
+.krc-bundle-section.is-disabled .krc-bundle-section-hint {
+  color: var(--krc-accent-red);
+  opacity: 1;
+}
+
+/* The import result toast's Undo (shared/toast.js `action`). It follows the import
+   dialog, so modal.css is always loaded by then. */
+.krc-toast.has-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.krc-toast-action {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: var(--krc-radius-md);
+  background: var(--krc-control-bg);
+  color: var(--krc-text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.krc-toast-action:hover {
+  background: var(--krc-control-hover-bg);
+}
+
+/* Confirm / alert text keeps its line breaks ("\n\n" between a message and its details). */
+.krc-modal-overlay .krc-confirm-message {
+  white-space: pre-line;
+}

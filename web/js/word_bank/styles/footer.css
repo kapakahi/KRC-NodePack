@@ -1,0 +1,70 @@
+.wb-bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.wb-add,
+.wb-rall {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0;
+  border-radius: var(--krc-radius-lg);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--krc-font-xs);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  transition: background var(--krc-dur-base) ease, color var(--krc-dur-base) ease, transform var(--krc-dur-instant) ease, filter var(--krc-dur-base) ease;
+}
+
+.wb-add {
+  border: 0;
+  background: var(--krc-accent-green);
+  color: var(--krc-on-accent);
+}
+
+.wb-add:hover:not(:disabled) {
+  filter: brightness(1.1);
+  color: var(--krc-text-primary);
+}
+
+.wb-add:active:not(:disabled) {
+  background: var(--krc-bg-deeper);
+  color: var(--krc-text-primary);
+  transform: translateY(1px);
+}
+
+.wb-rall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+}
+
+.wb-options-btn {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-lg);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  color: var(--krc-text-secondary);
+  font-size: var(--krc-font-lg);
+  cursor: pointer;
+  transition: background var(--krc-dur-base) ease, color var(--krc-dur-base) ease;
+}
+
+.wb-options-btn:hover {
+  background: var(--krc-bg-deep);
+  color: var(--krc-text-primary);
+}
