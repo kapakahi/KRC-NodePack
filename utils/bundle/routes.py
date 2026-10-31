@@ -145,9 +145,17 @@ def register_bundle_routes():
             path = await save_upload(request, BUNDLE_UPLOAD_MAX, ".zip")
         except UploadTooLarge as err:
             return web.json_response({"ok": False, "error": str(err)}, status=413)
+        except Exception as err:  # noqa: BLE001 - a broken or interrupted upload
+            print(f"[KRC Bundle] couldn't receive the upload: {type(err).__name__}: {err}")
+            return web.json_response({"ok": False, "error": f"Couldn't receive the file: {err}"}, status=400)
         if path is None:
             return web.json_response({"ok": False, "error": "Missing bundle file"}, status=400)
-        token = await asyncio.to_thread(store_upload, path)
+        try:
+            token = await asyncio.to_thread(store_upload, path)
+        except Exception as err:  # noqa: BLE001 - e.g. krc_nodes not writable or out of space
+            path.unlink(missing_ok=True)
+            print(f"[KRC Bundle] couldn't store the upload: {type(err).__name__}: {err}")
+            return web.json_response({"ok": False, "error": f"Couldn't store the upload: {err}"}, status=500)
         try:
             sections = await asyncio.to_thread(inspect_bundle, upload_path(token))
         except (BundleImportError, ArchiveGuardError) as err:

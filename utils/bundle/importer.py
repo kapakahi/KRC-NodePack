@@ -90,7 +90,9 @@ def store_upload(temp_path):
     folder = uploads_dir()
     folder.mkdir(parents=True, exist_ok=True)
     token = secrets.token_hex(16)
-    Path(temp_path).replace(folder / f"{token}.zip")
+    # The upload sits in the system temp folder, which can be on another drive or mount
+    # (Docker volumes): shutil.move copies across them where a rename can't (EXDEV).
+    shutil.move(str(temp_path), str(folder / f"{token}.zip"))
     return token
 
 
