@@ -1,8 +1,8 @@
 /* Shared sheets: ?v= must match SHARED_STYLE_VERSION in shared/stylesheets.js
    so every KRC node fetches each shared file once (one URL, one CSSOM copy). */
-@import url("./shared/design_tokens.css?v=1.6.68");
-@import url("./shared/themes.css?v=1.6.68");
-@import url("./shared/components.css?v=1.6.68");
+@import url("./shared/design_tokens.css?v=1.6.69");
+@import url("./shared/themes.css?v=1.6.69");
+@import url("./shared/components.css?v=1.6.69");
 @import url("./lora_loadout/styles/base.css?v=1.4.2-ui97-consistency");
 @import url("./lora_loadout/styles/browser.css?v=grid-1.6.67");
 @import url("./lora_loadout/styles/stacks_presets.css?v=1.4.6-preset-plug");

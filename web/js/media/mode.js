@@ -41,7 +41,7 @@ import { NODES_EVENT, activeItems, nodesSignature, workflowPresetId } from "./no
 import { allPresets, onPresets, presetById, presetSlots, presetsLoaded, refreshPresets, setPresetSlot } from "./presets.js";
 export const MEDIA_PROVIDER_ID = "media";
 export { MEDIA_DRAG_KIND } from "./drag.js";
-const STYLE_VERSION = "1.0.2-shared-1668";
+const STYLE_VERSION = "1.0.2-shared-1669";
 // Media offers only thumbnail list and grid; derive from the shared view order.
 const MEDIA_VIEWS = Object.freeze(BROWSER_VIEWS.filter((view) => view !== "list"));
 const mediaView = (view) => MEDIA_VIEWS.includes(view) ? view : DEFAULT_BROWSER_VIEW;

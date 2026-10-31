@@ -7,6 +7,8 @@ saved presets, and one shared library behind them, the **KRC Portal**.
 
 ### KRC LoRA Loadout
 
+<a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/lora_loadout.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/lora_loadout.webp" width="800" alt="KRC LoRA Loadout and KRC LoRA Loadout EX"></a>
+
 Build two LoRA stacks (A and B) with per-LoRA toggles and strengths, and save them as
 presets. **Browse** opens your LoRAs in the Portal; drag a card into a slot. Want the
 browser inside the node? Use **KRC LoRA Loadout EX**.
@@ -17,6 +19,8 @@ The same card browser for every other model folder: checkpoints, diffusion model
 text encoders, upscalers and more.
 
 ### KRC Prompt Vault
+
+<a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/prompt_vault.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/prompt_vault.webp" width="600" alt="KRC Prompt Vault"></a>
 
 Save, organise and browse your prompts in categories, with thumbnails. Each prompt can
 carry a linked LoRA Loadout preset, so picking a prompt switches your LoRAs too. Keep
@@ -34,6 +38,8 @@ one node, save them as named configs, and flip between configs without rewiring.
 with **KRC Config Switcher Link** to send each value where it goes.
 
 ### KRC Media Loader and KRC Media Output
+
+<a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/media.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/media.webp" width="520" alt="KRC Media Loader and KRC Media Output"></a>
 
 A home for your images and videos, in the Portal's **Media** tab.
 

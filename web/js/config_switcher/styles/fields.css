@@ -459,6 +459,8 @@
 
 .ddp-field .ddp-input::placeholder,
 .ddp-string-select.is-empty .ddp-string-select-label {
+  /* Room for descenders (g, p, q): overflow: hidden clips at a line-height: 1 box. */
+  line-height: 1.3;
   color: var(--krc-text-muted);
   opacity: var(--krc-text-faint-opacity);
 }

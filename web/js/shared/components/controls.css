@@ -45,6 +45,8 @@
 }
 
 .krc-node .krc-preset-search-label {
+  /* Room for descenders (g, p, q): overflow: hidden clips at a line-height: 1 box. */
+  line-height: 1.3;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -200,6 +202,8 @@ body > .krc-preset-menu.is-portal-menu .krc-preset-option.has-menu {
 }
 
 .krc-preset-option.has-menu .krc-preset-option-main {
+  /* Room for descenders (g, p, q): overflow: hidden clips at a line-height: 1 box. */
+  line-height: 1.3;
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
