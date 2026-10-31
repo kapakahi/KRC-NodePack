@@ -12,7 +12,7 @@ import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, el, 
 import { OUTPUT_DEFAULTS, OUTPUT_FORMATS, OUTPUT_TYPE, OUTPUT_WIDGET, mergeOutputHistory, newOutputKey, normalizeOutput, outputHistory, readOutput } from "./output_state.js";
 
 const UI_WIDGET = "krc_media_output_ui";
-const STYLE_VERSION = "1.0.1-shared-1668";
+const STYLE_VERSION = "1.0.2-shared-1668";
 const MIN_W = MEDIA_NODE_DEFAULT_WIDTH;
 const uiOf = node => node.widgets?.find(widget => widget.name === UI_WIDGET);
 const contentHeight = node => mediaNodeContentHeight(node, UI_WIDGET, MIN_W);

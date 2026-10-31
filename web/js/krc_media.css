@@ -29,15 +29,15 @@
   color: var(--krc-accent-gold);
 }
 
-/* Input / Output folders: one letter, I or O. */
-.krc-mio-media .krc-mio-storage-toggle {
-  /* A smaller label at one fixed width, so INPUT / OUTPUT never pushes the row's buttons. */
+/* Input / Output folders toggle. */
+/* A smaller label at one fixed width, so INPUT / OUTPUT never pushes the row's buttons.
+   Outranks the shared .krc-node .krc-action-button rule, whose width/padding/font reset this. */
+.krc-mio-media .krc-action-button.krc-mio-storage-toggle {
   flex: none;
-  width: 48px;
+  width: 44px;
   min-width: 0;
   padding: 0 2px;
-  font-size: var(--krc-font-2xs);
-  font-weight: 700;
+  font: 700 var(--krc-font-3xs)/1 Inter, ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0;
 }
 
