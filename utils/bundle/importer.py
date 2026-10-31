@@ -138,14 +138,16 @@ def _open_bundle(path):
 
 
 def inspect_bundle(path):
-    """-> [{id, counts, linkedOnly, known}] for the sections the bundle holds, in this
-    machine's section order (unknown ones, e.g. a kit not installed here, last)."""
+    """-> [{id, counts, linkedOnly, known, choices?}] for the sections the bundle holds, in
+    this machine's section order (unknown ones, e.g. a kit not installed here, last).
+    ``choices`` = the items a section's subset picker offers (Section.choices)."""
     try:
         archive, sections = _open_bundle(path)
     except zipfile.BadZipFile as err:
         raise BundleImportError("That isn't a valid .zip file.") from err
     with archive:
-        order = [section.id for section in all_sections()]
+        by_id = {section.id: section for section in all_sections()}
+        order = list(by_id)
         known = set(order)
         listed = [section_id for section_id in order if section_id in sections]
         listed += sorted(str(section_id) for section_id in sections if section_id not in known)
@@ -157,6 +159,9 @@ def inspect_bundle(path):
             if section_id == "prompt_vault":
                 from ..prompt_profile_transfer import archive_profile
                 profile = {"profile": archive_profile(SectionArchive(archive, section_id))}
+            section = by_id.get(section_id)
+            if section is not None and section.choices is not None:
+                profile["choices"] = section.choices(SectionArchive(archive, section_id))
             out.append({
                 **profile,
                 "id": section_id,
@@ -167,7 +172,7 @@ def inspect_bundle(path):
         return out
 
 
-def _plans(archive, sections, section_ids, mode, options, stager):
+def _plans(archive, sections, section_ids, mode, options, stager, selection=None):
     by_id = {section.id: section for section in all_sections()}
     plans = []
     for section_id in section_ids:
@@ -176,37 +181,43 @@ def _plans(archive, sections, section_ids, mode, options, stager):
             raise BundleImportError(f"This machine can't import {section_id}")
         if section_id not in sections:
             raise BundleImportError(f"The bundle has no {section_id}")
-        plans.append((section_id, section.plan(SectionArchive(archive, section_id), mode, options, stager)))
+        section_options = {**options, "selection": (selection or {}).get(section_id)}
+        plans.append((section_id, section.plan(SectionArchive(archive, section_id), mode, section_options, stager)))
     return plans
 
 
-def _check_request(section_ids, mode):
+def _check_request(section_ids, mode, selection=None):
     if mode not in MODES:
         raise BundleImportError(f"Unknown import mode: {mode}")
     section_ids = list(dict.fromkeys(str(s) for s in section_ids or []))
     if not section_ids:
         raise BundleImportError("Choose at least one section to import.")
+    if selection is not None and (not isinstance(selection, dict)
+                                  or not all(value is None or isinstance(value, dict) for value in selection.values())):
+        raise BundleImportError("The import's selection is invalid")
     return section_ids
 
 
-def preview_bundle(path, section_ids, mode="merge", history=True, prompt_profile=None):
+def preview_bundle(path, section_ids, mode="merge", history=True, prompt_profile=None, selection=None):
     """What importing ``section_ids`` would do, writing nothing (plans only, a dry stager).
-    -> {"sections": {id: summary}}."""
-    section_ids = _check_request(section_ids, mode)
+    ``selection`` = {section id: subset}, as for export. -> {"sections": {id: summary}}."""
+    section_ids = _check_request(section_ids, mode, selection)
     try:
         archive, sections = _open_bundle(path)
     except zipfile.BadZipFile as err:
         raise BundleImportError("That isn't a valid .zip file.") from err
     with archive:
-        plans = _plans(archive, sections, section_ids, mode, {"history": bool(history), "promptProfile": prompt_profile}, Stager(dry=True))
+        plans = _plans(archive, sections, section_ids, mode, {"history": bool(history), "promptProfile": prompt_profile},
+                       Stager(dry=True), selection)
     return {"sections": {section_id: plan.summary for section_id, plan in plans}}
 
 
-def import_bundle(path, section_ids, mode="merge", history=True, file_name="", prompt_profile=None):
-    """Import ``section_ids`` from the bundle at ``path``. -> {"sections": {id: {summary,
-    result}}, "files": {"placed", "removed"}, "undo": {...}}. Saves the state first for
-    Undo last import (undo.py); ``file_name`` is what the Undo line calls the import."""
-    section_ids = _check_request(section_ids, mode)
+def import_bundle(path, section_ids, mode="merge", history=True, file_name="", prompt_profile=None, selection=None):
+    """Import ``section_ids`` from the bundle at ``path`` (``selection`` = {section id:
+    subset}, as for export). -> {"sections": {id: {summary, result}}, "files": {"placed",
+    "removed"}, "undo": {...}}. Saves the state first for Undo last import (undo.py);
+    ``file_name`` is what the Undo line calls the import."""
+    section_ids = _check_request(section_ids, mode, selection)
     try:
         archive, sections = _open_bundle(path)
     except zipfile.BadZipFile as err:
@@ -215,7 +226,8 @@ def import_bundle(path, section_ids, mode="merge", history=True, file_name="", p
     record = None
     try:
         with archive:
-            plans = _plans(archive, sections, section_ids, mode, {"history": bool(history), "promptProfile": prompt_profile}, stager)
+            plans = _plans(archive, sections, section_ids, mode, {"history": bool(history), "promptProfile": prompt_profile},
+                           stager, selection)
         record = undo.begin(section_ids, mode, file_name, slices={sid: getattr(plan, "slices", None) for sid, plan in plans if getattr(plan, "slices", None) is not None})
         with db.write() as conn:
             results = {section_id: plan.apply() for section_id, plan in plans}

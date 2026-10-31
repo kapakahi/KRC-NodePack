@@ -114,6 +114,18 @@ def write_vault_section(prompt_store, archive, selection=None):
     }
 
 
+def vault_choices(archive):
+    """The category names a bundle's Prompt Vault holds, in its order (the Import dialog's
+    picker; the values plan_vault_section's selection matches)."""
+    if PROMPTS_ARCHIVE_NAME not in archive.namelist():
+        return []
+    manifest = read_json_entry(archive, PROMPTS_ARCHIVE_NAME)
+    if not isinstance(manifest, dict):
+        raise ArchiveGuardError("prompt_vault/prompts.json is invalid")
+    names = (_clean_name(raw, category=True) for raw, bucket in manifest.items() if isinstance(bucket, dict))
+    return list(dict.fromkeys(name for name in names if name))
+
+
 def bundle_sections(prompt_store):
     """This node's KRC bundle section (registered by prompt_vault_routes.py)."""
     return [Section("prompt_vault", "Prompt Vault",
@@ -122,7 +134,8 @@ def bundle_sections(prompt_store):
                     lambda archive, mode, options, stager: plan_profile_section(prompt_store, archive, mode, options, stager, plan_vault_section),
                     slices=(("usage", "domain = 'prompts' AND item_id IN (SELECT id FROM main.prompts WHERE profile_id = 'default' UNION SELECT id FROM snap.prompts WHERE profile_id = 'default')"),
                             ("prompt_categories", "profile_id = 'default'"), ("prompts", "profile_id = 'default'")),
-                    stores=(("prompts", None), ("usage", "prompts"), ("prompt_profiles", None)), refresh=announce_profiles)]
+                    stores=(("prompts", None), ("usage", "prompts"), ("prompt_profiles", None)), refresh=announce_profiles,
+                    choices=vault_choices)]
 
 
 def _usage_by_record_id(prompts, profile_id="default"):
@@ -307,6 +320,12 @@ def plan_vault_section(prompt_store, archive, mode, options, stager):
     manifest = read_json_entry(archive, PROMPTS_ARCHIVE_NAME) if PROMPTS_ARCHIVE_NAME in archive.namelist() else {}
     if not isinstance(manifest, dict):
         raise ArchiveGuardError("prompt_vault/prompts.json is invalid")
+    # The Import dialog's category picker: only these of the bundle's categories (vault_choices names).
+    wanted = (options.get("selection") or {}).get("categories")
+    if wanted is not None:
+        if not isinstance(wanted, list):
+            raise ValueError("The category selection is invalid")
+        wanted = {str(name) for name in wanted}
     thumbs = _archive_thumbnails(archive.namelist())
     bundle_usage = _read_archive_usage(archive) if keep_history else None
     snapshot = prompt_store.load_prompts()
@@ -332,6 +351,8 @@ def plan_vault_section(prompt_store, archive, mode, options, stager):
         category = _clean_name(raw_category, category=True)
         if not category or not isinstance(cat_prompts, dict):
             invalid += 1
+            continue
+        if wanted is not None and category not in wanted:
             continue
         if profiled:
             category = category_names.setdefault(category.casefold(), category)

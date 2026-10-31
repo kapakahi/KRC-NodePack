@@ -3,7 +3,8 @@
  *
  * Export: a checklist of sections (with counts), a category / bank subset where a section
  * has one, Include linked presets -> one file. Import: pick a file, see what's inside (all
- * ticked), Merge / Overwrite + Keep history, Preview, Import -> a result toast with Undo.
+ * ticked, Prompt Vault's categories pickable too), Merge / Overwrite + Keep history,
+ * Preview, Import -> a result toast with Undo.
  *
  * Export: POST /krc/bundle/export -> one .zip. Import: the file uploads once
  * (POST /krc/bundle/upload -> a token + the bundle's sections), then Preview / Import send
@@ -24,6 +25,7 @@ import { bundleCountText, bundleSections, countText, knownSections, mergedSectio
 
 import { loadProfiles, profileControl, profileSnapshot, profileName } from "../../prompt_vault/profiles.js";
 import { promptImportControls, transferProfileId } from "../../prompt_vault/profile_transfer.js";
+import { categoryLabel } from "../../prompt_vault/constants.js";
 
 const MODES = [
   { id: "merge", label: "Merge", desc: "Adds what's new and fills only empty fields; your existing edits are kept." },
@@ -59,7 +61,7 @@ function labelFlips(target, toggle) {
 }
 
 // A section's line: label + hint on the left, then its count and its switch on the
-// right; (export only) its subset picker under it. A `disabled` line (a bundle
+// right; its subset picker under it (where it has one). A `disabled` line (a bundle
 // section this machine can't import) shows no switch.
 function sectionLine(section, picked, { onChange, subset = null, count = null, hint = null, disabled = false } = {}) {
   const line = el("div", `krc-bundle-section${picked[section.id] && !disabled ? "" : " is-off"}${disabled ? " is-disabled" : ""}`);
@@ -353,6 +355,15 @@ function renderImport({ modal, content, file, upload, known, only, node, sources
   }));
   const picked = Object.fromEntries(entries.map(({ entry, importable }) => [entry.id, importable && (!only || only.includes(entry.id))]));
   const state = { mode: "merge", history: true, preview: null, busy: false };
+  // A section with a picker whose bundle lists its items (Prompt Vault's categories): "All"
+  // or a chosen few, like Export. choices = [[value, label]].
+  const subsets = {};
+  const choices = {};
+  for (const { entry, section, importable } of entries) {
+    if (!importable || !section.picker || !Array.isArray(entry.choices)) continue;
+    subsets[entry.id] = { all: true, items: new Set() };
+    choices[entry.id] = entry.choices.map((value) => [value, section.picker === "category" ? categoryLabel(value) : value]);
+  }
 
   const promptControls = promptImportControls({ id: promptProfile,
     name: upload.sections.find(entry => entry.id === "prompt_vault")?.profile?.name,
@@ -364,7 +375,10 @@ function renderImport({ modal, content, file, upload, known, only, node, sources
   const optionCell = optionLine("Keep history", stateSwitch("Keep history", state, "history", { onChange: () => { state.preview = null; render(); } }),
     "Brings the bundle's dates and usage counts along. Off: imported items are dated now, with no usage.");
   const chosen = () => entries.filter(({ entry, importable }) => importable && picked[entry.id]).map(({ entry }) => entry.id);
-  const request = () => ({ token: upload.token, sections: chosen(), mode: state.mode, history: !!state.history,
+  const selection = () => Object.fromEntries(chosen().filter((id) => subsets[id] && !subsets[id].all)
+    .map((id) => [id, { [byId.get(id).picker === "category" ? "categories" : "banks"]: [...subsets[id].items] }]));
+  const subsetsReady = () => chosen().every((id) => !subsets[id] || subsets[id].all || subsets[id].items.size);
+  const request = () => ({ token: upload.token, sections: chosen(), selection: selection(), mode: state.mode, history: !!state.history,
     fileName: file.name, ...(chosen().includes("prompt_vault") ? { promptProfile: { ...promptControls.state } } : {}) });
 
   const foot = el("div", "krc-modal-foot");
@@ -375,8 +389,10 @@ function renderImport({ modal, content, file, upload, known, only, node, sources
   cancel.addEventListener("click", () => modal.close());
 
   const render = () => {
+    const changed = () => { state.preview = null; render(); };
     list.replaceChildren(...entries.map(({ entry, section, importable }) => sectionLine(section, picked, {
-      onChange: () => { state.preview = null; render(); },
+      onChange: changed,
+      subset: subsets[entry.id] ? subsetPicker(section, choices[entry.id], subsets[entry.id], changed) : null,
       count: bundleCountText(entry.counts),
       hint: !importable ? "Not on this machine: can't be imported here" : entry.linkedOnly ? "Only the presets the prompts use" : section.hint,
       disabled: !importable,
@@ -392,7 +408,7 @@ function renderImport({ modal, content, file, upload, known, only, node, sources
     list.inert = !!state.busy;
     modeCell.inert = !!state.busy;
     otherModeSection.hidden = !chosen().some(id => id !== "prompt_vault");
-    const any = chosen().length > 0 && (!picked.prompt_vault || promptControls.valid());
+    const any = chosen().length > 0 && subsetsReady() && (!picked.prompt_vault || promptControls.valid());
     cancel.disabled = state.busy === "import" || state.busy === "confirm";
     previewBtn.disabled = state.busy || !any;
     importBtn.disabled = state.busy || !any;

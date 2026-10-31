@@ -4,9 +4,10 @@ check (utils/request_guard.py) like every KRC route.
 GET  /krc/bundle/sections  -> {ok, sections: [{id, count}]}  (the Export dialog's counts)
 POST /krc/bundle/export    {sections: [ids], selection: {id: subset}, includeLinked}
                            -> the bundle .zip (streamed from a temp file)
-POST /krc/bundle/upload    the .zip (multipart) -> {ok, token, sections: [{id, counts, linkedOnly, known}]}
-POST /krc/bundle/preview   {token, sections: [ids], mode, history} -> {ok, sections: {id: summary}}
-POST /krc/bundle/import    {token, sections: [ids], mode, history} -> {ok, sections: {id: {summary, result}}}
+POST /krc/bundle/upload    the .zip (multipart) -> {ok, token, sections: [{id, counts, linkedOnly, known, choices?}]}
+                           (choices: the items the Import dialog's subset picker offers)
+POST /krc/bundle/preview   {token, sections: [ids], selection: {id: subset}, mode, history} -> {ok, sections: {id: summary}}
+POST /krc/bundle/import    {token, sections: [ids], selection: {id: subset}, mode, history} -> {ok, sections: {id: {summary, result}}}
 POST /krc/bundle/discard   {token} -> {ok}  (the Import dialog was closed)
 GET  /krc/bundle/undo      -> {ok, undo: {createdMs, sections, mode, fileName, changesSince} | null}
 POST /krc/bundle/undo      -> {ok, sections, rows, files}  (Undo last import)
@@ -162,7 +163,8 @@ def register_bundle_routes():
         payload = await _json_body(request)
         try:
             result = await run_import(preview_bundle, upload_path(payload.get("token")), payload.get("sections") or [],
-                                      str(payload.get("mode") or "merge"), payload.get("history") is not False, payload.get("promptProfile"))
+                                      str(payload.get("mode") or "merge"), payload.get("history") is not False, payload.get("promptProfile"),
+                                      payload.get("selection"))
         except (BundleImportError, ArchiveGuardError, ValueError, UnicodeDecodeError) as err:
             return web.json_response({"ok": False, "error": str(err)}, status=400)
         except Exception as err:  # noqa: BLE001
@@ -177,7 +179,8 @@ def register_bundle_routes():
         try:
             path = upload_path(token)
             result = await run_import(import_bundle, path, payload.get("sections") or [], mode,
-                                      payload.get("history") is not False, str(payload.get("fileName") or ""), payload.get("promptProfile"))
+                                      payload.get("history") is not False, str(payload.get("fileName") or ""), payload.get("promptProfile"),
+                                      payload.get("selection"))
         except (BundleImportError, ArchiveGuardError, UndoError, ValueError, UnicodeDecodeError) as err:
             log_transfer("import", "krc_bundle", False, mode=mode, summary=str(err))
             return web.json_response({"ok": False, "error": str(err)}, status=400)

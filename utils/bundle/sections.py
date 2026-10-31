@@ -16,7 +16,10 @@ A section:
   plan(archive, mode, options, stager) -> ImportPlan
              reads the section's folder and decides every write, OUTSIDE any transaction
              (parse, scan, stage thumbnails through the Stager); writes nothing. mode is
-             "merge" or "overwrite"; options = {"history": bool}.
+             "merge" or "overwrite"; options = {"history": bool, "selection": the
+             section's subset or None (everything), as for export}.
+  choices(archive) optional: -> [item values] the bundle's section holds, for the Import
+             dialog's subset picker (Prompt Vault: its category names)
 
   slices     [(table, WHERE clause or None)]: the krc.db rows the section owns; Undo last
              import restores exactly these from the pre-import copy
@@ -47,6 +50,7 @@ class Section:
     slices: tuple = ()
     stores: tuple = ()
     refresh: Callable = None
+    choices: Callable = None
 
 
 @dataclass
