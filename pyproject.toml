@@ -17,3 +17,4 @@ Documentation = "https://github.com/kapakahi/KRC-NodePack#readme"
 [tool.comfy]
 PublisherId = "krc"
 DisplayName = "KRC NodePack"
+Icon = "https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/icon.svg"

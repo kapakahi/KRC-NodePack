@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <title>KRC</title>
+  <defs>
+    <clipPath id="cap"><rect x="-40" y="0" width="500" height="160"/></clipPath>
+  </defs>
+  <rect width="400" height="400" rx="72" fill="#232427"/>
+  <g transform="translate(56 143.5) scale(0.708)">
+    <g clip-path="url(#cap)" fill="none" stroke="#c9cbd1" stroke-width="32">
+      <path d="M16 -20V180M24 92L100 -20M52 70L110 180"/>
+      <path d="M156 -20V180M156 16H196A40 40 0 0 1 196 96H156M192 96L240 180"/>
+      <path d="M395.1 31A64 64 0 1 0 395.1 129"/>
+    </g>
+  </g>
+</svg>
