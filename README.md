@@ -93,8 +93,8 @@ Get it at [KRC NodePack Extras](https://github.com/kapakahi/KRC-NodePack-Extras)
 Open **Manager ▸ Custom Nodes Manager**, search for **KRC NodePack**, click **Install**,
 and restart ComfyUI.
 
-> **Just released:** if Manager shows no installable version yet, the Comfy Registry is
-> still reviewing it. Use the manual install below for now.
+> **Waiting for Comfy Registry approval:** KRC NodePack can't be installed through Manager
+> yet. Until it's approved, use the manual install below.
 
 ### Manual install
 

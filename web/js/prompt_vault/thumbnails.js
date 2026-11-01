@@ -55,8 +55,14 @@ export const thumbnailMethods = {
     if (this.pasteThumbMode) return this.pasteThumb();
     const file = await pickThumbnailFile();
     if (!file) return;
-    // One picker, two paths: an mp4/webm is transcoded server-side, a still image
-    // goes through the existing data-URL upload.
+    return this.uploadThumbFile(file);
+  },
+
+  // A picked file, or a Media card dropped on the thumbnail (shared/media_thumbnail_drop.js).
+  async uploadThumbFile(file) {
+    if (!this.orig) { this.toast("Save the prompt first"); return; }
+    // Two paths: an mp4/webm is transcoded server-side, a still image goes through the
+    // existing data-URL upload.
     if (isVideoFile(file)) return this._uploadVideoThumb(file);
     try {
       const dataUrl = await blobToDataURL(file);

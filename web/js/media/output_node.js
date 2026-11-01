@@ -1,5 +1,6 @@
 // Output settings execute on the server; history stays in the workflow properties.
 import { makeMediaDraggable } from "./drag.js";
+import { bindMediaKeys, wrapIndex } from "./keyboard.js";
 import { downloadMedia } from "./download.js";
 import { app } from "../../../scripts/app.js";
 import { api as comfyApi } from "../../../scripts/api.js";
@@ -8,11 +9,11 @@ import { applyNodePalette, ensureStylesheet, markDirty, menuSelect, openKrcModal
 import { mediaItem, mediaItems, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
 import { mediaDisplayState } from "./display.js";
 import { MEDIA_EVENT, mediaApi } from "./api.js";
-import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, el, fitMediaNode, mediaNodeContentHeight, mediaControlButton, nodeShell, openMedia, openNodeOptions, optionsButton, prepareDataWidget, slotCells } from "./panel.js";
+import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, confirmControlButton, el, fitMediaNode, mediaNodeContentHeight, mediaControlButton, nodeShell, openMedia, openNodeOptions, optionsButton, prepareDataWidget, slotCells } from "./panel.js";
 import { OUTPUT_DEFAULTS, OUTPUT_FORMATS, OUTPUT_TYPE, OUTPUT_WIDGET, mergeOutputHistory, newOutputKey, normalizeOutput, outputHistory, readOutput } from "./output_state.js";
 
 const UI_WIDGET = "krc_media_output_ui";
-const STYLE_VERSION = "1.0.2-shared-1669";
+const STYLE_VERSION = "1.0.4-shared-1670";
 const MIN_W = MEDIA_NODE_DEFAULT_WIDTH;
 const uiOf = node => node.widgets?.find(widget => widget.name === UI_WIDGET);
 const contentHeight = node => mediaNodeContentHeight(node, UI_WIDGET, MIN_W);
@@ -71,6 +72,31 @@ function openOptions(node) {
 
 function historyOf(node) {
   return outputHistory(node.properties?.krcMediaOutputHistory || [], mediaItems(), readOutput(node).key);
+}
+
+// Trash: the shown history entry's file is deleted from Media (record, file, thumbnail), and
+// the entry leaves the history. One already gone from Media just leaves the history.
+async function deleteShown(node) {
+  const entries = historyOf(node);
+  const index = Math.min(node._krcMioOutputHistoryPick ?? 0, Math.max(0, entries.length - 1));
+  const id = entries[index]?.id;
+  if (!id) return;
+  if (mediaItem(id)) {
+    let result = null;
+    try { result = await mediaApi.remove(id); } catch { result = null; }
+    if (!result?.ok) {
+      console.warn(`[KRC Media] couldn't delete output ${id}: ${result?.error || "no answer"}`);
+      render(node);
+      return;
+    }
+  }
+  node.properties ||= {};
+  node.properties.krcMediaOutputHistory = (node.properties.krcMediaOutputHistory || []).filter(entry => entry?.id !== id);
+  if (node._krcMioOutputPending) delete node._krcMioOutputPending[id];
+  node._krcMioOutputHistoryPick = Math.max(0, Math.min(index, historyOf(node).filter(entry => entry?.id !== id).length - 1));
+  markDirty(node);
+  Promise.resolve(refreshMediaItems()).catch(() => {});   // the Media event refreshes too
+  render(node);
 }
 
 function clearHistory(node) {
@@ -210,7 +236,7 @@ function render(node) {
   const empty = missing ? "Missing media" : "No output yet";
   const previewKey = JSON.stringify([item?.id, item?.kind, item?.width, item?.height, item?.audio, mediaDisplayState(item), empty]);
   const playbackKey = () => JSON.stringify([isMuted(), isAutoplay()]);
-  const headerKey = () => JSON.stringify([choices, state.folder, isMuted(), isAutoplay(), Boolean(entries.length)]);
+  const headerKey = () => JSON.stringify([choices, state.folder, isMuted(), isAutoplay(), Boolean(entries.length), entries[selected]?.id || ""]);
   // Header comes first; its controls resolve the current preview when clicked.
   section(node, panel, "header", headerKey(), () => {
     const header = el("div", "krc-panel-header krc-mio-header");
@@ -258,7 +284,15 @@ function render(node) {
       auto.setAttribute("aria-pressed", String(isAutoplay()));
     };
     syncAutoplay();
-    header.append(folder, el("span", "krc-mio-header-gap"), auto, mute, clearAllButton(() => clearHistory(node), !entries.length, "Clear output history (media files are kept)"), optionsButton(() => openOptions(node)));
+    const trash = confirmControlButton("trash", () => deleteShown(node), {
+      title: "Delete the shown output's file from Media (the file itself, not just the history)",
+      armedTitle: "Click again to delete the file",
+      className: "krc-mio-output-trash-shown",
+      disabled: !entries[selected]?.id,
+    });
+    header.append(folder, el("span", "krc-mio-header-gap"), auto, mute,
+      clearAllButton(() => clearHistory(node), !entries.length, "Clear output history (media files are kept)"), trash,
+      optionsButton(() => openOptions(node)));
     return header;
   });
   const previousPreview = node._krcMioOutputSections?.preview?.element;
@@ -414,8 +448,17 @@ app.registerExtension({
     if (node?.comfyClass !== OUTPUT_TYPE) return;
     ensureStylesheet("krc-media-css", "../krc_media.css", import.meta.url, { version: STYLE_VERSION });
     ensureKey(node);
+    // ← / → (its panel clicked, or the node selected): the previous / next history entry,
+    // wrapping. A view change only.
+    node._krcMioStep = (delta) => {
+      const count = historyOf(node).length;
+      if (!count) return;
+      node._krcMioOutputHistoryPick = wrapIndex(Math.min(node._krcMioOutputHistoryPick ?? 0, count - 1), delta, count);
+      render(node);
+    };
     prepare(node);
     const { root } = nodeShell("krc-mio-output");
+    bindMediaKeys(root, node);
     const widget = node.addDOMWidget(UI_WIDGET, "krc-media-output", root, {
       serialize: false, hideOnZoom: false, getMinHeight: () => contentHeight(node),
     });

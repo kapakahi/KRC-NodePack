@@ -1,8 +1,8 @@
 /* Shared sheets: ?v= must match SHARED_STYLE_VERSION in shared/stylesheets.js
    so every KRC node fetches each shared file once (one URL, one CSSOM copy). */
-@import url("./shared/design_tokens.css?v=1.6.69");
-@import url("./shared/themes.css?v=1.6.69");
-@import url("./shared/components.css?v=1.6.69");
+@import url("./shared/design_tokens.css?v=1.6.70");
+@import url("./shared/themes.css?v=1.6.70");
+@import url("./shared/components.css?v=1.6.70");
 @import url("./model_library/styles/base.css?v=1.4.2-ui26-consistency");
 @import url("./model_library/styles/browser.css?v=grid-1.6.67-home-svg");
 @import url("./model_library/styles/info_panel.css?v=info-actions-1.4.2-ui87");

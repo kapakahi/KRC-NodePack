@@ -1,4 +1,5 @@
 import { installMediaDropTarget } from "./drag.js";
+import { bindMediaKeys, wrapIndex } from "./keyboard.js";
 // KRC Media Loader, browser side (GAMEPLAN.md section 4): the image / video loader. It loads
 // one slot of a media preset (6 slots, saved on every change):
 //
@@ -26,10 +27,10 @@ import { createPreset, onPresets, presetById, presetSlots, presetsLoaded, refres
 import { teardownMedia } from "./krc.js";
 import { mediaDisplayState } from "./display.js";
 import { mediaItem, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
-import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, el, fitMediaNode, mediaNodeContentHeight, iconButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, prepareDataWidget, presetButton, slotCells } from "./panel.js";
+import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, el, fitMediaNode, mediaNodeContentHeight, iconButton, mediaControlButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, prepareDataWidget, presetButton, slotCells } from "./panel.js";
 
 const UI_WIDGET = "krc_media_loader_ui";
-const STYLE_VERSION = "1.0.2-shared-1669";
+const STYLE_VERSION = "1.0.4-shared-1670";
 const MIN_W = MEDIA_NODE_DEFAULT_WIDTH;
 const BAREBONES_MIN_W = 240;
 const BAREBONES_PROP = "krcMioBarebones";
@@ -171,13 +172,36 @@ function pendingPreview(node, pending) {
 
 // The slot's media preview, kept while the slot holds the same item (a re-render never
 // interrupts a hovered video).
+// The preview's sound (the header's mute button, like Media Output's): off by default, so a
+// hovered video plays with sound; kept in the workflow (node.properties.krcMioLoaderMuted).
+const loaderMuted = (node) => node.properties?.krcMioLoaderMuted === true;
+
 function slotPreview(node, item, empty) {
   const key = JSON.stringify([item?.id, item?.kind, empty, mediaDisplayState(item)]);
   if (node._krcMioPreview?.key !== key) {
     teardownMedia(node._krcMioPreview?.box);
-    node._krcMioPreview = { key, box: mediaPreview(item, { empty, full: true, holdPreview: true, typeIndicator: true, className: "krc-mio-pick-preview" }) };
+    node._krcMioPreview = { key, box: mediaPreview(item, { empty, full: true, holdPreview: true, typeIndicator: true,
+      className: "krc-mio-pick-preview", muted: () => loaderMuted(node) }) };
   }
   return node._krcMioPreview.box;
+}
+
+function muteButton(node) {
+  const button = mediaControlButton("mute", () => {
+    node.properties ||= {};
+    node.properties.krcMioLoaderMuted = !loaderMuted(node);
+    sync();
+    node._krcMioPreview?.box?.syncPreviewSound?.();
+    markDirty(node);
+  });
+  const sync = () => {
+    button.classList.toggle("is-muted", loaderMuted(node));
+    button.title = loaderMuted(node) ? "Preview muted · click to unmute" : "Preview sound on hover · click to mute";
+    button.setAttribute("aria-label", "Mute preview");
+    button.setAttribute("aria-pressed", String(loaderMuted(node)));
+  };
+  sync();
+  return button;
 }
 
 // Drop only references an existing record; the saved file stays in input/output.
@@ -315,7 +339,7 @@ function render(node) {
   }
 
   const header = el("div", "krc-panel-header krc-mio-header");
-  header.append(presetPicker, el("span", "krc-mio-header-gap"), clear, options);
+  header.append(presetPicker, el("span", "krc-mio-header-gap"), muteButton(node), clear, options);
 
   // Preview: the pending upload, else the slot's media.
   const empty = following ? "Follows the preset input" : !loaded ? "Loading…" : !preset ? (pick.preset ? "Missing preset" : "No preset")
@@ -424,7 +448,14 @@ app.registerExtension({
     if (node?.comfyClass !== LOADER_TYPE) return;
     ensureStylesheet("krc-media-css", "../krc_media.css", import.meta.url, { version: STYLE_VERSION });
     prepareDataWidget(node, LOADER_WIDGET);
+    // ← / → (its panel clicked, or the node selected): the previous / next of its 6 slots,
+    // empty ones too, wrapping.
+    node._krcMioStep = (delta) => {
+      writeLoader(node, { slot: wrapIndex(readLoader(node).slot, delta, 6) });
+      render(node);
+    };
     const { root, panel } = nodeShell("krc-mio-loader");
+    bindMediaKeys(root, node);
     installMediaDropTarget(panel, {
       enabled: () => canFillSlot(node, readLoader(node).preset),
       onDropMany: ids => replaceSlots(node, readLoader(node).preset, ids, readLoader(node).slot),

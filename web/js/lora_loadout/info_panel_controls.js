@@ -1,10 +1,12 @@
 import { createCardColorButton } from "../shared/card_color_button.js";
+import { isVideoFile } from "../shared/files.js";
+import { installMediaThumbnailDrop } from "../shared/media_thumbnail_drop.js";
 import { applyStabilizeGlow } from "../shared/stabilize_glow.js";
 import { renderVerificationShield } from "../shared/verification_shield.js";
 import { copyText } from "../shared/clipboard.js";
 import { switchToggle } from "../shared/browser_controls.js";
 import { thumbnailBox } from "../shared/browser_cards.js";
-import { openKrcModal, krcModalSection } from "../shared/modal.js";
+import { krcAlert, openKrcModal, krcModalSection } from "../shared/modal.js";
 import { buildNodePaletteField } from "../shared/node_palette.js";
 import { nodeTransferRow } from "../shared/transfer/node_transfer_row.js";
 import { isNetworkAllowed, notifyNetworkDisabled } from "../shared/network_consent.js";
@@ -40,6 +42,12 @@ export const infoPanelControlMethods = {
     });
     thumb.draggable = true;
     thumb.title = "Drag into a stack slot";
+    // A Media card dropped here becomes the thumbnail, like picking that file with UPLOAD.
+    installMediaThumbnailDrop(thumb, {
+      enabled: () => Boolean(selected?.sha256),
+      onFile: (file) => (isVideoFile(file) ? this.uploadThumbnailVideo(selected, file) : this.uploadThumbnail(selected, file)),
+      onError: (message) => krcAlert(message, this.node),
+    });
     thumb.addEventListener("dragstart", (event) => {
       const dragSha = this.canonicalId?.(selected?.sha256) || selected?.sha256 || "";
       if (!dragSha) {

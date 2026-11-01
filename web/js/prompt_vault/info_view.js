@@ -6,6 +6,7 @@
  * Mixed onto PMRedesign.prototype via Object.assign.
  */
 import { createCardColorButton } from "../shared/card_color_button.js";
+import { installMediaThumbnailDrop } from "../shared/media_thumbnail_drop.js";
 import { thumbnailBox } from "../shared/browser_cards.js";
 import {
   favoriteActionButton,
@@ -109,6 +110,12 @@ export const infoMethods = {
     });
 
     const saved = !!this.orig && !foreign;   // upload requires an existing record
+    // A Media card dropped here becomes the thumbnail, like picking that file with UPLOAD.
+    installMediaThumbnailDrop(thumb, {
+      enabled: () => saved,
+      onFile: (file) => this.uploadThumbFile(file),
+      onError: (message) => this.toast(message),
+    });
     this._thumbRemoveConfirm?.dispose();
     this._thumbRemoveConfirm = null;
     const thumbCtl = thumbnailControlRow({

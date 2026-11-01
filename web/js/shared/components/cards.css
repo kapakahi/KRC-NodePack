@@ -818,3 +818,10 @@
   min-width: 0;
   min-height: 0;
 }
+
+/* An Info Panel thumbnail with a Media card dragged over it (shared/media_thumbnail_drop.js):
+   the selection ring and a light tint, without changing its size. */
+.krc-info-thumb.krc-media-thumb-drop.is-drop-target {
+  box-shadow: var(--krc-selection-ring);
+  filter: brightness(1.12);
+}

@@ -110,19 +110,17 @@ def _linux_mount_type(path):
 
 
 def _windows_remote_drive(path):
+    """A network share: a UNC path (\\\\server\\share), or a mapped drive letter, which
+    realpath resolves to one (\\\\?\\UNC\\server\\share). Plain Python, no native calls."""
     path = str(path)
-    if path.startswith("\\\\"):
+    if path.startswith("\\\\") and not path.startswith("\\\\?\\") and not path.startswith("\\\\.\\"):
         return True
     try:
-        import ctypes
-
-        drive = os.path.splitdrive(os.path.abspath(path))[0]
-        if not drive:
-            return False
-        DRIVE_REMOTE = 4
-        return ctypes.windll.kernel32.GetDriveTypeW(drive + "\\") == DRIVE_REMOTE
-    except Exception:  # noqa: BLE001
+        resolved = os.path.realpath(path)
+    except (OSError, ValueError):
         return False
+    return resolved.upper().startswith("\\\\?\\UNC\\") or (
+        resolved.startswith("\\\\") and not resolved.startswith("\\\\?\\") and not resolved.startswith("\\\\.\\"))
 
 
 def location_warning(folder):

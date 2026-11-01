@@ -5,7 +5,7 @@
 import { installMediaDropTarget, makeMediaDraggable } from "./drag.js";
 import { thumbnailBox } from "./krc.js";
 import { mediaDisplayState } from "./display.js";
-import { buildNodePaletteField, closeFloatingMenu, openKrcModal, openLibraryModal, toggleFloatingMenu } from "./krc.js";
+import { armConfirmButton, buildNodePaletteField, closeFloatingMenu, openKrcModal, openLibraryModal, toggleFloatingMenu } from "./krc.js";
 import { mediaApi } from "./api.js";
 import { MEDIA_PROVIDER_ID } from "./mode.js";
 import { SLOT_COUNT } from "./presets.js";
@@ -51,26 +51,49 @@ export function iconButton(text, title, onClick, extra = "") {
 }
 
 // Compact, centered media controls use one vector style in the node header.
+const CONTROL_PATHS = {
+  clear: '<rect x="7" y="7" width="14" height="14" rx="2"/><path d="M17 3H5a2 2 0 0 0-2 2v12M11 11l6 6M17 11l-6 6"/>',
+  mute: '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+  autoplay: '<path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/><path d="m10 8 6 4-6 4z" fill="currentColor" stroke="none"/>',
+  confirm: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+};
+const controlSvg = (kind) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CONTROL_PATHS[kind] || CONTROL_PATHS.autoplay}</svg>`;
+
 export function mediaControlButton(kind, onClick) {
-  const paths = kind === "clear"
-    ? '<rect x="7" y="7" width="14" height="14" rx="2"/><path d="M17 3H5a2 2 0 0 0-2 2v12M11 11l6 6M17 11l-6 6"/>'
-    : kind === "mute"
-    ? '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>'
-    : '<path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/><path d="m10 8 6 4-6 4z" fill="currentColor" stroke="none"/>';
   const button = iconButton("", "", onClick, `krc-mio-control krc-mio-output-${kind}`);
   const glyph = el("span", "krc-mio-control-glyph");
-  glyph.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+  glyph.innerHTML = controlSvg(kind);
   button.append(glyph);
   return button;
 }
 
-export function clearAllButton(onClick, disabled = false, title = "Clear all references (media files are kept)") {
-  const button = mediaControlButton("clear", onClick);
-  button.classList.add("krc-mio-clear-all");
+// A header action that asks in the button itself (no dialog): the first click arms it (a red
+// ✓, "click again"), a second click within 2.5 s runs `onConfirm`, anything else lets it
+// reset. `kind` is the idle glyph.
+export function confirmControlButton(kind, onConfirm, { title, armedTitle, className = "", disabled = false } = {}) {
+  const button = mediaControlButton(kind, () => {});
+  if (className) button.classList.add(className);
   button.title = title;
   button.setAttribute("aria-label", title);
   button.disabled = disabled;
+  const glyph = button.querySelector(".krc-mio-control-glyph");
+  armConfirmButton(button, {
+    armedText: "confirm",
+    restoreText: kind,
+    armedTitle,
+    restoreTitle: title,
+    stopPropagation: true,
+    renderText: (_button, which) => { if (glyph) glyph.innerHTML = controlSvg(which); },
+    onConfirm: () => onConfirm(),
+  });
   return button;
+}
+
+export function clearAllButton(onClick, disabled = false, title = "Clear all references (media files are kept)") {
+  return confirmControlButton("clear", onClick, {
+    title, armedTitle: "Click again to clear", className: "krc-mio-clear-all", disabled,
+  });
 }
 
 // The row above the cells: what the cells are (SLOT / HISTORY) on the left, the shown

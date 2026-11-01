@@ -1,9 +1,9 @@
 /* KRC Media: the Portal's Media tab and the KRC Media Loader / Output nodes.
    Shared sheets: ?v= must match SHARED_STYLE_VERSION in shared/stylesheets.js
    so every KRC node fetches each shared file once (one URL, one CSSOM copy). */
-@import url("./shared/design_tokens.css?v=1.6.69");
-@import url("./shared/themes.css?v=1.6.69");
-@import url("./shared/components.css?v=1.6.69");
+@import url("./shared/design_tokens.css?v=1.6.70");
+@import url("./shared/themes.css?v=1.6.70");
+@import url("./shared/components.css?v=1.6.70");
 
 /* KRC tokens only (--krc-*); cards, panels, buttons, the header and search come from
    NodePack's shared components.css (under .krc-node). */
@@ -547,6 +547,12 @@
 
 /* ---- KRC Media Loader: the KRC node structure ------------------------------------- */
 /* .krc-node › .krc-panel (the background cell, from NodePack) › header, preview, cells, bar */
+/* A Media panel takes keyboard focus on a click (media/keyboard.js: ← / → step it); no ring. */
+.krc-mio-node:focus,
+.krc-mio-node:focus-visible {
+  outline: none;
+}
+
 .krc-mio-node .krc-mio-panel {
   display: flex;
   flex-direction: column;
@@ -1695,6 +1701,12 @@ div.krc-mio-cell {
   display: block;
   width: 16px;
   height: 16px;
+}
+
+/* Clear / trash ask in the button (panel.js confirmControlButton): armed = a red ✓. */
+.krc-node .krc-icon-button.krc-mio-control.is-confirming {
+  background: var(--krc-danger-armed-bg);
+  color: var(--krc-on-accent);
 }
 
 .krc-node .krc-icon-button.krc-mio-output-mute.is-muted {

@@ -26,7 +26,6 @@ Internal, for KRC Portal ▸ Options ▸ Network only (not part of ext/v1):
     The two POSTs only accept ComfyUI's own page (request_guard; stage 16).
 """
 import functools
-import importlib
 
 from . import ext_api
 from .request_guard import refuse_cross_site
@@ -203,17 +202,25 @@ def store_revisions():
     return stores, kits, max([0, *stores.values(), *kits.values()])
 
 
+def _library_index(lineage):
+    """The library index class for `lineage`: plain imports, inside the function so the
+    libraries load only when asked (and no import cycle at start)."""
+    if lineage == "loras":
+        from .lora_loadout.library_index import LoraLibraryIndex
+        return LoraLibraryIndex
+    from .model_library.library_index import ModelLibraryIndex
+    return ModelLibraryIndex
+
+
 async def scan_tokens():
     """{"loras": token, "models": token}: changes when that library was rescanned (files
     added, moved, removed) or a record changed in place. Asking runs the library's usual
     folder check (cheap, at most every few seconds), so files changed on disk are noticed;
     a cold library scans first, on a worker thread. "" when a library can't be read."""
     tokens = {}
-    for lineage, module, name in (("loras", "lora_loadout.library_index", "LoraLibraryIndex"),
-                                  ("models", "model_library.library_index", "ModelLibraryIndex")):
+    for lineage in ("loras", "models"):
         try:
-            cls = getattr(importlib.import_module(f"{__package__}.{module}"), name)
-            tokens[lineage] = (await cls.loaded()).change_token()
+            tokens[lineage] = (await _library_index(lineage).loaded()).change_token()
         except Exception as exc:  # noqa: BLE001
             print(f"[KRC External API] couldn't read the {lineage} library: {exc}")
             tokens[lineage] = ""
