@@ -252,7 +252,9 @@ export function createRowControls({
     valInp.addEventListener("input", commit);
 
     rBtn.addEventListener("click", async () => {
-      valInp.value = await randomWord(sel.value, valInp.value);
+      const word = await randomWord(sel.value, valInp.value);
+      if (word === null) return;   // the request failed: keep the current word
+      valInp.value = word;
       commit({ check: false });
       await checkMissing(row);
     });
@@ -351,7 +353,9 @@ export function createRowControls({
       const picker = rowBank(r);
       const i = r.querySelector("input[type=text]");
       if (picker && i) {
-        i.value = await randomWord(picker.value, i.value);
+        const word = await randomWord(picker.value, i.value);
+        if (word === null) return;   // the request failed: keep the current word
+        i.value = word;
         clearMissing(r);
       }
     }));

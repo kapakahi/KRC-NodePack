@@ -19,32 +19,46 @@ app.registerExtension({
   setup() {
     installWordBankStatsHook();
     const origQueue = app.queuePrompt?.bind(app);
-    if (typeof origQueue !== "function") return;
+    if (typeof origQueue !== "function" || app._krcWordBankQueueHooked) return;
+    // Runs before EVERY queue (any workflow), so nothing in here may stop the run: a word
+    // that can't be fetched keeps its current value, and any other failure is logged and
+    // the queue goes ahead.
     app.queuePrompt = async function (...args) {
-      const wbNodes = (app.graph?._nodes ?? []).filter(
-        n => (n.comfyClass ?? n.type) === NODE_TYPE
-      );
-      await Promise.all(wbNodes.map(async node => {
-        if (!loadState(node).autoSeed || !node.__wbWrap) return;
-        const rows = [...node.__wbWrap.querySelectorAll(".wb-row")];
-        await Promise.all(rows.map(async row => {
-          if (row.classList.contains("locked")) return;
-          const picker = rowBank(row);
-          const inp = row.querySelector("input[type=text]");
-          if (picker && inp) {
-            inp.value = await randomWord(picker.value, inp.value);
+      try {
+        const wbNodes = (app.graph?._nodes ?? []).filter(
+          n => (n.comfyClass ?? n.type) === NODE_TYPE
+        );
+        let failed = 0;
+        await Promise.all(wbNodes.map(async node => {
+          if (!loadState(node).autoSeed || !node.__wbWrap) return;
+          const rows = [...node.__wbWrap.querySelectorAll(".wb-row")];
+          await Promise.all(rows.map(async row => {
+            if (row.classList.contains("locked")) return;
+            const picker = rowBank(row);
+            const inp = row.querySelector("input[type=text]");
+            if (!picker || !inp) return;
+            const word = await randomWord(picker.value, inp.value).catch(() => null);
+            if (word === null) {
+              failed += 1;            // keep the current word
+              return;
+            }
+            inp.value = word;
             row.classList.remove("missing-word");
             inp.title = "";
+          }));
+          if (node._wbGetRows) {
+            const s = loadState(node);
+            s.rows = node._wbGetRows();
+            saveState(node, s);
           }
         }));
-        if (node._wbGetRows) {
-          const s = loadState(node);
-          s.rows = node._wbGetRows();
-          saveState(node, s);
-        }
-      }));
+        if (failed) console.warn(`[KRC Word Bank] auto-randomize: ${failed} word(s) couldn't be fetched; kept their current value`);
+      } catch (err) {
+        console.warn(`[KRC Word Bank] auto-randomize skipped before the run: ${err?.message || err}`);
+      }
       return origQueue(...args);
     };
+    app._krcWordBankQueueHooked = true;
   },
 
   async nodeCreated(node) {

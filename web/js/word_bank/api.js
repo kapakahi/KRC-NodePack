@@ -68,10 +68,13 @@ export async function removeBankEntry(categoryId, value) {
   return result;
 }
 
+// -> a random word ("" when the bank is empty), or null when the request failed: callers
+// then keep the row's current word instead of blanking it.
 export async function randomWord(categoryId, exclude = "") {
   const query = exclude ? `?exclude=${encodeURIComponent(exclude)}` : "";
   const data = await getJson(`/wordbank/random/${encodeURIComponent(categoryId)}${query}`, { fallback: null });
-  return data?.value ?? "";
+  if (!data || typeof data !== "object" || "error" in data) return null;
+  return typeof data.value === "string" ? data.value : "";
 }
 
 // ── Global presets (disk-backed via /wordbank/presets) ──────────────────────
