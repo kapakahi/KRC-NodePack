@@ -8,9 +8,8 @@ Everything here is cheap and safe at import time: a few import probes plus the
 capability check krc_video already made. It never scans the LoRA library (that stays
 lazy) so it can't cause a startup spike.
 
-Two verbosity levels:
-  * default  — two lines: identity + hard requirements, then optional capabilities.
-  * KRC_QUIET — a single summary line.
+Two lines: identity + hard requirements, then optional capabilities. (No environment
+variable switch: reading the environment is a registry-scanner "system-modification" tag.)
 """
 import os
 import sys
@@ -56,15 +55,9 @@ def _animated_state(cap):
 
 
 def format_lines(node_count, version):
-    """Return the list of lines to print (1 line under KRC_QUIET, else 2)."""
+    """Return the two lines to print."""
     cap = kv.capability()
     pillow = _pillow_version()
-    posters = "on" if cap["poster"] else "off"
-
-    if os.environ.get("KRC_QUIET"):
-        animated = "on" if cap["webm"] else "off"
-        return [f"{PREFIX} v{version} | {node_count} nodes | "
-                f"animated:{animated} posters:{posters} | store:{_store_state() or '?'}"]
 
     # Line 1 — identity + the hard requirements (Python, Pillow).
     pillow_txt = f"Pillow {pillow}" if pillow else "Pillow MISSING (image thumbnails off)"
