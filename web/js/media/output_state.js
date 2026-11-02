@@ -19,7 +19,7 @@ export function normalizeOutput(raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) raw = {};
   const format = OUTPUT_FORMATS.find(entry => entry.value === raw.format) || OUTPUT_FORMATS[0];
   return {
-    // "" = Default (output/KRC-Media/Default, the Output view's Unsorted); "output" was its old name.
+    // "" = Default (loose in output/KRC-Media/, the Output view's Unsorted); "output" was its old name.
     folder: ID.test(raw.folder) ? raw.folder : OUTPUT_DEFAULTS.folder,
     prefix: typeof raw.prefix === "string" ? raw.prefix : OUTPUT_DEFAULTS.prefix,
     format: format.value,

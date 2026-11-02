@@ -9,11 +9,11 @@ import { applyNodePalette, ensureStylesheet, markDirty, menuSelect, openKrcModal
 import { mediaItem, mediaItems, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
 import { mediaDisplayState } from "./display.js";
 import { MEDIA_EVENT, mediaApi } from "./api.js";
-import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, confirmControlButton, el, fitMediaNode, mediaNodeContentHeight, mediaControlButton, nodeShell, openMedia, openNodeOptions, optionsButton, prepareDataWidget, slotCells } from "./panel.js";
+import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, confirmControlButton, el, fitMediaNode, mediaNodeContentHeight, mediaControlButton, nodeShell, openMedia, openNodeOptions, optionsButton, prepareDataWidget, refitOnPanelResize, slotCells } from "./panel.js";
 import { OUTPUT_DEFAULTS, OUTPUT_FORMATS, OUTPUT_TYPE, OUTPUT_WIDGET, mergeOutputHistory, newOutputKey, normalizeOutput, outputHistory, readOutput } from "./output_state.js";
 
 const UI_WIDGET = "krc_media_output_ui";
-const STYLE_VERSION = "1.0.4-shared-1670";
+const STYLE_VERSION = "1.0.6-shared-1671";
 const MIN_W = MEDIA_NODE_DEFAULT_WIDTH;
 const uiOf = node => node.widgets?.find(widget => widget.name === UI_WIDGET);
 const contentHeight = node => mediaNodeContentHeight(node, UI_WIDGET, MIN_W);
@@ -22,6 +22,22 @@ function write(node, changes) {
   const widget = node.widgets?.find(entry => entry.name === OUTPUT_WIDGET);
   if (widget) widget.value = JSON.stringify(normalizeOutput({ ...readOutput(node), ...changes }));
   markDirty(node);
+}
+
+// Auto-download (Options, off by default): each output this node saves also downloads in
+// the browser. A node property, not output_data: it never reaches the server, so toggling it
+// doesn't change the run's inputs (no re-run, no cache miss).
+const AUTO_DOWNLOAD = "krcMediaOutputAutoDownload";
+const autoDownload = node => node.properties?.[AUTO_DOWNLOAD] === true;
+
+function downloadOutputs(records) {
+  for (const item of records) {
+    const link = el("a", "", { href: mediaApi.fileUrl(item.id), download: item.filename || item.name || item.id, rel: "noopener" });
+    link.style.display = "none";
+    document.body.append(link);
+    link.click();
+    link.remove();
+  }
 }
 
 function optionRow(label, control) {
@@ -57,15 +73,25 @@ function openOptions(node) {
     title: NATIVE_TITLE,
     onClick: () => { write(node, { native: !readOutput(node).native }); sync(); },
   });
+  const download = switchToggle({
+    label: "Auto-download", active: autoDownload(node),
+    title: "Also download each output this node saves, in this browser",
+    onClick: () => {
+      node.properties ||= {};
+      node.properties[AUTO_DOWNLOAD] = !autoDownload(node);
+      markDirty(node);
+      sync();
+    },
+  });
   const sync = () => {
-    for (const [toggle, on] of [[metadata, readOutput(node).saveMetadata], [native, readOutput(node).native]]) {
+    for (const [toggle, on] of [[metadata, readOutput(node).saveMetadata], [native, readOutput(node).native], [download, autoDownload(node)]]) {
       toggle.classList.toggle("is-on", on);
       toggle.classList.toggle("is-active", on);
       toggle.setAttribute("aria-pressed", String(on));
     }
   };
   fields.append(optionRow("Filename / prefix", prefix), optionRow("Image format", format), metadata, native,
-    el("div", "krc-mio-output-note", { textContent: NATIVE_TITLE }));
+    el("div", "krc-mio-output-note", { textContent: NATIVE_TITLE }), download);
   sync();
   openNodeOptions(node, "Media Output options", uiOf(node)?.element || null, [fields]);
 }
@@ -408,6 +434,7 @@ app.registerExtension({
       const records = (Array.isArray(message?.krc_media_outputs) ? message.krc_media_outputs : [])
         .filter(item => !item?.outputKey || item.outputKey === key);
       if (!records.length) return;
+      if (autoDownload(this)) downloadOutputs(records);
       this.properties ||= {};
       this.properties.krcMediaOutputHistory = mergeOutputHistory(historyOf(this), records);
       this._krcMioOutputHistoryPick = 0;
@@ -426,6 +453,7 @@ app.registerExtension({
     nodeType.prototype.onRemoved = function () {
       this._krcMioOutputRemoved = true;
       this._krcMioOutputCleanup?.();
+      this._krcMioRefitCleanup?.();
       if (this._krcMioOutputRenderFrame != null) cancelAnimationFrame(this._krcMioOutputRenderFrame);
       this._krcMioOutputRenderFrame = null;
       this._krcMioOutputSections = null;
@@ -457,8 +485,9 @@ app.registerExtension({
       render(node);
     };
     prepare(node);
-    const { root } = nodeShell("krc-mio-output");
+    const { root, panel } = nodeShell("krc-mio-output");
     bindMediaKeys(root, node);
+    node._krcMioRefitCleanup = refitOnPanelResize(panel, () => fitMediaNode(node, MIN_W));
     const widget = node.addDOMWidget(UI_WIDGET, "krc-media-output", root, {
       serialize: false, hideOnZoom: false, getMinHeight: () => contentHeight(node),
     });

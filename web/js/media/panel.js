@@ -3,7 +3,7 @@
 // hidden data widget, the preset button (from presets.js), the 6 slot cells, the
 // Options modal (the node palette), and the Media opener.
 import { installMediaDropTarget, makeMediaDraggable } from "./drag.js";
-import { thumbnailBox } from "./krc.js";
+import { classicNodeHeight, isNode2Dom, thumbnailBox } from "./krc.js";
 import { mediaDisplayState } from "./display.js";
 import { armConfirmButton, buildNodePaletteField, closeFloatingMenu, openKrcModal, openLibraryModal, toggleFloatingMenu } from "./krc.js";
 import { mediaApi } from "./api.js";
@@ -221,6 +221,9 @@ export function openMedia({ preset = "", slot = 0, folder = "", view = "" } = {}
 export function mediaNodeContentHeight(node, widgetName, minWidth, barebones = false) {
   const root = node.widgets?.find(widget => widget.name === widgetName)?.element;
   const panel = root?.querySelector(".krc-mio-panel");
+  // Classic canvas: the panel's real height (its preview is capped at 52vh, so a
+  // width formula drifts); the panel never stretches with the node, so no feedback.
+  if (panel?.offsetHeight && !isNode2Dom(root)) return panel.offsetHeight;
   if (barebones) return Math.max(panel?.offsetHeight || 0, 40) + 4;
   const width = Math.max(Math.max(node.size?.[0] || 0, minWidth) - 24 - 16, 120);
   const rows = [...(panel?.children || [])].filter(child => !child.classList.contains("krc-mio-preview"));
@@ -232,9 +235,32 @@ export function mediaNodeContentHeight(node, widgetName, minWidth, barebones = f
   return width + (measured || 69 + (width - 4 * (SLOT_COUNT - 1)) / SLOT_COUNT) + 6 * (rows.length || 4) + 16 + 4;
 }
 
+// Classic canvas: refit whenever the panel's height changes (a width change, a row
+// showing, the window's height moving the preview's 52vh cap). -> disconnect.
+export function refitOnPanelResize(panel, refit) {
+  if (typeof ResizeObserver !== "function") return () => {};
+  let height = 0;
+  const observer = new ResizeObserver(() => {
+    if (isNode2Dom(panel) || panel.offsetHeight === height) return;
+    height = panel.offsetHeight;
+    refit();
+  });
+  observer.observe(panel);
+  return () => observer.disconnect();
+}
+
+// Classic canvas: the node is its panel plus the shared edge (classicNodeHeight);
+// Node 2.0: LiteGraph's own size from the widget's content height.
+function wantedHeight(node) {
+  const widget = node.widgets?.find(entry => entry.element?.querySelector?.(".krc-mio-panel"));
+  const panel = widget?.element.querySelector(".krc-mio-panel");
+  if (panel?.offsetHeight && !isNode2Dom(widget.element)) return classicNodeHeight(node, widget, panel.offsetHeight);
+  return (node.computeSize?.() || node.size)[1];
+}
+
 export function fitMediaNode(node, minWidth) {
   requestAnimationFrame(() => {
-    const want = (node.computeSize?.() || node.size)[1];
+    const want = wantedHeight(node);
     const width = Math.max(node.size?.[0] || 0, minWidth);
     if (Math.abs((node.size?.[1] || 0) - want) > 1 || width !== node.size?.[0]) node.setSize?.([width, want]);
     node.setDirtyCanvas?.(true, true);

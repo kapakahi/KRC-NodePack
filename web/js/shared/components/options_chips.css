@@ -13,7 +13,9 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--krc-text-secondary);
+  /* One label colour, the Options field labels' (.krc-modal-field-label), on or off:
+     the track shows the state. */
+  color: var(--krc-text-muted);
   cursor: pointer;
   font: inherit;
   font-size: var(--krc-font-xs);
@@ -49,10 +51,6 @@
   border-radius: var(--krc-radius-pill);
   background: var(--krc-text-secondary);
   transition: transform var(--krc-dur-base) ease, background var(--krc-dur-base) ease;
-}
-
-:is(.krc-modal-overlay, .krc-options-host) .krc-switch-toggle.is-on {
-  color: var(--krc-text-primary);
 }
 
 :is(.krc-modal-overlay, .krc-options-host) .krc-switch-toggle.is-on .krc-switch-track {

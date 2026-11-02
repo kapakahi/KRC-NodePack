@@ -15,6 +15,7 @@ import {
 } from "./helpers.js";
 import { debounce, stopCanvasWheel } from "../shared/dom.js";
 import { startPanelWhenReady } from "../shared/panel_startup.js";
+import { classicNodeHeight, isClassicDom } from "../shared/node_edge.js";
 import { LoraStackerPanel } from "./panel.js";
 
 
@@ -204,6 +205,17 @@ export function attachPanel(node, options = {}) {
       };
     } else {
       domWidget.computeSize = () => [MINI_NODE_SIZE[0], MINI_DOM_HEIGHT];
+      // Classic canvas: a definite DOM height, and the node sized from the shared edge.
+      node.__krcClassicMiniHeight = () => {
+        if (!isClassicDom(panel.root)) return null;
+        panel.root.style.height = `${MINI_DOM_HEIGHT}px`;
+        return classicNodeHeight(node, domWidget, MINI_DOM_HEIGHT);
+      };
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (!node.graph || !isClassicDom(panel.root)) return;
+        applyMinimumNodeSize(node);
+        forceNodeSize(node, node.size);
+      }));
     }
     node.__krcCancelPanelStartup = startPanelWhenReady(panel, {
       stylesReady,

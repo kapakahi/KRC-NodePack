@@ -66,6 +66,7 @@ import {
     renderAll,
     renderFields,
     resizeConfigNode,
+    stampConfigDomHeight,
 } from "./field_rows.js";
 import {
     addField,
@@ -162,6 +163,7 @@ export const DDP_STRING_MULTILINE_H = 72;   // raw STRING field switched to mult
 export const DDP_FIELD_GAP = 2;
 export const DDP_DOM_FIXED_H = 73;
 export const DDP_EMPTY_DOM_H = 92;
+// Node 2.0 chrome; the classic canvas sizes from the shared edge (shared/node_edge.js).
 export const DDP_NODE_BASE_CHROME_H = 50;
 export const DDP_CONFIG_OUTPUT_ROW_H = 24;
 export const MODEL_CARD_W = 324;
@@ -822,6 +824,10 @@ function buildDom(node) {
     });
     widget.computeSize = (width) => [width ?? MIN_W, calcConfigDomHeight(node)];
     promoteDomWidgetAfterVisible(node, widget);
+    // Once mounted the renderer is known: the classic canvas sizes from the shared edge.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (node._ddp && node.graph) resizeConfigNode(node);
+    }));
     return widget;
 }
 
@@ -923,11 +929,13 @@ app.registerExtension({
             }
         };
 
-        // Grow freely; never shrink below the minimum width or content height.
+        // Grow freely; never shrink below the minimum width or content height. On the
+        // classic canvas the UI follows the new height (Node 2.0 does that itself).
         const onResize = nodeType.prototype.onResize;
         nodeType.prototype.onResize = function (size) {
             size[0] = Math.max(size[0], MIN_W);
             size[1] = Math.max(size[1], calcConfigNodeHeight(this));
+            stampConfigDomHeight(this, size[1]);
             return onResize?.apply(this, arguments);
         };
     },

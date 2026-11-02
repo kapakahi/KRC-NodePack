@@ -33,7 +33,7 @@ from .utils.pack_network import krc_fetch, network_enabled
 from .utils.bundle.pack_sections import register_bundle_section
 from .utils import krc_video as _krc_video
 
-KRC_API_VERSION = (2, 8)
+KRC_API_VERSION = (2, 9)
 
 __all__ = [
     "validate_card_ids",

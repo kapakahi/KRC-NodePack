@@ -6,7 +6,7 @@
 // instead of once per distinct URL. Bump it whenever a shared CSS file changes;
 // keep the hardcoded `?v=` in those @import bundles in sync (check_krc_api.py in the
 // dev repo flags an Extras bundle that falls behind).
-export const SHARED_STYLE_VERSION = "1.6.70";
+export const SHARED_STYLE_VERSION = "1.6.71";
 
 export function stylesheetHref(relPath, metaUrl, version = "") {
   const href = new URL(relPath, metaUrl).href;

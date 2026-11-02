@@ -62,8 +62,13 @@ export const KRC_MAX_NODE_HEIGHT =
 // differed only by these four size constants. The "mini" surface is an LL concept
 // (ML never sets __krcLoraSurface="mini"), so its branch is simply inert there.
 export function makeNodeSizing({ minSize, miniSize, maxWidth, maxHeight }) {
-  const minimumNodeSize = (node) =>
-    node.__krcLoraSurface === "mini" ? miniSize : minSize;
+  // Mini's height on the classic canvas comes from the shared edge (node_edge.js), via
+  // the node's own __krcClassicMiniHeight (null until mounted there).
+  const minimumNodeSize = (node) => {
+    if (node.__krcLoraSurface !== "mini") return minSize;
+    const classic = node.__krcClassicMiniHeight?.();
+    return Number.isFinite(classic) ? [miniSize[0], classic] : miniSize;
+  };
 
   const applyMinimumNodeSize = (node, requestedSize = node.size) => {
     const min = minimumNodeSize(node);

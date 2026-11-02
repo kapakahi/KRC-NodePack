@@ -1,7 +1,9 @@
 """Media's catalog (items and folders) lives in krc.db (tables media_items / media_folders,
 MEDIA_INTO_NODEPACK_GAMEPLAN.md stage 2); thumbnails and transient uploads in KRC's private
-data folder. Completed uploads use ComfyUI input/KRC-Media/uploads/; generated media uses
-output/KRC-Media/. Presets reference stable record IDs, independently of filesystem paths.
+data folder. Files live in ComfyUI's input (uploads) and output (generated) directories, under
+KRC-Media/: an item in a folder sits in KRC-Media/<folder name>/, an Unsorted one loose in
+KRC-Media/ (2026-11-01). Moving an item, renaming or deleting a folder moves the files to
+match. Presets reference stable record IDs, independently of filesystem paths.
 
 Every read-modify-save runs inside :func:`locked`: one write transaction (so a write from
 another thread can't land between the read and the save), and the thread lock the files
@@ -9,6 +11,7 @@ next to the records rely on. Files are removed only after the transaction commit
 """
 
 import json
+import os
 import re
 import shutil
 import threading
@@ -22,9 +25,10 @@ from .krc import api
 from . import media_paths
 
 MEDIA_DIRNAME = "media"
-# Where Media Output saves with no folder chosen ("Default" on the node; the Output view's
-# Unsorted). Under ComfyUI's output directory.
-DEFAULT_OUTPUT_DIRECTORY = "KRC-Media/Default"
+# Unsorted media (an upload with no folder, Media Output's "Default") sits loose here, under
+# ComfyUI's input / output directory; a folder's files in KRC-Media/<folder name>/.
+UNSORTED_DIRECTORY = media_paths.MANAGED_DIRECTORY
+DEFAULT_OUTPUT_DIRECTORY = UNSORTED_DIRECTORY
 STORE = "media"   # the `changes` store name: revisions, live sync, the external API's feed
 ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 CARD_FIELDS = ("favorite", "pinned", "color", "name", "folder", "customBadge", "nsfw")
@@ -262,7 +266,8 @@ def update(item_id, fields):
             raise MediaError("Unknown card color.")
         changes["color"] = color
     with locked():
-        current = _read()
+        doc = _read_doc()
+        current = doc["items"]
         record = next((item for item in current if item["id"] == item_id), None)
         if record is None:
             raise MediaError("Unknown Media item.")
@@ -271,11 +276,11 @@ def update(item_id, fields):
                 raise MediaError(f"Only {pin_limit()} items can be pinned.")
         if "folder" in changes:
             changes["folder"] = str(changes["folder"] or "")
-            if changes["folder"] and changes["folder"] not in {folder["id"] for folder in folders()}:
-                raise MediaError("That folder no longer exists.")
+            _check_destination(doc, [record], changes["folder"])
         for key, value in changes.items():
             record[key] = value if key in ("name", "folder", "customBadge") else str(value or "")[:32] if key == "color" else bool(value)
-        _write(current)
+        with _moving(doc, [record] if "folder" in changes else []):
+            _write_doc(doc)
         return dict(record)
 
 
@@ -303,7 +308,27 @@ def bulk_attributes(payload):
 
 
 # ---- folders (GAMEPLAN.md section 1): one level, id-primary; an item's "folder" is a folder
-# id ("" = Unsorted). Renaming never touches the items; deleting moves them to Unsorted.
+# id ("" = Unsorted). A folder belongs to one side (Input, or Output: storage "output") and is a
+# real directory on that side: KRC-Media/<name>. Renaming renames it; deleting moves its
+# files to KRC-Media/ (Unsorted).
+_FORBIDDEN_CHARACTERS = set('<>:"/\\|?*')
+_RESERVED_NAMES = {"con", "prn", "aux", "nul", *(f"com{n}" for n in range(1, 10)), *(f"lpt{n}" for n in range(1, 10))}
+
+
+def folder_dirname(name):
+    """A folder name as a directory name that works on every OS: characters Windows forbids
+    become "_", no trailing dots / spaces, never a reserved device name (CON, NUL, COM1...)."""
+    text = "".join("_" if char in _FORBIDDEN_CHARACTERS or not char.isprintable() else char for char in str(name or ""))
+    text = text.strip().rstrip(". ") or "Folder"
+    if text.split(".", 1)[0].lower() in _RESERVED_NAMES:
+        text += "_"
+    return text[:FOLDER_NAME_MAX]
+
+
+def folder_side(folder):
+    return "output" if folder.get("storage") == "output" else "input"
+
+
 def _clean_folder(raw):
     cleaned = {
         "id": str(raw["id"]),
@@ -315,10 +340,10 @@ def _clean_folder(raw):
     }
     if raw.get("storage") == "output":
         cleaned["storage"] = "output"
-        try:
-            cleaned["directory"] = media_paths.relative_path(raw.get("directory") or f"KRC-Media/{cleaned['id']}")
-        except media_paths.MediaPathError as err:
-            raise MediaError(str(err)) from err
+    try:
+        cleaned["directory"] = media_paths.relative_path(raw.get("directory") or f"{UNSORTED_DIRECTORY}/{folder_dirname(cleaned['name'])}")
+    except media_paths.MediaPathError as err:
+        raise MediaError(str(err)) from err
     return cleaned
 
 
@@ -328,7 +353,7 @@ def folders():
         return sorted(_read_doc()["folders"], key=lambda folder: (not folder["pinned"], folder["name"].lower()))
 
 
-def _folder_name(name, current, own_id=""):
+def _folder_name(name, current, own_id="", side="input"):
     clean = clean_name(name)[:FOLDER_NAME_MAX]
     if not clean:
         raise MediaError("A folder name can't be empty.")
@@ -336,23 +361,183 @@ def _folder_name(name, current, own_id=""):
         raise MediaError(f'"{clean}" is taken by a built-in chip.')
     if any(folder["id"] != own_id and folder["name"].lower() == clean.lower() for folder in current):
         raise MediaError(f'Another folder is already called "{clean}".')
+    directory = folder_dirname(clean).lower()
+    if any(folder["id"] != own_id and folder_side(folder) == side and folder_dirname(folder["name"]).lower() == directory
+           for folder in current):
+        raise MediaError(f'Another folder already uses the directory name "{folder_dirname(clean)}".')
     return clean
+
+
+# ---- files follow their folders --------------------------------------------------------
+def item_side(item):
+    """"input" / "output" for a file in ComfyUI's input / output directory; None for one in
+    Media's private folder (storage "media"), which has no on-disk folders."""
+    storage = item.get("storage") or "media"
+    return storage if storage in ("input", "output") else None
+
+
+def _home_directory(item, folders_by_id):
+    """Where ``item``'s file belongs: its folder's directory on its own side, else loose."""
+    folder = folders_by_id.get(item.get("folder") or "")
+    return folder["directory"] if folder and folder_side(folder) == item_side(item) else UNSORTED_DIRECTORY
+
+
+def _free_name(side, directory, inner, taken):
+    """``directory/inner``, numbered (name_2.ext, name_3.ext...) when another record or any
+    file already holds it: a move never overwrites. ``inner`` may keep subfolders (a Media
+    Output prefix like shots/%date%)."""
+    head, _, filename = inner.rpartition("/")
+    stem, suffix = os.path.splitext(filename)
+    for number in range(1, 10000):
+        name = filename if number == 1 else f"{stem}_{number}{suffix}"
+        candidate = "/".join(part for part in (directory, head, name) if part)
+        if (side, candidate.lower()) in taken:
+            continue
+        try:
+            if media_paths.shared_path(side, candidate).exists():
+                continue
+        except media_paths.MediaPathError as err:
+            raise MediaError(str(err)) from err
+        return candidate
+    raise MediaError(f"No free file name for {filename} in {directory}.")
+
+
+def _split_base(path, bases):
+    """(the folder directory ``path`` sits under, the rest of the path below it). ``bases``:
+    folder directories (and a renamed / deleted folder's old one); a path under none of them
+    is Unsorted (loose in KRC-Media)."""
+    lowered = path.lower()
+    for base in sorted(bases, key=len, reverse=True):
+        if lowered.startswith(base.lower() + "/"):
+            return base, path[len(base) + 1:]
+    return UNSORTED_DIRECTORY, path[len(UNSORTED_DIRECTORY) + 1:] if lowered.startswith(UNSORTED_DIRECTORY.lower() + "/") else Path(path).name
+
+
+def _relocate(doc, records, old_directories=()):
+    """Move each of ``records``' files to its folder's directory (records in ``doc``), keeping
+    any subfolders below its old folder, and update relative_path. ``old_directories``: a
+    renamed / deleted folder's previous directory, still where its files are. -> the moves
+    done, for _undo_moves when the catalog write fails. A file that isn't there stays put."""
+    folders_by_id = {folder["id"]: folder for folder in doc["folders"]}
+    wanted_ids = {record["id"] for record in records}
+    taken = {(item_side(item), str(item.get("relative_path") or "").lower())
+             for item in doc["items"] if item_side(item) and item["id"] not in wanted_ids}
+    moves = []
+    try:
+        for record in records:
+            side = item_side(record)
+            if not side:
+                continue
+            current = str(record.get("relative_path") or "")
+            bases = {folder["directory"] for folder in doc["folders"] if folder_side(folder) == side}
+            bases.update(old_directories)
+            base, inner = _split_base(current, bases)
+            home = _home_directory(record, folders_by_id)
+            if base.lower() == home.lower() and base not in old_directories:
+                taken.add((side, current.lower()))
+                continue
+            source = media_paths.shared_path(side, current, record.get("storage_root", ""))
+            if not source.is_file():
+                taken.add((side, current.lower()))
+                continue
+            target_relative = _free_name(side, home, inner, taken)
+            target = media_paths.shared_path(side, target_relative)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(source, target)
+            moves.append((source, target, record, current))
+            record["relative_path"] = target_relative
+            taken.add((side, target_relative.lower()))
+    except (OSError, media_paths.MediaPathError) as err:
+        _undo_moves(moves)
+        raise MediaError(f"Couldn't move a file to its folder: {err}") from err
+    return moves
+
+
+def _undo_moves(moves):
+    for source, target, record, old in reversed(moves):
+        try:
+            os.replace(target, source)
+            record["relative_path"] = old
+        except OSError as err:
+            print(f"[KRC Media] couldn't move {target.name} back: {err}")
+
+
+@contextmanager
+def _moving(doc, records, old_directories=()):
+    """Relocate ``records``, then let the caller write the catalog; a failed write moves the
+    files back."""
+    moves = _relocate(doc, records, old_directories)
+    try:
+        yield moves
+    except BaseException:
+        _undo_moves(moves)
+        raise
+
+
+def _side_directory(side, relative):
+    """A folder's directory on its side, or None (an invalid path, or no ComfyUI to ask)."""
+    try:
+        return media_paths.shared_path(side, relative)
+    except (media_paths.MediaPathError, ImportError):
+        return None
+
+
+def _same_directory(first, second):
+    try:
+        return os.path.samefile(first, second)
+    except OSError:
+        return False
+
+
+def _remove_if_empty(side, relative):
+    """Remove a folder's directory once nothing is left in it (only an empty one)."""
+    directory = _side_directory(side, relative)
+    try:
+        if directory and directory.is_dir() and not any(directory.iterdir()):
+            directory.rmdir()
+    except OSError:
+        pass
+
+
+def _check_destination(doc, records, destination):
+    """A move target must exist and be on the items' own side (an Input file never moves
+    into an Output folder, or back)."""
+    if not destination:
+        return
+    folder = next((entry for entry in doc["folders"] if entry["id"] == destination), None)
+    if folder is None:
+        raise MediaError("That destination folder no longer exists.")
+    if any(item_side(record) and item_side(record) != folder_side(folder) for record in records):
+        raise MediaError("Input media and Output media stay on their own side: pick a folder from the same view.")
 
 
 def create_folder(name, *, storage="media"):
     if storage not in ("media", "output"):
         raise MediaError("Unknown folder storage location.")
+    side = "output" if storage == "output" else "input"
     with locked():
         doc = _read_doc()
-        folder = _clean_folder({"id": new_id(), "name": _folder_name(name, doc["folders"]),
-                                "created": int(time.time() * 1000)})
-        if storage == "output":
-            slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", folder["name"]).strip("_") or "Output"
-            folder["storage"] = "output"
-            folder["directory"] = f"KRC-Media/{slug}-{folder['id']}"
+        folder = _clean_folder({"id": new_id(), "name": _folder_name(name, doc["folders"], side=side),
+                                "created": int(time.time() * 1000), **({"storage": "output"} if storage == "output" else {})})
+        directory = _side_directory(side, folder["directory"])
+        if directory is not None:
+            try:
+                directory.mkdir(parents=True, exist_ok=True)
+            except OSError as err:
+                raise MediaError(f"Couldn't create the folder's directory: {err}") from err
         doc["folders"].append(folder)
         _write_doc(doc)
         return folder
+
+
+def upload_directory(folder_id):
+    """Where a new upload into ``folder_id`` goes: that Input folder's directory, else loose
+    in KRC-Media/ (Unsorted; an unknown or Output folder too)."""
+    if not ID_PATTERN.match(str(folder_id or "")):
+        return UNSORTED_DIRECTORY
+    with _lock:
+        folder = next((entry for entry in _read_doc()["folders"] if entry["id"] == folder_id), None)
+    return folder["directory"] if folder and folder_side(folder) == "input" else UNSORTED_DIRECTORY
 
 
 def output_destination(folder_id, filename, *, subfolders=False):
@@ -379,7 +564,8 @@ def output_destination(folder_id, filename, *, subfolders=False):
 
 
 def update_folder(folder_id, fields):
-    """{name, color, keep, pinned} -> the folder."""
+    """{name, color, keep, pinned} -> the folder. A new name renames its directory too, and
+    every file in it follows."""
     folder_id = valid_id(folder_id)
     fields = fields or {}
     with locked():
@@ -387,32 +573,67 @@ def update_folder(folder_id, fields):
         folder = next((entry for entry in doc["folders"] if entry["id"] == folder_id), None)
         if folder is None:
             raise MediaError("That folder no longer exists.")
+        side = folder_side(folder)
+        old_directory = folder["directory"]
         if "name" in fields:
-            folder["name"] = _folder_name(fields["name"], doc["folders"], folder_id)
+            folder["name"] = _folder_name(fields["name"], doc["folders"], folder_id, side=side)
+            folder["directory"] = f"{UNSORTED_DIRECTORY}/{folder_dirname(folder['name'])}"
         if "color" in fields:
             folder["color"] = str(fields["color"] or "")[:32]
         for flag in ("keep", "pinned"):
             if flag in fields:
                 folder[flag] = bool(fields[flag])
-        _write_doc(doc)
+        members = [item for item in doc["items"] if item.get("folder") == folder_id and item_side(item) == side]
+        renamed = folder["directory"] != old_directory
+        old_path, new_path = _side_directory(side, old_directory), _side_directory(side, folder["directory"])
+        # Rename the directory itself in one step (it also handles a capitals-only rename on a
+        # case-insensitive disk); move file by file only when the new name is taken on disk.
+        whole = bool(renamed and old_path and new_path and old_path.is_dir()
+                     and (not new_path.exists() or _same_directory(old_path, new_path)))
+        previous = {item["id"]: item.get("relative_path") for item in members}
+        if whole:
+            try:
+                os.replace(old_path, new_path)
+            except OSError as err:
+                raise MediaError(f"Couldn't rename the folder's directory: {err}") from err
+            for item in members:
+                path = str(item.get("relative_path") or "")
+                if path.startswith(old_directory + "/"):
+                    item["relative_path"] = folder["directory"] + path[len(old_directory):]
+        try:
+            with _moving(doc, members, (old_directory,) if renamed and not whole else ()):
+                _write_doc(doc)
+        except BaseException:
+            if whole:
+                try:
+                    os.replace(new_path, old_path)
+                except OSError as err:
+                    print(f"[KRC Media] couldn't rename {new_path.name} back: {err}")
+                for item in members:
+                    item["relative_path"] = previous[item["id"]]
+            raise
+        if renamed and not whole:
+            _remove_if_empty(side, old_directory)
         return dict(folder)
 
 
 def delete_folder(folder_id):
-    """Remove a folder; its items move to Unsorted. -> how many moved (None: no such folder)."""
+    """Remove a folder; its items move to Unsorted, their files loose into KRC-Media/, and
+    the emptied directory goes. -> how many moved (None: no such folder)."""
     folder_id = valid_id(folder_id)
     with locked():
         doc = _read_doc()
-        if not any(entry["id"] == folder_id for entry in doc["folders"]):
+        folder = next((entry for entry in doc["folders"] if entry["id"] == folder_id), None)
+        if folder is None:
             return None
         doc["folders"] = [entry for entry in doc["folders"] if entry["id"] != folder_id]
-        moved = 0
-        for item in doc["items"]:
-            if item.get("folder") == folder_id:
-                item["folder"] = ""
-                moved += 1
-        _write_doc(doc)
-        return moved
+        members = [item for item in doc["items"] if item.get("folder") == folder_id]
+        for item in members:
+            item["folder"] = ""
+        with _moving(doc, members, (folder["directory"],)):
+            _write_doc(doc)
+    _remove_if_empty(folder_side(folder), folder["directory"])
+    return len(members)
 
 
 def purge_folder(folder_id):
@@ -424,6 +645,7 @@ def purge_folder(folder_id):
         doc = _read_doc()
         if not any(entry["id"] == folder_id for entry in doc["folders"]):
             return None
+        folder = next(entry for entry in doc["folders"] if entry["id"] == folder_id)
         doomed = [item for item in doc["items"] if item.get("folder") == folder_id]
         for item in doomed:
             media_path(item), thumb_path(item["id"])
@@ -439,6 +661,7 @@ def purge_folder(folder_id):
                 path.unlink(missing_ok=True)
             except OSError as exc:
                 print(f"[KRC Media] purge: couldn't remove {path.name}: {exc}")
+    _remove_if_empty(folder_side(folder), folder["directory"])
     return {"removed": len(doomed), "bytes": freed}
 
 
@@ -483,14 +706,15 @@ def bulk_operation(payload, *, preview=False):
                        f"{len(referenced)} selected items are used by {len(references)} saved presets; "
                        f"{protected} are favorites, pinned or in Keep folders. Explicit deletion includes these items. "
                        "Preset and workflow references remain unchanged and will report missing media when loaded. This cannot be undone."
-                       if operation == "delete" else "Changes folder membership only. Files keep their IDs, names and storage paths; preset references remain valid.")
+                       if operation == "delete" else "Moves the files into the folder's directory (KRC-Media/<folder>; Unsorted = loose in KRC-Media). IDs and names stay, so preset references remain valid.")
             return {"ok": True, "count": len(ids), "referenced": len(referenced),
                     "message": message, "destinations": [{"value": "", "label": "Unsorted"}] +
                     [{"value": folder["id"], "label": folder["name"]} for folder in doc["folders"]]}
         if operation == "move":
             destination = payload.get("destination")
-            if not isinstance(destination, str) or (destination and destination not in {folder["id"] for folder in doc["folders"]}):
+            if not isinstance(destination, str):
                 raise MediaError("That destination folder no longer exists.")
+            _check_destination(doc, doomed, destination)
             updated = sum((item.get("folder") or "") != destination for item in doomed)
             for item in doomed:
                 item["folder"] = destination
@@ -501,7 +725,8 @@ def bulk_operation(payload, *, preview=False):
             updated = len(ids)
             doc["items"] = [item for item in doc["items"] if item["id"] not in selected]
         if updated:
-            _write_doc(doc)
+            with _moving(doc, doomed if operation == "move" else []):
+                _write_doc(doc)
     warnings = _remove_media_files(doomed) if operation == "delete" else []
     return {"ok": True, "ids": ids, "updated": updated, "skipped": len(ids) - updated,
             "deleted": ids if operation == "delete" else [], "warnings": warnings}

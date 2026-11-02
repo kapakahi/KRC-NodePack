@@ -27,10 +27,10 @@ import { createPreset, onPresets, presetById, presetSlots, presetsLoaded, refres
 import { teardownMedia } from "./krc.js";
 import { mediaDisplayState } from "./display.js";
 import { mediaItem, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
-import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, el, fitMediaNode, mediaNodeContentHeight, iconButton, mediaControlButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, prepareDataWidget, presetButton, slotCells } from "./panel.js";
+import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, el, fitMediaNode, mediaNodeContentHeight, iconButton, mediaControlButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, prepareDataWidget, presetButton, refitOnPanelResize, slotCells } from "./panel.js";
 
 const UI_WIDGET = "krc_media_loader_ui";
-const STYLE_VERSION = "1.0.4-shared-1670";
+const STYLE_VERSION = "1.0.6-shared-1671";
 const MIN_W = MEDIA_NODE_DEFAULT_WIDTH;
 const BAREBONES_MIN_W = 240;
 const BAREBONES_PROP = "krcMioBarebones";
@@ -438,6 +438,7 @@ app.registerExtension({
     const removed = nodeType.prototype.onRemoved;
     nodeType.prototype.onRemoved = function (...args) {
       liveNodes.delete(this);
+      this._krcMioRefitCleanup?.();
       teardownMedia(uiOf(this)?.element);
       this._krcMioPreview = null;
       drop(this);
@@ -456,6 +457,7 @@ app.registerExtension({
     };
     const { root, panel } = nodeShell("krc-mio-loader");
     bindMediaKeys(root, node);
+    node._krcMioRefitCleanup = refitOnPanelResize(panel, () => fit(node));
     installMediaDropTarget(panel, {
       enabled: () => canFillSlot(node, readLoader(node).preset),
       onDropMany: ids => replaceSlots(node, readLoader(node).preset, ids, readLoader(node).slot),

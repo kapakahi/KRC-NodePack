@@ -11,7 +11,7 @@
  * so the sync bus, open-menu tracking and palettes stay shared. See Extras' krc_nodepack.js.
  */
 
-export const KRC_API_VERSION = Object.freeze({ major: 2, minor: 8 });
+export const KRC_API_VERSION = Object.freeze({ major: 2, minor: 9 });
 
 // ---- Node plumbing: widgets, sizing, DOM, stylesheets ----------------------------
 export {
@@ -22,6 +22,8 @@ export {
   promoteDomWidget,
 } from "./shared/widgets.js";
 export { krcNodeMinHeight, makeNodeSizing } from "./shared/node_limits.js";
+// 2.9: the classic canvas edge under a node's UI (node height <-> DOM height).
+export { KRC_EDGE, classicDomHeight, classicNodeHeight, isClassicDom, isNode2Dom } from "./shared/node_edge.js";
 export {
   appendFragment,
   debounce,

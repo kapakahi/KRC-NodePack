@@ -3,7 +3,7 @@ import { applyNodeCanvasColors } from "../shared/node_palette.js";
 import { ensureStylesheet } from "../shared/stylesheets.js";
 
 const STYLE_ID = "krc-config-switcher-style";
-const STYLE_VERSION = "1.0.99-section-tint-shared-1670";
+const STYLE_VERSION = "1.0.99-section-tint-shared-1671";
 
 // Inject the ConfigSwitcher stylesheet once and return a promise that resolves when
 // it has actually loaded. Callers re-fit node height on resolve so the initial

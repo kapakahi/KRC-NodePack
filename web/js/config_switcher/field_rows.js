@@ -5,6 +5,7 @@
 // safe because no module reads another's binding at load, only inside calls.
 import { h } from "./helpers.js";
 import { armConfirmButton } from "../shared/confirm_action.js";
+import { classicDomHeight, classicNodeHeight, isClassicDom } from "../shared/node_edge.js";
 import {
     activeConfigValues,
     CARD_VIEW_CARD,
@@ -336,14 +337,49 @@ export function calcConfigDomHeight(node) {
     return DDP_DOM_FIXED_H + fieldHeights + fieldGaps;
 }
 
+function classicWidget(node) {
+    const wrap = node._ddp?.wrap;
+    const widget = wrap && node.widgets?.find((entry) => entry.element === wrap);
+    return widget && isClassicDom(wrap) ? widget : null;
+}
+
+// Classic canvas: the UI's natural height. The panel fills a taller node (min-height:
+// 100%), but its rows never grow, so the last row's bottom plus the panel's padding is
+// the content at any node height (rects, so canvas zoom divides out).
+function classicContentHeight(node) {
+    const panel = node._ddp?.wrap?.querySelector(".ddp-panel");
+    if (!panel?.offsetHeight) return 0;
+    const box = panel.getBoundingClientRect();
+    const scale = box.height / panel.offsetHeight || 1;
+    let bottom = box.top;
+    for (const child of panel.children) {
+        if (child.offsetHeight) bottom = Math.max(bottom, child.getBoundingClientRect().bottom);
+    }
+    const style = getComputedStyle(panel);
+    const floor = style.minHeight.endsWith("px") ? parseFloat(style.minHeight) : 0;
+    return Math.ceil(Math.max(floor, (bottom - box.top) / scale + (parseFloat(style.paddingBottom) || 0)));
+}
+
 export function calcConfigNodeHeight(node) {
+    // Classic canvas: the content + the shared edge (node_edge.js); Node 2.0 its chrome.
+    const widget = classicWidget(node);
+    if (widget) return classicNodeHeight(node, widget, classicContentHeight(node) || calcConfigDomHeight(node));
     return calcConfigDomHeight(node) + DDP_NODE_BASE_CHROME_H + DDP_CONFIG_OUTPUT_ROW_H;
+}
+
+// Classic canvas: the UI fills the node down to the shared edge, like LoRA Loadout and
+// Prompt Vault, so a taller node is a taller panel (Node 2.0 does this itself).
+export function stampConfigDomHeight(node, nodeHeight = node.size?.[1]) {
+    const widget = classicWidget(node);
+    if (!widget || !Number.isFinite(nodeHeight)) return;
+    node._ddp.wrap.style.setProperty("height", `${classicDomHeight(node, widget, nodeHeight)}px`, "important");
 }
 
 export function resizeConfigNode(node) {
     const height = calcConfigNodeHeight(node);
     node.min_size = [MIN_W, height];
     node.setSize([Math.max(node.size?.[0] ?? MIN_W, MIN_W), height]);
+    stampConfigDomHeight(node, height);
     node.setDirtyCanvas(true, true);
 }
 

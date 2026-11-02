@@ -1,8 +1,8 @@
 /* Shared sheets: ?v= must match SHARED_STYLE_VERSION in shared/stylesheets.js
    so every KRC node fetches each shared file once (one URL, one CSSOM copy). */
-@import url("./shared/design_tokens.css?v=1.6.70");
-@import url("./shared/themes.css?v=1.6.70");
-@import url("./shared/components.css?v=1.6.70");
+@import url("./shared/design_tokens.css?v=1.6.71");
+@import url("./shared/themes.css?v=1.6.71");
+@import url("./shared/components.css?v=1.6.71");
 @import url("./prompt_vault/styles/base.css?v=1.4.2-ui62");
 @import url("./prompt_vault/styles/browser.css?v=profile-layout-ui70");
 @import url("./prompt_vault/styles/info_panel.css?v=1.4.4-ui66-preset-sync");

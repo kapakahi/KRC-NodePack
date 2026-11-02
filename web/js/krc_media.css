@@ -1,9 +1,9 @@
 /* KRC Media: the Portal's Media tab and the KRC Media Loader / Output nodes.
    Shared sheets: ?v= must match SHARED_STYLE_VERSION in shared/stylesheets.js
    so every KRC node fetches each shared file once (one URL, one CSSOM copy). */
-@import url("./shared/design_tokens.css?v=1.6.70");
-@import url("./shared/themes.css?v=1.6.70");
-@import url("./shared/components.css?v=1.6.70");
+@import url("./shared/design_tokens.css?v=1.6.71");
+@import url("./shared/themes.css?v=1.6.71");
+@import url("./shared/components.css?v=1.6.71");
 
 /* KRC tokens only (--krc-*); cards, panels, buttons, the header and search come from
    NodePack's shared components.css (under .krc-node). */

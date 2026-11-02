@@ -1,6 +1,9 @@
 import { app } from "../../../scripts/app.js";
 // Registers window.krcNodeSize() for measuring node/DOM size mismatches from the console.
 import "./node_size_diagnostics.js";
+import { classicDomHeight, isClassicDom, isNode2Dom } from "./node_edge.js";
+
+export { isNode2Dom };
 
 export function markDirty(node) {
   if (node?.__krcDetached) return; // detached NodeHost stub: no canvas to invalidate
@@ -173,7 +176,8 @@ export function createDomHeightController(node, root, {
 } = {}) {
   const hiddenWidgetCount = () =>
     (node.widgets || []).filter((w) => w !== domWidget && (w.hidden === true || w.type === "hidden")).length;
-  const node2Trim = () => root.closest?.(".lg-node") ? node2DomTrim : 0;
+  const node2 = () => isNode2Dom(root);
+  const node2Trim = () => node2() ? node2DomTrim : 0;
   // Keep the DOM widget's bottom gap consistent with the node's minimum size.
   // Hidden backing widgets are promoted below the DOM widget and collapsed, so
   // they must not become extra subtracted height at larger node sizes.
@@ -190,6 +194,9 @@ export function createDomHeightController(node, root, {
     offset: chromeOffset,
     domHeightForNodeHeight(height, { interactive = false } = {}) {
       const nodeHeight = clampNodeHeight(height);
+      // Classic canvas at rest: the shared edge (node_edge.js) from the frontend's own
+      // layout, no calibrated offset.
+      if (!interactive && domWidget && isClassicDom(root)) return Math.max(minDomHeight, classicDomHeight(node, domWidget, nodeHeight));
       const offset = (interactive ? interactiveOffset() : this.offset) + node2Trim();
       return Math.max(minDomHeight, nodeHeight - offset);
     },
@@ -211,7 +218,13 @@ export function createDomHeightController(node, root, {
     },
   };
   controller.stamp();
-  requestAnimationFrame(() => controller.calibrate());
+  // Calibrate once mounted (the renderer is known only then; classic sizes from the edge).
+  let tries = 0;
+  const calibrateWhenMounted = () => {
+    if (!root.isConnected && tries++ < 30) requestAnimationFrame(calibrateWhenMounted);
+    else controller.calibrate();
+  };
+  requestAnimationFrame(calibrateWhenMounted);
   return controller;
 }
 
