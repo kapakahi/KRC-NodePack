@@ -18,11 +18,15 @@ export const thumbnailMethods = {
     return promptThumbnailUrl(item, kind) || null;
   },
 
-  _setThumbState(has, id, thumbType = "image", saved = {}) {
-    if (!has) this.disarmThumbRemove();
+  // `target` is the prompt the upload started on ({ category, name }). The user may have
+  // moved on while it ran, so only that prompt's record changes; the open draft only
+  // when it is still the same prompt.
+  _setThumbState(has, id, thumbType = "image", saved = {}, target = this.orig) {
+    const current = !!target && this.orig?.category === target.category && this.orig?.name === target.name;
+    if (current && !has) this.disarmThumbRemove();
     const now = saved.dateModified || new Date().toISOString();
     const thumbnailVersion = saved.thumbnailVersion || now;
-    if (this.draft) {
+    if (current && this.draft) {
       this.draft.hasThumb = has;
       this.draft.thumbType = has ? thumbType : "";
       this.draft.thumbHasPoster = !!has;
@@ -31,7 +35,7 @@ export const thumbnailMethods = {
       this.draft.dateModified = now;
       this.draft.thumbnailVersion = thumbnailVersion;
     }
-    const rec = this.data[this.orig.category]?.[this.orig.name];
+    const rec = target && this.data[target.category]?.[target.name];
     if (rec) {
       if (has) { rec.hasThumb = true; rec.thumbType = thumbType; rec.thumbHasPoster = true; if (id) rec.id = id; } else { delete rec.hasThumb; delete rec.thumbType; delete rec.thumbHasPoster; }
       rec.dateAdded = rec.dateAdded || now;
@@ -41,7 +45,8 @@ export const thumbnailMethods = {
     this.flatten();
     this.publishPromptLibrary?.(this.data, {
       lane: KRC_SYNC_LANES.METADATA,
-      detail: this.detailFromPromptLibrary?.(this.data, this.orig.category, this.orig.name, this.draft),
+      // Metadata lane: receivers keep their own prompt text, so another prompt needs none.
+      detail: target && this.detailFromPromptLibrary?.(this.data, target.category, target.name, current ? this.draft : {}),
     });
     this.preserveSelectedPromptText?.();
     this.refreshPromptMutation({
@@ -64,10 +69,11 @@ export const thumbnailMethods = {
     // Two paths: an mp4/webm is transcoded server-side, a still image goes through the
     // existing data-URL upload.
     if (isVideoFile(file)) return this._uploadVideoThumb(file);
+    const target = { category: this.orig.category, name: this.orig.name };
     try {
       const dataUrl = await blobToDataURL(file);
-      const resp = await apiPost.call(this, "/upload-thumbnail", { category: this.orig.category, name: this.orig.name, thumbnail: dataUrl });
-      if (apiSucceeded(resp)) this._setThumbState(true, resp.id, "image", resp);
+      const resp = await apiPost.call(this, "/upload-thumbnail", { ...target, thumbnail: dataUrl });
+      if (apiSucceeded(resp)) this._setThumbState(true, resp.id, "image", resp, target);
       else toastApiError((msg) => this.toast(msg), resp, "Upload failed (restart ComfyUI for the new routes?)");
     } catch {
       this.toast("Upload failed");
@@ -76,16 +82,17 @@ export const thumbnailMethods = {
 
   async _uploadVideoThumb(file) {
     if (!this.orig || !file) return;
+    const target = { category: this.orig.category, name: this.orig.name };
     try {
       const form = new FormData();
-      form.append("category", this.orig.category);
-      form.append("name", this.orig.name);
+      form.append("category", target.category);
+      form.append("name", target.name);
       form.append("video", file);
       const response = await apiFetch.call(this, "/upload-video-thumbnail", { method: "POST", body: form });
       let resp = { success: false };
       try { resp = await response.json(); } catch { resp = { success: false }; }
       if (response.ok && apiSucceeded(resp)) {
-        this._setThumbState(true, resp.id, resp.hasAnimation ? "video" : "image", resp);
+        this._setThumbState(true, resp.id, resp.hasAnimation ? "video" : "image", resp, target);
         if (!resp.hasAnimation) {
           this.toast("Saved a static poster (this ComfyUI's PyAV has no VP9 encoder)");
         }
@@ -99,12 +106,13 @@ export const thumbnailMethods = {
 
   async pasteThumb() {
     if (!this.orig) { this.toast("Save the prompt first"); return; }
+    const target = { category: this.orig.category, name: this.orig.name };
     try {
       const image = await clipboardImageBlob();
       if (!image) { this.toast("Clipboard has no image"); return; }
       const dataUrl = await blobToDataURL(image.blob);
-      const resp = await apiPost.call(this, "/upload-thumbnail", { category: this.orig.category, name: this.orig.name, thumbnail: dataUrl });
-      if (apiSucceeded(resp)) this._setThumbState(true, resp.id, "image", resp);
+      const resp = await apiPost.call(this, "/upload-thumbnail", { ...target, thumbnail: dataUrl });
+      if (apiSucceeded(resp)) this._setThumbState(true, resp.id, "image", resp, target);
       else toastApiError((msg) => this.toast(msg), resp, "Paste failed");
     } catch {
       this.toast("Clipboard paste unavailable");
@@ -113,8 +121,9 @@ export const thumbnailMethods = {
 
   async removeThumb() {
     if (!this.orig) return;
-    const resp = await apiPost.call(this, "/remove-thumbnail", { category: this.orig.category, name: this.orig.name });
-    if (apiSucceeded(resp)) this._setThumbState(false, resp.id, "image", resp);
+    const target = { category: this.orig.category, name: this.orig.name };
+    const resp = await apiPost.call(this, "/remove-thumbnail", target);
+    if (apiSucceeded(resp)) this._setThumbState(false, resp.id, "image", resp, target);
     else toastApiError((msg) => this.toast(msg), resp, "Remove failed");
   }
 };

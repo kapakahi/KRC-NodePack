@@ -1,7 +1,8 @@
 import shutil
 from pathlib import Path
 
-from .identity import IdentityStore, compute_sha256, file_signature, is_local_library_id
+from ..library.identity import EMPTY_SHA256, content_id, file_root
+from .identity import IdentityStore, file_signature, is_local_library_id
 from .thumbnails import find_thumbnail, find_thumbnail_variant, get_krc_thumbnail_path, thumbnail_kind
 
 
@@ -196,11 +197,12 @@ def purge_missing_identity(library_id):
 
 
 def blank_record_metadata(record):
-    """Reset one LoRA to a BLANK default record under a stabilized content-SHA id.
+    """Reset ID: re-read the file and give it its own id (its content SHA256) and a
+    BLANK default record. The last-resort fix for a file stuck on the wrong id.
 
-    A user-owned blank slate whose id is promoted to the file's content SHA256, so the
-    empty record is stable, not path-derived. Marks userBlanked so the Civitai batch
-    fill skips it; a Civitai fetch or HuggingFace import clears the flag."""
+    If another file still on disk uses the old id, that file keeps the id and its
+    record; only this file is unlinked. Marks userBlanked so the Civitai batch fill
+    skips it; a Civitai fetch or HuggingFace import clears the flag."""
     if not record:
         return None
 
@@ -210,25 +212,36 @@ def blank_record_metadata(record):
     path = Path(record.get("path") or "")
     relative_path = record.get("relative_path") or path.name
     fallback_id = make_library_id(Path(relative_path))
+    root = file_root(path, relative_path)
 
     # Stabilized id: the file's content SHA. Fall back to the existing/path id only if
     # the file can't be read.
     try:
-        new_id = compute_sha256(str(path)).lower()
+        new_id = content_id(str(path))
     except OSError:
-        new_id = library_id or fallback_id
+        new_id = ""
+    new_id = new_id or (library_id if library_id != EMPTY_SHA256 else "") or fallback_id
 
-    # Drop all existing metadata + thumbnail variants for the old id (and the
-    # path-derived fallback), and forget the identity alias so nothing re-imports.
-    delete_identity_files(library_id)
+    store = IdentityStore()
+    shared = store.id_used_by_other_file(library_id, relative_path, root)
+    if shared:
+        store.release_file(relative_path, fallback_id)
+    else:
+        # Drop all existing metadata + thumbnail variants for the old id, and forget
+        # the identity alias so nothing re-imports.
+        delete_identity_files(library_id)
+        store.forget_identity(library_id, relative_path)
     if fallback_id != library_id:
         delete_identity_files(fallback_id)
-    IdentityStore().forget_identity(library_id, relative_path)
+    # Reset the metadata too: whatever was stored under the file's real id goes (unless
+    # an identical copy elsewhere still uses it).
+    if new_id != library_id and not store.id_used_by_other_file(new_id, relative_path, root):
+        delete_identity_files(new_id)
 
     metadata = default_metadata(path, new_id)
     metadata["sha256"] = new_id
     metadata["userBlanked"] = True
-    if library_id and library_id != new_id:
+    if library_id and library_id != new_id and not shared:
         metadata["identityStabilizedFrom"] = library_id
         metadata["identityStabilizedAt"] = current_millis()
 
@@ -247,15 +260,17 @@ def blank_record_metadata(record):
     # above leaves a no-sidecar LoRA resolving to a fresh local- id (a new default
     # record) on rescan — orphaning the blank record and showing the LoRA as "Missing"
     # in the preset stack until the async stabilization loop re-links it.
+    # The old id aliases to the new one only when it was this file's alone; a shared id
+    # stays with the other file, so only this file's own path id points here.
     if not is_local_library_id(new_id):
         try:
             signature = file_signature(path, None)
             signature["relativePath"] = relative_path
-            IdentityStore().remember_file(new_id, library_id, signature, sha256=new_id)
+            store.remember_file(new_id, fallback_id if shared else library_id, signature, sha256=new_id)
         except OSError:
             pass
 
-    return {"oldId": library_id, "newId": new_id, "source": "blank"}
+    return {"oldId": library_id, "newId": new_id, "source": "blank", "shared": shared}
 
 
 def stabilize_record_identity(record):
@@ -268,7 +283,7 @@ def stabilize_record_identity(record):
         return record, None
 
     try:
-        sha256 = compute_sha256(path)
+        sha256 = content_id(path)
     except OSError:
         return record, None
 

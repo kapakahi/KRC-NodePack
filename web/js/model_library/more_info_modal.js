@@ -329,6 +329,31 @@ export const moreInfoModalMethods = {
           },
         });
 
+        // Reset ID: the same last resort as a LoRA's (re-read the file, own ID, blank record).
+        const resetId = document.createElement("button");
+        resetId.className = "krc-modal-btn krc-blank-metadata-button";
+        resetId.type = "button";
+        resetId.textContent = "Reset ID";
+        resetId.title = "Re-read the file, give it its own ID and clear all its metadata (last-resort fix for a stuck card)";
+        resetId.disabled = !current;
+        armConfirmButton(resetId, {
+          armedText: "Confirm Reset ID",
+          armedTitle: "Click again: re-read the file and clear all its metadata",
+          restoreText: "Reset ID",
+          restoreTitle: "Re-read the file, give it its own ID and clear all its metadata (last-resort fix for a stuck card)",
+          timeout: 2400,
+          shouldArm: () => !!current,
+          onConfirm: async () => {
+            resetId.disabled = true;
+            resetId.textContent = "Reading…";
+            const refreshed = await this.blankMetadata(current);
+            if (refreshed?.sha256) {
+              selected = refreshed;
+            }
+            renderModal();
+          },
+        });
+
         // Force Refresh (Civitai) — public by-hash re-pull, overwrites cached data.
         // Same wiring as the LoRA branch; the route maps into the generic model schema.
         const civitai = document.createElement("button");
@@ -378,7 +403,7 @@ export const moreInfoModalMethods = {
           });
         });
 
-        footer.append(blank, verify, civitai, hfImport, save);
+        footer.append(blank, resetId, verify, civitai, hfImport, save);
         refreshHeaderBadge();
         return;
       }
@@ -443,19 +468,19 @@ export const moreInfoModalMethods = {
       const blank = document.createElement("button");
       blank.className = "krc-modal-btn krc-blank-metadata-button";
       blank.type = "button";
-      blank.textContent = "Reset";
-      blank.title = "Clear all metadata to a blank slate (keeps a stable ID)";
+      blank.textContent = "Reset ID";
+      blank.title = "Re-read the file, give it its own ID and clear all its metadata (last-resort fix for a stuck card)";
       blank.disabled = !current;
       armConfirmButton(blank, {
-        armedText: "Confirm reset",
-        armedTitle: "Click again to blank all metadata",
-        restoreText: "Reset",
-        restoreTitle: "Clear all metadata to a blank slate (keeps a stable ID)",
+        armedText: "Confirm Reset ID",
+        armedTitle: "Click again: re-read the file and clear all its metadata",
+        restoreText: "Reset ID",
+        restoreTitle: "Re-read the file, give it its own ID and clear all its metadata (last-resort fix for a stuck card)",
         timeout: 2400,
         shouldArm: () => !!current,
         onConfirm: async () => {
           blank.disabled = true;
-          blank.textContent = "Resetting…";
+          blank.textContent = "Reading…";
           const refreshed = await this.blankMetadata(current);
           if (refreshed?.sha256) {
             selected = refreshed;

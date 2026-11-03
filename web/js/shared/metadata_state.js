@@ -825,6 +825,25 @@ export function makeMetadataApiMethods({ fetchLora, postLoraJson, getSharedJson,
     } catch {
       payload = {};
     }
+    // Reset ID is the last-resort fix for a stuck record: no unsaved-edits draft
+    // survives it, under either id.
+    const draft = this.readMetadataDraft();
+    const resetIds = [selected.sha256, payload?.identity?.oldId, payload?.identity?.newId].filter(Boolean);
+    if (resetIds.some((id) => id in draft)) {
+      resetIds.forEach((id) => delete draft[id]);
+      this.writeMetadataDraft(draft, { dirty: false });
+    }
+    if (payload?.identity?.shared) {
+      // The old id still belongs to another file on disk: this file moved to its own
+      // id and the other one comes back as its own card, so this list is re-read.
+      await this.loadLibrary({ restoreScroll: true, focusSelection: true, changed: true });
+      this.selectedSha = payload.identity.newId;
+      setWidgetValue(this.node, "selected_lora_sha256", payload.identity.newId);
+      const current = this.loras.find((lora) => lora.sha256 === payload.identity.newId);
+      const refreshed = current ? await this.ensureLoraDetail(current, { refresh: true }) : null;
+      if (refreshed) this.commitSavedMetadata?.(refreshed);
+      return refreshed;
+    }
     if (payload?.identity?.oldId && payload?.identity?.newId) {
       this.applyIdentityChange(payload.identity, { rememberAlias: false });
       // The other surfaces used to learn of the new id from a full reload.

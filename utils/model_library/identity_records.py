@@ -2,7 +2,8 @@
 
 import shutil
 
-from .identity import IdentityStore, compute_sha256, file_signature, is_local_library_id
+from ..library.identity import content_id
+from .identity import IdentityStore, file_signature, is_local_library_id
 from ..db import library as library_db
 from .metadata import (
     current_millis, metadata_dir_name_for_model_type, model_metadata_exists,
@@ -43,6 +44,70 @@ def delete_identity_files(library_id, model_type=None):
         pass
 
 
+def blank_record_metadata(record):
+    """Reset ID for a model: re-read the file and give it its own id (its content
+    SHA256) and a BLANK default record, as LoRA Loadout's blank_record_metadata does.
+    If another file still on disk uses the old id, that file keeps the id and its
+    record; only this file is unlinked."""
+    if not record:
+        return None
+
+    from pathlib import Path
+    from ..library.identity import EMPTY_SHA256, file_root
+    from .metadata import default_model_metadata, make_model_library_id
+
+    library_id = record.get("library_id") or ""
+    path = Path(record.get("path") or "")
+    relative_path = record.get("relative_path") or path.name
+    model_type = record.get("modelType") or (record.get("sidecar_data") or {}).get("modelType")
+    fallback_id = make_model_library_id(Path(relative_path))
+    root = file_root(path, relative_path)
+    try:
+        new_id = content_id(str(path))
+    except OSError:
+        new_id = ""
+    new_id = new_id or (library_id if library_id != EMPTY_SHA256 else "") or fallback_id
+
+    store = IdentityStore()
+    shared = store.id_used_by_other_file(library_id, relative_path, root)
+    if shared:
+        store.release_file(relative_path, fallback_id)
+    else:
+        delete_identity_files(library_id, model_type)
+        store.forget_identity(library_id, relative_path)
+    if fallback_id != library_id:
+        delete_identity_files(fallback_id, model_type)
+    if new_id != library_id and not store.id_used_by_other_file(new_id, relative_path, root):
+        delete_identity_files(new_id, model_type)
+
+    metadata = default_model_metadata(path, new_id)
+    metadata["sha256"] = new_id
+    metadata["userBlanked"] = True
+    if model_type:
+        metadata["modelType"] = model_type
+    if library_id and library_id != new_id and not shared:
+        metadata["identityStabilizedFrom"] = library_id
+        metadata["identityStabilizedAt"] = current_millis()
+    write_model_metadata({
+        "library_id": new_id,
+        "relative_path": relative_path,
+        "filename": path.name,
+        "path": str(path),
+        "modelType": model_type,
+    }, metadata)
+
+    # Same re-link as LoRA Loadout's: the next scan resolves this file straight to new_id.
+    if not is_local_library_id(new_id):
+        try:
+            signature = file_signature(path, None)
+            signature["relativePath"] = relative_path
+            store.remember_file(new_id, fallback_id if shared else library_id, signature, sha256=new_id)
+        except OSError:
+            pass
+
+    return {"oldId": library_id, "newId": new_id, "source": "blank", "shared": shared}
+
+
 def stabilize_record_identity(record):
     """Promote one path-derived Model Library record to its content SHA256 id."""
     if not record or not is_local_library_id(record.get("library_id")):
@@ -52,7 +117,7 @@ def stabilize_record_identity(record):
     if not path:
         return record, None
 
-    sha256 = compute_sha256(path).lower()
+    sha256 = content_id(path)
     old_id = record["library_id"]
     model_type = record.get("modelType") or (record.get("sidecar_data") or {}).get("modelType")
     if not sha256 or sha256 == old_id:

@@ -2,6 +2,7 @@
 Model Library's LoRA read-through share them (LoRA metadata is owned by LoRA Loadout).
 Each metadata handler returns (body, http_status)."""
 
+import asyncio
 from pathlib import Path
 
 from aiohttp import web
@@ -177,7 +178,8 @@ async def blank_lora_metadata(sha256):
     if not record:
         return {"error": "Unknown LoRA SHA256"}, 404
 
-    result = blank_record_metadata(record)
+    # Off the event loop: Reset ID hashes the whole file.
+    result = await asyncio.get_running_loop().run_in_executor(None, blank_record_metadata, record)
     LoraLibraryIndex().refresh_record(record.get("library_id") or sha256)
     return {"ok": True, "identity": result}, 200
 

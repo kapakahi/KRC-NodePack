@@ -158,6 +158,26 @@ def compute_sha256(path, chunk_size=1024 * 1024):
     return digest.hexdigest()
 
 
+# The SHA256 of zero bytes. A file hashed while still empty (mid-copy) would get it, and
+# every such file would then share one id, so it is never used as an id.
+EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
+
+
+def content_id(path):
+    """The file's content SHA256 as a library id, or "" for an empty file (keep its
+    path id until it has content). Raises OSError when the file can't be read."""
+    sha256 = compute_sha256(path).lower()
+    return "" if sha256 == EMPTY_SHA256 else sha256
+
+
+def file_root(path, relative_path):
+    """The scan root a record's file sits under: its path minus its relative path."""
+    root = Path(path)
+    for _part in Path(relative_path or root.name).parts:
+        root = root.parent
+    return root
+
+
 class IdentityStore:
     LINEAGE = None  # "loras" / "models", set by each node's subclass
 
@@ -341,8 +361,11 @@ class IdentityStore:
 
         fp = fingerprint_key(signature)
         if fp:
+            # A move, not a copy: an id whose file is still there (a same-named copy in
+            # another folder) is not this file's, or both would share one id.
             matches = sorted(set(
-                match for match in (self.canonical_id(cid) for cid in self._fingerprint_ids(fp)) if match
+                match for match in (self.canonical_id(cid) for cid in self._fingerprint_ids(fp))
+                if match and not self.id_used_by_other_file(match, relative_path, root)
             ))
             if len(matches) == 1:
                 return matches[0]
@@ -462,6 +485,32 @@ class IdentityStore:
         entry["updated"] = current_millis()
         self._set_file(relative_path, entry)
         return self.save()
+
+    def id_used_by_other_file(self, library_id, relative_path, root):
+        """True when another file still on disk under `root` resolves to `library_id`
+        (two files sharing one id, e.g. a same-named copy matched as a move)."""
+        library_id = str(library_id or "")
+        if not library_id or root is None:
+            return False
+        for key, entry in self.load()["files"].items():
+            if key == relative_path or not isinstance(entry, dict):
+                continue
+            if self.canonical_id(entry.get("canonicalId")) == library_id and (Path(root) / key).exists():
+                return True
+        return False
+
+    def release_file(self, relative_path, path_id=""):
+        """Unlink just this file: drop its path entry and its own path id's alias,
+        leaving the id (and every other file on it) alone."""
+        data = self.load()
+        changed = False
+        if relative_path and relative_path in data["files"]:
+            self._pop_file(relative_path)
+            changed = True
+        if path_id and path_id in data["aliases"]:
+            data["aliases"].pop(path_id, None)
+            changed = True
+        return self.save() if changed else data
 
     def forget_identity(self, library_id, relative_path=""):
         data = self.load()

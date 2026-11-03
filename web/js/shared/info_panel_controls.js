@@ -544,7 +544,7 @@ export const sharedInfoPanelControlMethods = {
     stopCanvasEvents(button);
     const cleanDesc = document.createElement("div");
     cleanDesc.className = "krc-options-description";
-    cleanDesc.textContent = "Review and remove stale LoRA records left behind by moved or deleted files.";
+    cleanDesc.textContent = "Review and remove stale records left behind by moved or deleted files.";
     const cleanButton = document.createElement("button");
     cleanButton.className = "krc-action-button krc-options-reset";
     cleanButton.type = "button";

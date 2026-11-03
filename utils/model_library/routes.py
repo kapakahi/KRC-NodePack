@@ -9,6 +9,7 @@ no-cache: two clients on one ComfyUI instance share this data and a stale cached
 would desync a client's dirty-state baseline (same rule as LoRA Loadout).
 """
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -541,9 +542,18 @@ def register_routes():
     @routes.post("/krc/model-library/metadata/blank/{sha256}")
     @notify_card_write("model")
     async def model_library_lora_blank(request):
-        from ..lora_loadout.write_handlers import blank_lora_metadata
-        body, status = await blank_lora_metadata(request.match_info.get("sha256", ""))
-        return _json(body, status=status)
+        # Reset ID: a scanned model resets here; anything else is a LoRA read-through.
+        library_id = request.match_info.get("sha256", "")
+        index = await ModelLibraryIndex.loaded()
+        record = index.get(library_id)
+        if record is None:
+            from ..lora_loadout.write_handlers import blank_lora_metadata
+            body, status = await blank_lora_metadata(library_id)
+            return _json(body, status=status)
+        from .identity_records import blank_record_metadata
+        result = await asyncio.get_running_loop().run_in_executor(None, blank_record_metadata, record)
+        ModelLibraryIndex().refresh_record(record.get("library_id") or library_id)
+        return _json({"ok": True, "identity": result})
 
     @routes.get("/krc/model-library/thumbnail/{library_id}")
     async def model_library_thumbnail(request):
@@ -707,6 +717,48 @@ def register_routes():
             )
         body, status = await _hf_import_impl(library_id, repo)
         return _json(body, status=status)
+
+    # Options ▸ Clean stale records: saved records whose file is gone. Model Library
+    # shows LoRAs too, so the list (and the clean) covers LoRA Loadout's records as well.
+    async def _live_ids(force=False):
+        models = await ModelLibraryIndex.loaded(force=force)
+        loras = await LoraLibraryIndex.loaded(force=force)
+        return set(models.records.keys()) | set(loras.records.keys()), models, loras
+
+    @routes.get("/krc/model-library/missing")
+    async def model_library_missing(_request):
+        from ..lora_loadout.identity_records import stale_identity_records
+        from .stale_records import stale_model_records
+        live, _models, _loras = await _live_ids()
+        items = stale_model_records(live) + stale_identity_records(live)
+        return _json({"items": items})
+
+    @routes.delete("/krc/model-library/missing")
+    async def model_library_purge_missing(request):
+        from ..lora_loadout.identity_records import purge_missing_identity
+        from .stale_records import purge_stale_model
+        try:
+            payload = await request.json()
+        except Exception:
+            return _json({"error": "bad-json"}, status=400)
+        ids = payload.get("ids", []) if isinstance(payload, dict) else []
+        if not isinstance(ids, list):
+            return _json({"error": "Expected ids list"}, status=400)
+        live, models, loras = await _live_ids(force=True)
+        deleted, skipped = [], []
+        for library_id in [str(item or "") for item in ids]:
+            if not library_id:
+                continue
+            if library_id in live or models.get(library_id) or loras.get(library_id):
+                skipped.append(library_id)
+                continue
+            # Each purge touches only its own store's rows for this id.
+            purge_stale_model(library_id)
+            purge_missing_identity(library_id)
+            deleted.append(library_id)
+        ModelLibraryIndex._cache = {}
+        LoraLibraryIndex._cache = {}
+        return _json({"ok": True, "deleted": deleted, "skipped": skipped})
 
     @routes.post("/krc/model-library/stabilize/{library_id}")
     async def model_library_stabilize(request):
