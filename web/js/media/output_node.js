@@ -9,7 +9,7 @@ import { applyNodePalette, ensureStylesheet, markDirty, menuSelect, openKrcModal
 import { mediaItem, mediaItems, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
 import { mediaDisplayState } from "./display.js";
 import { MEDIA_EVENT, mediaApi } from "./api.js";
-import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, confirmControlButton, el, fitMediaNode, mediaNodeContentHeight, mediaControlButton, nodeShell, openMedia, openNodeOptions, optionsButton, prepareDataWidget, refitOnPanelResize, slotCells } from "./panel.js";
+import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, clickPreviewToMute, confirmControlButton, el, fitMediaNode, mediaNodeContentHeight, mediaControlButton, nodeShell, openMedia, openNodeOptions, optionsButton, prepareDataWidget, refitOnPanelResize, slotCells } from "./panel.js";
 import { OUTPUT_DEFAULTS, OUTPUT_FORMATS, OUTPUT_TYPE, OUTPUT_WIDGET, mergeOutputHistory, newOutputKey, normalizeOutput, outputHistory, readOutput } from "./output_state.js";
 
 const UI_WIDGET = "krc_media_output_ui";
@@ -327,7 +327,7 @@ function render(node) {
       full: true, holdPreview: true, typeIndicator: true, muted: isMuted, autoplay: isAutoplay,
       className: "krc-mio-pick-preview", empty,
     });
-    if (item) makeMediaDraggable(box, () => itemOf(item.id));
+    if (item) makeMediaDraggable(clickPreviewToMute(box), () => itemOf(item.id));
     return box;
   });
   const playback = playbackKey();

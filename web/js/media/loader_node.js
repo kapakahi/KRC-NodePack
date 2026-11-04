@@ -22,12 +22,12 @@ import { bindMediaKeys, wrapIndex } from "./keyboard.js";
 import { app } from "../../../scripts/app.js";
 import { applyNodePalette, ensureStylesheet, markDirty, subscribeKrcSync, switchToggle } from "./krc.js";
 import { MEDIA_EVENT, displayName, mediaApi } from "./api.js";
-import { LOADER_TYPE, LOADER_WIDGET, NODES_EVENT, isBypassed, isFollowing, readLoader, writeLoader } from "./nodes.js";
+import { LOADER_TYPE, LOADER_WIDGET, NODES_EVENT, isBypassed, isFollowing, loaderPromptValue, readLoader, writeLoader } from "./nodes.js";
 import { createPreset, onPresets, presetById, presetSlots, presetsLoaded, refreshPresets, setPresetSlot, setPresetSlots } from "./presets.js";
 import { teardownMedia } from "./krc.js";
 import { mediaDisplayState } from "./display.js";
 import { mediaItem, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
-import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, el, fitMediaNode, mediaNodeContentHeight, iconButton, mediaControlButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, prepareDataWidget, presetButton, refitOnPanelResize, slotCells } from "./panel.js";
+import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, clickPreviewToMute, el, fitMediaNode, mediaNodeContentHeight, iconButton, mediaControlButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, prepareDataWidget, presetButton, refitOnPanelResize, slotCells } from "./panel.js";
 
 const UI_WIDGET = "krc_media_loader_ui";
 const STYLE_VERSION = "1.0.6-shared-1671";
@@ -180,8 +180,9 @@ function slotPreview(node, item, empty) {
   const key = JSON.stringify([item?.id, item?.kind, empty, mediaDisplayState(item)]);
   if (node._krcMioPreview?.key !== key) {
     teardownMedia(node._krcMioPreview?.box);
-    node._krcMioPreview = { key, box: mediaPreview(item, { empty, full: true, holdPreview: true, typeIndicator: true,
-      className: "krc-mio-pick-preview", muted: () => loaderMuted(node) }) };
+    const box = mediaPreview(item, { empty, full: true, holdPreview: true, typeIndicator: true,
+      className: "krc-mio-pick-preview", muted: () => loaderMuted(node) });
+    node._krcMioPreview = { key, box: item ? clickPreviewToMute(box) : box };
   }
   return node._krcMioPreview.box;
 }
@@ -426,7 +427,7 @@ app.registerExtension({
     nodeType.prototype.onConfigure = function (...args) {
       configure?.apply(this, args);
       this._krcMioConfigured = true;
-      prepareDataWidget(this, LOADER_WIDGET);
+      prepareDataWidget(this, LOADER_WIDGET, () => loaderPromptValue(this));
       requestAnimationFrame(() => render(this));
     };
     const resize = nodeType.prototype.onResize;
@@ -448,7 +449,8 @@ app.registerExtension({
   nodeCreated(node) {
     if (node?.comfyClass !== LOADER_TYPE) return;
     ensureStylesheet("krc-media-css", "../krc_media.css", import.meta.url, { version: STYLE_VERSION });
-    prepareDataWidget(node, LOADER_WIDGET);
+    // A queued run carries the slot's item (loaderPromptValue), not just the slot number.
+    prepareDataWidget(node, LOADER_WIDGET, () => loaderPromptValue(node));
     // ← / → (its panel clicked, or the node selected): the previous / next of its 6 slots,
     // empty ones too, wrapping.
     node._krcMioStep = (delta) => {

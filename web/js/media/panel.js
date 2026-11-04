@@ -68,6 +68,17 @@ export function mediaControlButton(kind, onClick) {
   return button;
 }
 
+// A click on the big preview toggles the preview's sound: it presses the node header's mute
+// button, so the state, its glyph and the saved property stay in one place. Clicks on the
+// preview's own buttons are theirs.
+export function clickPreviewToMute(box) {
+  box.addEventListener("click", (event) => {
+    if (event.button !== 0 || event.target.closest?.("button")) return;
+    box.closest(".krc-mio-node")?.querySelector(".krc-mio-output-mute")?.click();
+  });
+  return box;
+}
+
 // A header action that asks in the button itself (no dialog): the first click arms it (a red
 // ✓, "click again"), a second click within 2.5 s runs `onConfirm`, anything else lets it
 // reset. `kind` is the idle glyph.

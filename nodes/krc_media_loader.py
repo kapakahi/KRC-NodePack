@@ -7,8 +7,12 @@ optional ``preset`` input (a STRING: an id, a name or "group/name") overrides th
 ("Follow": feed one preset string to several Loaders and they switch together, each keeping
 its own slot). A still is a batch of 1 (MASK from alpha, else empty; AUDIO silent); a video
 is its frames (MASK from alpha, else empty; AUDIO its track, else silent), decoded from the
-stored WebM with PyAV (ComfyUI's own video library). The run reads the preset file, so it always loads what
-the Media shows.
+stored WebM with PyAV (ComfyUI's own video library).
+
+A queued run is pinned to the Media item that was in the slot when it was queued (the
+browser adds it to ``loader_data`` as ``media``), so a hot swap or preset edit after
+queueing doesn't change runs already in the queue, as with ComfyUI's Load Image. With
+Follow (or without a pin) the run reads the preset when it starts.
 """
 
 import hashlib
@@ -157,13 +161,15 @@ def _json(text, default):
 
 
 def parse_loader(loader_data):
-    """{"preset", "slot" (0-5)} from a Media Loader's widget."""
+    """{"preset", "slot" (0-5), "media" (the item pinned at queue time, or "")} from a
+    Media Loader's widget."""
     raw = _json(loader_data, {})
     try:
         slot = int(raw.get("slot") or 0)
     except (TypeError, ValueError):
         slot = 0
-    return {"preset": str(raw.get("preset") or ""), "slot": min(max(slot, 0), SLOTS - 1)}
+    return {"preset": str(raw.get("preset") or ""), "slot": min(max(slot, 0), SLOTS - 1),
+            "media": str(raw.get("media") or "")}
 
 
 def pick_preset(picked, follow, who):
@@ -231,10 +237,17 @@ class KRCMediaLoader:
     @classmethod
     def IS_CHANGED(cls, loader_data, preset=None):
         pick = parse_loader(loader_data)
+        if pick["media"] and preset is None:
+            return f"pinned|{media_identity(pick['media'])}"
         return f"{pick['slot']}|{_preset_identity(pick['preset'])}|{_follow_identity(preset)}"
 
     def load(self, loader_data, preset=None):
         pick = parse_loader(loader_data)
+        if pick["media"] and preset is None:
+            # Pinned at queue time: the item the slot held then, wherever the preset is now.
+            label = f"Slot {pick['slot'] + 1} (as queued)"
+            item, path = slot_media(pick["media"], label)
+            return load_media(item, path, label)
         record = pick_preset(pick["preset"], preset, "KRC Media Loader")
         slots = record["payload"]["slots"]
         index = pick["slot"]   # Follow: the same slot number in the arriving preset

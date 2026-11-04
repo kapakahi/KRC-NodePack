@@ -58,6 +58,20 @@ export function writeLoader(node, fields) {
   writeJson(node, LOADER_WIDGET, { ...readLoader(node), ...fields });
 }
 
+// What a queued run sends: the pick plus the Media item in its slot right now, so a later
+// hot swap or preset edit doesn't change runs already in the queue (ComfyUI's Load Image
+// sends its file the same way). Following, the preset only arrives at run time.
+export function loaderPromptValue(node) {
+  const value = { ...readJson(node, LOADER_WIDGET) };
+  delete value.media;
+  if (!isFollowing(node)) {
+    const pick = readLoader(node);
+    const media = presetSlots(presetById(pick.preset))[pick.slot]?.id;
+    if (media) value.media = String(media);
+  }
+  return JSON.stringify(value);
+}
+
 // The node loads its `preset` input's preset instead of its own (connected = following).
 export function isFollowing(node) {
   const input = node?.inputs?.find((slot) => slot?.name === FOLLOW_INPUT);
