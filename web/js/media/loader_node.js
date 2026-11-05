@@ -30,7 +30,7 @@ import { mediaItem, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems }
 import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, clickPreviewToMute, el, fitMediaNode, mediaNodeContentHeight, iconButton, mediaControlButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, prepareDataWidget, presetButton, refitOnPanelResize, slotCells } from "./panel.js";
 
 const UI_WIDGET = "krc_media_loader_ui";
-const STYLE_VERSION = "1.0.6-shared-1671";
+const STYLE_VERSION = "1.0.6-shared-1677";
 const MIN_W = MEDIA_NODE_DEFAULT_WIDTH;
 const BAREBONES_MIN_W = 240;
 const BAREBONES_PROP = "krcMioBarebones";

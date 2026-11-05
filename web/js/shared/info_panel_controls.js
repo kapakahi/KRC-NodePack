@@ -134,13 +134,13 @@ export const sharedInfoPanelControlMethods = {
           selected.category = value;
           this.markMetadataEdited();
         }
-      }),
+      }, { metaKey: "category" }),
       this.renderField("BASE MODEL", selected?.baseModel || "", (value) => {
         if (selected) {
           selected.baseModel = value;
           this.markMetadataEdited();
         }
-      }),
+      }, { metaKey: "baseModel" }),
       this.renderCollectionControl(selected),
       this.renderDuplicateControl(selected)
     );
@@ -373,7 +373,7 @@ export const sharedInfoPanelControlMethods = {
     const right = document.createElement("div");
     right.className = "krc-info-right";
 
-    const trainedWordsLabel = this.renderLabel("TRAINED WORDS");
+    const trainedWordsLabel = this.renderLabel("TRAINED WORDS", "trainedWords");
     const chips = this.renderTrainedWordChips(selected);
 
     const promptOne = this.renderPromptBox(selected, 0);
@@ -392,11 +392,11 @@ export const sharedInfoPanelControlMethods = {
     right.append(
       trainedWordsLabel,
       chips,
-      this.renderLabel("EXAMPLE PROMPT 1"),
+      this.renderLabel("EXAMPLE PROMPT 1", "examplePrompts.0"),
       promptOne,
-      this.renderLabel("EXAMPLE PROMPT 2"),
+      this.renderLabel("EXAMPLE PROMPT 2", "examplePrompts.1"),
       promptTwo,
-      this.renderLabel("DESCRIPTION"),
+      this.renderLabel("DESCRIPTION", "description"),
       description
     );
     return right;
@@ -487,12 +487,15 @@ export const sharedInfoPanelControlMethods = {
     this.refreshBrowserResults();
   },
 
-  renderField(label, value, onInput, { limitToVisible = false } = {}) {
+  // metaKey: the metadata field this edits; its label carries data-meta-key, where the
+  // per-field Modified dot goes (metadata_state.js renderMetadataDots).
+  renderField(label, value, onInput, { limitToVisible = false, metaKey = "" } = {}) {
     const field = document.createElement("label");
     field.className = "krc-field";
     const text = document.createElement("span");
     text.className = "krc-field-label";
     text.textContent = label;
+    if (metaKey) text.dataset.metaKey = metaKey;
     const input = document.createElement("input");
     input.className = "krc-input";
     input.value = value;
@@ -505,10 +508,11 @@ export const sharedInfoPanelControlMethods = {
     return field;
   },
 
-  renderLabel(label) {
+  renderLabel(label, metaKey = "") {
     const element = document.createElement("div");
     element.className = "krc-field-label";
     element.textContent = label;
+    if (metaKey) element.dataset.metaKey = metaKey;
     return element;
   },
 

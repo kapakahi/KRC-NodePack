@@ -13,36 +13,9 @@
  * It gets out of the way while you actually type: it shows on mouse hover only
  * (never on focus) and hides the moment the field is focused or edited.
  */
-import { floatingPaletteId } from "./node_palette.js";
+import { placeFloating, syncFloatingTheme } from "./hover_card.js";
 
 const SHOW_DELAY_MS = 2000;
-
-function syncTheme(anchor, tip) {
-  const id = floatingPaletteId(anchor.closest("[data-krc-theme]")?.dataset?.krcTheme || "");
-  if (id) tip.dataset.krcTheme = id;
-  else delete tip.dataset.krcTheme;
-}
-
-function position(anchor, tip) {
-  const margin = 8;
-  const gap = 6;
-  const rect = anchor.getBoundingClientRect();
-  const width = tip.offsetWidth || 0;
-  const height = tip.offsetHeight || 0;
-  const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
-  const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
-
-  let left = rect.left;
-  left = Math.min(Math.max(margin, left), Math.max(margin, viewportW - width - margin));
-
-  // Prefer below the field; flip above when there isn't room.
-  let top = rect.bottom + gap;
-  if (top + height + margin > viewportH && rect.top - gap - height >= margin) {
-    top = rect.top - gap - height;
-  }
-  tip.style.left = `${Math.round(left)}px`;
-  tip.style.top = `${Math.round(top)}px`;
-}
 
 /**
  * Attach a hover hint tooltip to `anchor`.
@@ -84,9 +57,9 @@ export function attachHintTooltip(anchor, buildContent, { focusEl = anchor } = {
     if (focused) return;
     const el = build();
     if (!el.isConnected) document.body.append(el);
-    syncTheme(anchor, el);
+    syncFloatingTheme(anchor, el);
     // Measure after it's in the DOM, then place it.
-    position(anchor, el);
+    placeFloating(anchor, el);
     document.addEventListener("pointerdown", onDocPointerDown, true);
     document.addEventListener("keydown", onKeyDown, true);
   };

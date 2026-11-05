@@ -1,5 +1,29 @@
 import { closeFloatingMenu, toggleFloatingMenu } from "./floating_menu.js";
 import { LOCAL_STATUS } from "./local_status.js";
+import { attachHoverCard } from "./hover_card.js";
+import { renderChangeList } from "./change_list.js";
+
+// The hover card's heading per status. Stale / Conflict say only that (their detail is a
+// later step: KRC_MAYBE.md "Stale / Conflict change lists").
+const CARD_HEADINGS = {
+  [LOCAL_STATUS.MODIFIED]: "Unsaved changes",
+  [LOCAL_STATUS.STALE]: "Saved elsewhere",
+  [LOCAL_STATUS.CONFLICT]: "Changed here, and saved elsewhere",
+};
+
+// With `changes` (() => change_list.js rows), the badge's tooltip is a KRC hover card:
+// a Modified badge lists those rows; a Stale / Conflict one gets a heading; the badge's
+// own hint is the card's footer, replacing the browser tooltip.
+function attachStatusCard(badge, copy, changes) {
+  const heading = CARD_HEADINGS[copy.status];
+  if (typeof changes !== "function" || !heading) return;
+  badge.removeAttribute("title");
+  attachHoverCard(badge, () => renderChangeList({
+    heading,
+    rows: copy.status === LOCAL_STATUS.MODIFIED ? (changes() || []) : [],
+    footer: copy.badge.title || "",
+  }), { align: "right" });
+}
 
 // The Modified badge for surfaces that don't run the status engine. Discardable (Prompt
 // Vault's info panel, the metadata panels and their More Info modal): the shared status
@@ -10,6 +34,7 @@ export function modifiedBadge({
   className = "",
   title = discardable ? "Discard unsaved changes" : "",
   onDiscard = null,
+  changes = null,
 } = {}) {
   if (!discardable) {
     const pill = document.createElement("span");
@@ -21,6 +46,7 @@ export function modifiedBadge({
     copy: { status: LOCAL_STATUS.MODIFIED, badge: { label: "Modified", title, badgeClass: "is-modified" } },
     onDiscard: onDiscard || (() => {}),
     className: ["krc-modified-badge", className].filter(Boolean).join(" "),
+    changes,
   });
 }
 
@@ -45,8 +71,10 @@ function badgeText(className, textContent) {
  *                badge.
  *   discardLabel - hover label for the discard affordance (default "Discard").
  *   className  - extra class(es) for placement (e.g. a slot-specific hook).
+ *   changes    - optional () => change-list rows: the tooltip becomes a hover card
+ *                (attachStatusCard above).
  */
-export function localStatusBadge({ copy, onDiscard = null, onKeep = null, discardLabel = "Discard", className = "" } = {}) {
+export function localStatusBadge({ copy, onDiscard = null, onKeep = null, discardLabel = "Discard", className = "", changes = null } = {}) {
   const badgeCopy = copy && copy.badge;
   if (!badgeCopy) return null;
 
@@ -63,6 +91,7 @@ export function localStatusBadge({ copy, onDiscard = null, onKeep = null, discar
       event.stopPropagation();
       openConflictChoice(badge, { onKeep, onDiscard });
     });
+    attachStatusCard(badge, copy, changes);
     return badge;
   }
 
@@ -73,6 +102,7 @@ export function localStatusBadge({ copy, onDiscard = null, onKeep = null, discar
   if (!discardable) {
     badge.textContent = badgeCopy.label;
     if (badgeCopy.title) badge.title = badgeCopy.title;
+    attachStatusCard(badge, copy, changes);
     return badge;
   }
 
@@ -86,6 +116,7 @@ export function localStatusBadge({ copy, onDiscard = null, onKeep = null, discar
     event.stopPropagation();
     onDiscard(event);
   });
+  attachStatusCard(badge, copy, changes);
   return badge;
 }
 

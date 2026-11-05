@@ -15,6 +15,7 @@ selection as an id pointer (``configPresetId``). ``schema`` is the preset schema
 (utils/config_switcher_schema.py): a preset newer than this server is kept as stored.
 """
 
+import math
 import time
 import uuid
 
@@ -67,6 +68,23 @@ def clean_seed_value(raw):
     if not str(raw or "").strip():
         return ""
     return str(min(int(digits or "0"), SEED_MAX))
+
+
+def _clean_number_step(value, number_output):
+    """A number field's own Step (schema 1.7): a positive number, a whole one (at least 1)
+    for Integer, or None for the default step. Mirrors cleanNumberStep in
+    web/js/config_switcher/number_step.js."""
+    if value is None or isinstance(value, bool) or str(value).strip() == "":
+        return None
+    try:
+        step = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(step) or step <= 0:
+        return None
+    if number_output == "integer":
+        return max(1, int(round(step)))
+    return int(step) if step.is_integer() else step
 
 
 def _migrate_field_type(raw_type, options):
@@ -279,6 +297,11 @@ class ConfigSwitcherPresetStore:
             "modelType": str(field.get("modelType") or "") if field_type == "model" else "",
             "stringMultiline": bool(field.get("stringMultiline")) if field_type == "string" else False,
         }
+        if field_type == "number":
+            # Schema 1.7: the field's own − / + Step (absent = the default step).
+            step = _clean_number_step(field.get("numberStep"), cleaned["numberOutput"])
+            if step is not None:
+                cleaned["numberStep"] = step
         if dynamic_combo is not None:
             cleaned["dynamicCombo"] = dynamic_combo
             hidden = clean_dynamic_hidden(dynamic_combo, field.get("dynamicHidden"))

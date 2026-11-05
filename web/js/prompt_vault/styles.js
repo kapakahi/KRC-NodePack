@@ -6,7 +6,7 @@
  */
 import { ensureStylesheet } from "../shared/stylesheets.js";
 
-const STYLE_VERSION = "1.4.5-ui70-shared-1671";
+const STYLE_VERSION = "1.4.9-no-portal-profile-shared-1677";
 
 export function injectStyle() {
   return ensureStylesheet("krc-pm-style", "../krc_prompt_vault.css", import.meta.url, { version: STYLE_VERSION, ready: true });

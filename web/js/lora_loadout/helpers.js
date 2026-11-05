@@ -15,7 +15,7 @@ import { makeNodeSizing } from "../shared/node_limits.js";
 import { ensureStylesheet as ensureSharedStylesheet } from "../shared/stylesheets.js";
 import { HIDDEN_WIDGETS, MAX_NODE_HEIGHT, MAX_NODE_WIDTH, MINI_NODE_SIZE, MIN_NODE_SIZE } from "./constants.js";
 
-const STYLE_VERSION = "1.4.10-shared-1671";
+const STYLE_VERSION = "1.4.10-shared-1677";
 
 export function ensureStylesheet() {
   return ensureSharedStylesheet("krc-lora-stacker-css", "../krc_lora_loadout.css", import.meta.url, { version: STYLE_VERSION, ready: true });

@@ -300,6 +300,12 @@ export const presetFieldMethods = {
     return _pvKits.filter((kit) => enabled[kit.id]);
   },
 
+  // A kit's short name, as its preset row's label uses it ("<name> Preset").
+  kitShortLabel(kitId) {
+    const kit = _pvKits.find((item) => item.id === kitId);
+    return kit ? (kit.shortLabel || kit.label || kitId) : "";
+  },
+
   kitRowEnabled(kitId) {
     return !!this.node?.properties?.pmKitRows?.[kitId];
   },

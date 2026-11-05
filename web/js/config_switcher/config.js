@@ -85,6 +85,7 @@ import { openIOModal } from "./options_modal.js";
 import { installSeedRunHook } from "./seed_field.js";
 import { installNoteRunStrip } from "./note_field.js";
 import { SECTION_TITLE_MAX } from "./section_field.js";
+import { cleanNumberStep } from "./number_step.js";
 import { normalizeCardColorId } from "../shared/card_colors.js";
 // Must match nodes/krc_config_switcher.py.
 const NODE_NAME = "KRC Config Switcher";
@@ -95,12 +96,13 @@ const PROMPT_TEXTS_EVENT = "krc-config-switcher-prompt-texts";
 // Preset schema version: sent with every save, which the server refuses unless it's on the
 // same one (utils/config_switcher_schema.py, keep CS_SCHEMA_VERSION equal). Bump it by .1
 // whenever the field vocabulary or a preset's shape changes (a new type below, a new key).
-export const CS_SCHEMA_VERSION = "1.6";
+export const CS_SCHEMA_VERSION = "1.7";
 // Recognized field types. "combo" is the saved option picker (historically
 // serialized as "string"); "string" is the new raw-text type. See migrateFieldType.
 // dynamic_combo (CS_DYNAMIC_COMBO_GAMEPLAN.md) only ever comes from Capture: never addable.
 // note (note_field.js) is a notes box: no output, never sent to a run.
 // section (section_field.js, schema 1.6) is a SECTION/DIVIDER row: a title or gap, no output.
+// A number field's own − / + Step is numberStep (schema 1.7; absent = the default step).
 export const FIELD_TYPES = ["combo", "string", "number", "boolean", "model", "prompt", "seed", "dynamic_combo", "note", "section"];
 // Types offered in the "add field" menu. STRING (raw text) sits next to Combo.
 // Most to least used; SEED last of the outputs (CS_SEED_FIELD_GAMEPLAN.md), then NOTES and
@@ -210,6 +212,8 @@ export function normalizeField(f) {
         type,
         options: type === "combo" && Array.isArray(f && f.options) ? f.options.map(String).filter((item) => item.trim()) : [],
         numberOutput: type === "number" ? numberOutput : "",
+        ...(type === "number" && cleanNumberStep(f?.numberStep, numberOutput) !== null
+            ? { numberStep: cleanNumberStep(f.numberStep, numberOutput) } : {}),
         modelType: type === "model" ? String((f && f.modelType) || "") : "",
         modelOptions,
         promptOptions,

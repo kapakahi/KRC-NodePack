@@ -301,3 +301,81 @@ body > .krc-search-hint .krc-search-hint-foot {
 :root[data-krc-thumbnail-framing="fit"] .krc-node {
   --krc-thumbnail-fit: contain;
 }
+
+/* Hover card (shared/hover_card.js): the search hint's card look, but it takes the pointer
+   so a long change list can be scrolled. */
+body > .krc-hover-card {
+  position: fixed;
+  z-index: var(--krc-z-floating-menu);
+  max-width: min(460px, calc(100vw - 16px));
+  padding: 8px 10px;
+  border: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--krc-radius-xl);
+  background: var(--krc-bg-deeper, #161a1d);
+  box-shadow: var(--krc-shadow-menu);
+  color: var(--krc-text-secondary, rgba(255, 255, 255, 0.72));
+  font: 500 var(--krc-font-sm)/1.4 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The status badges' change list (shared/change_list.js). */
+body > .krc-hover-card .krc-change-list-heading {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--krc-text-primary, #fff);
+  font-weight: 600;
+}
+body > .krc-hover-card .krc-change-list-scroll {
+  max-height: 252px;   /* about 12 rows, then it scrolls */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body > .krc-hover-card .krc-change-list-group {
+  position: sticky;
+  top: 0;
+  display: block;
+  padding: 4px 0 2px;
+  background: var(--krc-bg-deeper, #161a1d);
+  color: var(--krc-text-primary, #fff);
+  font-size: var(--krc-font-xs);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+body > .krc-hover-card .krc-change-list-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, max-content) auto minmax(0, max-content);
+  gap: 2px 8px;
+  align-items: baseline;
+  margin: 0 0 4px 8px;
+}
+body > .krc-hover-card .krc-change-list-grid > span {
+  min-width: 0;
+  max-width: 24ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body > .krc-hover-card .krc-change-list-label {
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.5));
+}
+body > .krc-hover-card .krc-change-list-before {
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.5));
+}
+body > .krc-hover-card .krc-change-list-arrow {
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.5));
+}
+body > .krc-hover-card .krc-change-list-after {
+  color: rgb(var(--krc-status-modified-rgb));
+}
+body > .krc-hover-card .krc-change-list-note {
+  grid-column: 2 / -1;
+  color: rgb(var(--krc-status-modified-rgb));
+}
+body > .krc-hover-card .krc-change-list-foot {
+  display: block;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--krc-border-subtle, rgba(255, 255, 255, 0.12));
+  color: var(--krc-text-muted, rgba(255, 255, 255, 0.5));
+  font-size: var(--krc-font-xs);
+}

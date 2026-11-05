@@ -12,7 +12,18 @@ import {
   stableSignature,
   statusOverwrites,
 } from "../shared/local_status.js";
+import { markModifiedFields } from "../shared/modified_dot.js";
+import { changeRows } from "../shared/change_list.js";
+import { EMPTY_PRESET_DISPLAY, EMPTY_PRESET_LINK } from "./constants.js";
 import { kitPresetSignature } from "./kit_presets.js";
+
+// The change list's names for normalizedRecord's keys (kit presets: "<kit> Preset").
+const RECORD_FIELD_LABELS = {
+  name: "Name", category: "Category", model: "Type", llPreset: "LL Preset",
+  prompt: "Prompt A", promptB: "Prompt B", notes: "Notes",
+};
+// Long text: the list and the dot say just "Changed" / "Modified".
+const LONG_RECORD_FIELDS = new Set(["prompt", "promptB", "notes"]);
 
 // The server trims these on every save (save-prompt strips name, text, Prompt B, model,
 // notes and the LL preset), so whitespace at either end is never part of a prompt. The
@@ -68,7 +79,78 @@ export const statusMethods = {
     }
     this.applyPromptSaveButton(this.root.querySelector(".krc-save-button"));
     this.refreshSelectedPromptCard();
+    this.renderModifiedFields();
   },
+
+  // Per-field Modified state: one descriptor (shared/modified_dot.js) for the dots on the
+  // editor's fields and the badge's hover-card list (shared/change_list.js). Each field is
+  // one key of normalizedRecord, compared as the badge compares it, against the loaded
+  // baseline (what this node started from; else the saved record), so a dot or a row
+  // always means the badge reads Modified. Only your own edits (Modified / Conflict):
+  // never Stale, Draft or another profile's prompt. -> { descriptor, enabled }.
+  recordChangeDescriptor() {
+    const status = this.isDraftActive() || this.profileMismatch() ? LOCAL_STATUS.CLEAN : this.classifyRecord();
+    const enabled = status === LOCAL_STATUS.MODIFIED || status === LOCAL_STATUS.CONFLICT;
+    const savedRecord = enabled ? (this.savedDetailForDraft() || this.savedForDraft()) : null;
+    let saved = savedRecord ? this.normalizedRecord(savedRecord) : null;
+    try {
+      const baseline = this.recordBaseline();
+      if (enabled && baseline?.signature) saved = JSON.parse(baseline.signature);
+    } catch { /* keep the saved record */ }
+    const draft = this.draft || {};
+    const current = this.normalizedRecord(draft);
+    const kitIds = (text) => Object.fromEntries(String(text || "").split("\n").filter(Boolean)
+      .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]));
+    const kits = [...new Set([...Object.keys(kitIds(current.kitPresets)), ...Object.keys(kitIds(saved?.kitPresets))])];
+    const kitName = (kitId) => `${this.kitShortLabel?.(kitId) || kitId} Preset`;
+    const valueOf = (record, key) => {
+      if (key.startsWith("kit:")) return kitIds(record.kitPresets)[key.slice(4)] || "";
+      // Prompt B's Append switch is part of Prompt B.
+      if (key === "promptB") return [record.promptB, record.appendPromptB];
+      return record[key];
+    };
+    // A preset link by name: the draft's or the saved record's cached label for that id.
+    const presetName = (id, labels) => !id ? "none" : id === EMPTY_PRESET_LINK ? EMPTY_PRESET_DISPLAY
+      : (labels.find((link) => link?.id === id)?.label || id);
+    const els = this._pmDotEls || {};
+    return {
+      enabled: Boolean(saved),
+      descriptor: {
+        fields: ["name", "category", "model", "llPreset", ...kits.map((kitId) => `kit:${kitId}`), "prompt", "promptB", "notes"],
+        element: (key) => els[key] || null,
+        inline: (key) => key !== "name",
+        current: (key) => valueOf(current, key),
+        saved: (key) => valueOf(saved, key),
+        label: (key) => key.startsWith("kit:") ? kitName(key.slice(4)) : RECORD_FIELD_LABELS[key],
+        text: (key, value) => {
+          if (LONG_RECORD_FIELDS.has(key)) return null;
+          if (key === "llPreset") {
+            return presetName(value, [{ id: draft.llPreset, label: draft.llPresetLabel }, { id: savedRecord?.llPreset, label: savedRecord?.llPresetLabel }]);
+          }
+          if (key.startsWith("kit:")) {
+            const kitId = key.slice(4);
+            return presetName(value, [draft.kitPresets?.[kitId], savedRecord?.kitPresets?.[kitId]]);
+          }
+          return String(value || "");
+        },
+      },
+    };
+  },
+
+  // The dots on the editor's fields (this._pmDotEls, set by renderInfo; null with no
+  // editor). -> how many fields carry a dot.
+  renderModifiedFields() {
+    if (!this._pmDotEls) return 0;
+    const { descriptor, enabled } = this.recordChangeDescriptor();
+    return markModifiedFields(descriptor, { enabled });
+  },
+
+  // The Modified badge's hover-card rows.
+  recordChangeRows() {
+    const { descriptor, enabled } = this.recordChangeDescriptor();
+    return enabled ? changeRows(descriptor) : [];
+  },
+
   // A saved prompt can be referenced by two nodes / workflows, so the same record
   // can drift. Snapshot the record's global state when this node loads it — persisted
   // so it survives reload — to tell a local edit (Modified) apart from the record
@@ -148,6 +230,7 @@ export const statusMethods = {
       return localStatusBadge({
         copy: localStatusCopy(LOCAL_STATUS.STALE, "prompt"),
         onDiscard: () => this.discardDraft(),
+        changes: () => [],
       });
     }
     // Conflict: edited here and saved elsewhere. Keep my changes = Save (over the newer
@@ -157,6 +240,7 @@ export const statusMethods = {
         copy: localStatusCopy(LOCAL_STATUS.CONFLICT, "prompt"),
         onDiscard: () => this.discardDraft(),
         onKeep: () => this.save(),
+        changes: () => [],
       });
     }
     if (status === LOCAL_STATUS.MODIFIED) return this.renderModifiedBadge();
@@ -167,6 +251,7 @@ export const statusMethods = {
       discardable: true,
       title: localStatusCopy(LOCAL_STATUS.MODIFIED, "prompt").badge.title,
       onDiscard: () => this.discardDraft(),
+      changes: () => this.recordChangeRows(),
     });
   },
   renderDraftBadge() {

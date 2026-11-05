@@ -103,7 +103,7 @@ export const infoPanelControlMethods = {
   },
 
   renderGenericModelInfo(selected) {
-    return renderInfoPanel(this.modelInfoPanelSource(), selected);
+    return this.withMetadataDots(renderInfoPanel(this.modelInfoPanelSource(), selected));
   },
 
   // PanelSource descriptor for the generic (non-LoRA) model panel — the "model"
@@ -197,8 +197,8 @@ export const infoPanelControlMethods = {
       thumb,
       thumbControls,
       this.renderInfoText("TYPE", this.modelTypeLabel(selected?.modelType), "krc-model-type-field"),
-      this.renderField("BASE MODEL", selected?.baseModel || "", (value) => this.editGenericField(selected, "baseModel", value)),
-      this.renderField("QUANTIZATION", selected?.quantization || "", (value) => this.editGenericField(selected, "quantization", value)),
+      this.renderField("BASE MODEL", selected?.baseModel || "", (value) => this.editGenericField(selected, "baseModel", value), { metaKey: "baseModel" }),
+      this.renderField("QUANTIZATION", selected?.quantization || "", (value) => this.editGenericField(selected, "quantization", value), { metaKey: "quantization" }),
       // + COLLECTION works for any stabilized file — the generic-model panel has its own left
       // column, so mount the shared control here too (the LoRA panel mounts it in renderInfoLeft).
       this.renderCollectionControl(selected)
@@ -235,15 +235,15 @@ export const infoPanelControlMethods = {
     notes.addEventListener("input", (event) => this.editGenericField(selected, "notes", event.target.value));
 
     right.append(
-      this.renderLabel("DESCRIPTION"),
+      this.renderLabel("DESCRIPTION", "description"),
       description,
-      this.renderLabel("NOTES"),
+      this.renderLabel("NOTES", "notes"),
       notes,
       this.renderField("TAGS", (selected?.tags || []).join(", "), (value) => {
         if (!selected) return;
         selected.tags = String(value || "").split(",").map((tag) => tag.trim()).filter(Boolean);
         this.markMetadataEdited();
-      })
+      }, { metaKey: "tags" })
     );
     return right;
   },

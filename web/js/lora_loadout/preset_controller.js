@@ -22,6 +22,7 @@ import { showToast } from "../shared/toast.js";
 import { parseJsonArray, uiValue } from "./pure_helpers.js";
 import { krcAlert, openKrcConfirm } from "../shared/modal.js";
 import { adoptCardSnapshots, presetEntryCard } from "../shared/card_snapshots.js";
+import { stackChangeRows, stackEntryName } from "../shared/stack_changes.js";
 
 const PRESET_CYCLE_SESSION_MS = 2500;
 
@@ -524,6 +525,29 @@ export const presetMethods = {
     return this.classifyActivePreset() !== LOCAL_STATUS.CLEAN;
   },
 
+  // The Modified badge's hover-card rows: Stack A / B against what this node loaded (the
+  // baseline, ids remapped like classifyActivePreset's), else the saved preset.
+  presetChangeRows() {
+    const preset = this.activePreset();
+    if (!preset) return [];
+    const baseline = this._presetBaseline && this._presetBaseline.id === preset.id ? this._presetBaseline : null;
+    let saved = null;
+    try {
+      saved = baseline ? JSON.parse(this.canonicalBaselineSignature(baseline.signature)) : null;
+    } catch { /* fall back to the saved preset */ }
+    saved ||= JSON.parse(this.savedPresetSignature(preset));
+    const current = JSON.parse(this.currentPresetSignature());
+    const onOff = (value) => (value ? "on" : "off");
+    const rows = ["A", "B"]
+      .filter((id) => Boolean(saved.stackEnabled?.[id]) !== Boolean(current.stackEnabled?.[id]))
+      .map((id) => ({ group: `Stack ${id}`, label: "Stack", before: onOff(saved.stackEnabled?.[id]), after: onOff(current.stackEnabled?.[id]) }));
+    return rows.concat(stackChangeRows({
+      stacks: ["A", "B"].map((id) => ({ group: `Stack ${id}`, current: current[id] || [], saved: saved[id] || [] })),
+      name: (id) => stackEntryName(this, id),
+      values: [{ key: "strength", label: "Strength" }],
+    }));
+  },
+
   renderPresetStatusBadge() {
     const state = this.presetSelectionState();
     // --unsaved--: LoRAs present that belong to no preset. A gentle nudge, reusing the
@@ -549,6 +573,7 @@ export const presetMethods = {
       onDiscard: () => this.discardActivePresetChanges(),
       // Conflict: Keep my changes = save this node's stacks over the newer saved preset.
       onKeep: () => this.savePreset(),
+      changes: () => this.presetChangeRows(),   // the hover card's list
     });
   },
 

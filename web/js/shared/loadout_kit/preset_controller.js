@@ -17,7 +17,8 @@ import {
   presetsForPrefix as sharedPresetsForPrefix,
 } from "../preset_naming.js";
 import { PRESETS_CHANGED_EVENT, PROP_PRESET_BASELINE, STACK_ID } from "./constants.js";
-import { entryFieldValues } from "./fields.js";
+import { entryFieldValues, formatField } from "./fields.js";
+import { stackChangeRows, stackEntryName } from "../stack_changes.js";
 import { parseJsonArray } from "./util.js";
 import { krcAlert, openKrcConfirm } from "../modal.js";
 import { adoptCardSnapshots, presetEntryCard } from "../card_snapshots.js";
@@ -394,6 +395,24 @@ export const presetMethods = {
     return this.classifyActivePreset() !== LOCAL_STATUS.CLEAN;
   },
 
+  // The Modified badge's hover-card rows: the stack against what this node loaded (the
+  // baseline, ids remapped), else the saved preset; the kit's fields per card.
+  presetChangeRows() {
+    const preset = this.activePreset();
+    if (!preset) return [];
+    const baseline = this._presetBaseline && this._presetBaseline.id === preset.id ? this._presetBaseline : null;
+    let saved = null;
+    try {
+      saved = baseline ? JSON.parse(this.canonicalBaselineSignature(baseline.signature)) : null;
+    } catch { /* fall back to the saved preset */ }
+    if (!Array.isArray(saved)) saved = JSON.parse(this.savedPresetSignature(preset));
+    return stackChangeRows({
+      stacks: [{ group: "", current: JSON.parse(this.currentPresetSignature()), saved }],
+      name: (id) => stackEntryName(this, id),
+      values: this.kit.fields.map((field) => ({ key: field.key, label: field.title || field.label || field.key, text: (value) => formatField(field, value) })),
+    });
+  },
+
   renderPresetStatusBadge() {
     const state = this.presetSelectionState();
     // --unsaved--: cards present that belong to no preset (Draft visual).
@@ -412,6 +431,7 @@ export const presetMethods = {
       onDiscard: () => this.discardActivePresetChanges(),
       // Conflict: Keep my changes = save this node's stacks over the newer saved preset.
       onKeep: () => this.savePreset(),
+      changes: () => this.presetChangeRows(),   // the hover card's list
     });
   },
 

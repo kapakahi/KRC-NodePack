@@ -73,7 +73,7 @@ export const infoPanelMethods = {
         }).catch(() => this._deferredDetailInFlight.delete(pendingSha));
       }
     }
-    return renderInfoPanel(this.loraPanelSource(), selected);
+    return this.withMetadataDots(renderInfoPanel(this.loraPanelSource(), selected));
   },
 
   selectLora(sha256, { focus = false } = {}) {

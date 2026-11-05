@@ -149,6 +149,17 @@
   display: none;
 }
 
+/* The Modified dot (shared .krc-modified-dot) sits at the name's right end, just before
+   the value. Editing, the × clear button is there: the dot moves left of it, and the
+   name's text stops short of the dot. */
+.ddp-name-wrap:has(> .ddp-name-clear:not(:disabled)) > .krc-modified-dot {
+  right: 23px;
+}
+
+.ddp-name-wrap:has(> .ddp-name-clear:not(:disabled)):has(> .krc-modified-dot) .ddp-name {
+  padding-right: 32px;
+}
+
 .ddp-name.is-readonly {
   border-color: transparent;
   background: transparent;
@@ -320,45 +331,32 @@
   font-size: var(--krc-font-base);
 }
 
-.ddp-number-format-menu {
-  position: fixed;
-  z-index: var(--krc-z-field-menu);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-height: 220px;
-  overflow: auto;
-  padding: 5px;
-  border: 1px solid var(--krc-border-strong);
-  border-radius: var(--krc-radius-xl);
-  background: var(--krc-bg-col);
-  box-shadow: var(--krc-shadow-dropdown);
-  box-sizing: border-box;
+/* The number popover (the # button): the Saved Values shell, AUTO / INTEGER / FLOAT in its
+   head, then the − / + Step and an example. */
+.ddp-number-step-row {
+  display: grid;
+  grid-template-columns: auto 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
 }
 
-.ddp-number-format-option {
-  display: block;
-  width: 100%;
-  min-height: 26px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: var(--krc-radius-lg);
-  background: var(--krc-bg-element);
-  color: var(--krc-text-secondary);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--krc-font-sm);
-  text-align: left;
+.ddp-number-step-label {
+  color: var(--krc-text-muted);
+  font-size: var(--krc-font-2xs);
+  font-weight: 650;
 }
 
-.ddp-number-format-option:hover,
-.ddp-number-format-option.is-selected {
-  border-color: var(--krc-border-strong);
-  color: var(--krc-text-primary);
+.ddp-string-popover-input.ddp-number-step-input.is-invalid {
+  border-color: var(--krc-accent-red);
+  box-shadow: 0 0 0 1px rgba(var(--krc-accent-red-rgb), 0.28);
 }
 
-.ddp-number-format-option.is-selected {
-  border-color: var(--krc-accent-green);
+.ddp-number-step-example {
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ddp-field .ddp-input {

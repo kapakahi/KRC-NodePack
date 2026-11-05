@@ -15,7 +15,7 @@ A preset without ``schema`` predates versioning and reads as "1.0". Older preset
 they are (no migrations); raise CS_SCHEMA_MIN only when old presets stop being valid.
 """
 
-CS_SCHEMA_VERSION = "1.6"
+CS_SCHEMA_VERSION = "1.7"
 CS_SCHEMA_MIN = "1.0"
 UNVERSIONED = "1.0"
 

@@ -22,6 +22,7 @@ import { fetchPresets, savePreset, renamePreset, deletePreset } from "./api.js";
 import { loadState, saveState } from "./state.js";
 import { resizeNode } from "./layout.js";
 import { krcAlert, openKrcConfirm } from "../shared/modal.js";
+import { wordBankChangeRows } from "./change_rows.js";
 
 const PRESET_CYCLE_SESSION_MS = 2500;
 
@@ -161,6 +162,25 @@ export function createPresetControls({
     });
   }
 
+  // The Modified badge's hover-card rows: the rows against what this node loaded (the
+  // baseline), else the saved preset. Bank names from the rows that carry them.
+  function changeRows() {
+    const p = selectedPreset();
+    if (!p) return [];
+    let saved = null;
+    try {
+      saved = JSON.parse(activeBaseline()?.signature || sig(p.rows));
+    } catch { /* fall back to the saved preset */ }
+    if (!Array.isArray(saved)) saved = JSON.parse(sig(p.rows));
+    const rows = rowsFromDOM();
+    const names = new Map();
+    for (const row of [...(p.rows || []), ...rows]) {
+      const id = String(row.categoryId || row.category || "");
+      if (id && row.category) names.set(id, String(row.category));
+    }
+    return wordBankChangeRows(saved, JSON.parse(sig(rows)), (id) => names.get(id) || id);
+  }
+
   function applySaveButton(status) {
     const copy = localStatusCopy(status, "preset");
     const label = copy.action.label;
@@ -215,6 +235,7 @@ export function createPresetControls({
         onDiscard: discardToPreset,
         // Conflict: Keep my changes = the Save button's save over the active preset.
         onKeep: () => saveBtn.click(),
+        changes: changeRows,   // the hover card's list
       });
       if (badge) badgeSlot.append(badge);
     }

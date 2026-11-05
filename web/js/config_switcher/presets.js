@@ -47,6 +47,7 @@ import { normalizePromptOption } from "./prompt_field.js";
 import { numberOutputFormat } from "./value_controls.js";
 import { normalizeModelOption } from "./model_field.js";
 import { renderAll, resizeConfigNode } from "./field_rows.js";
+import { presetChangeRows, renderModifiedFields } from "./modified_fields.js";
 import { closeConfigActionMenu, resetToBlankSlate, setActive } from "./config_ops.js";
 
 export function requestConfigSwitcherJson(path, options = {}) {
@@ -291,30 +292,38 @@ export function presetIsNewer(preset) {
 // badge, favorite, NSFW, a prompt's name / category) and a model's identity (id /
 // SHA256, which change when it's stabilized) follow the libraries live and never make
 // a preset read as changed.
+const optionValues = (options, normalize) => [...new Set(
+    (Array.isArray(options) ? options : [])
+        .map((option) => normalize(option)?.value)
+        .filter(Boolean)
+        .map(String),
+)].sort();
+
+// One field's definition as the signature compares it (a normalized field in). The
+// per-field Modified dots (modified_fields.js) compare fields with it too.
+export function signatureField(field) {
+    return {
+        id: field.id,
+        name: field.name,
+        type: field.type,
+        options: field.type === "combo" ? (field.options || []).map(String) : [],
+        numberOutput: field.type === "number" ? numberOutputFormat(field).id : "",
+        ...(field.type === "number" && field.numberStep ? { numberStep: field.numberStep } : {}),
+        modelType: field.type === "model" ? String(field.modelType || "") : "",
+        modelOptions: field.type === "model" ? optionValues(field.modelOptions, normalizeModelOption) : [],
+        promptOptions: field.type === "prompt" ? optionValues(field.promptOptions, normalizePromptOption) : [],
+        stringMultiline: field.type === "string" ? Boolean(field.stringMultiline) : false,
+        ...(field.type === "dynamic_combo" ? { dynamicCombo: field.dynamicCombo, dynamicHidden: field.dynamicHidden || [] } : {}),
+        ...(field.type === "section" && field.color ? { color: field.color } : {}),
+        ...(field.shared ? { shared: true } : {}),
+    };
+}
+
 function normalizedPresetSignature(payload) {
-    const optionValues = (options, normalize) => [...new Set(
-        (Array.isArray(options) ? options : [])
-            .map((option) => normalize(option)?.value)
-            .filter(Boolean)
-            .map(String),
-    )].sort();
     const fields = (Array.isArray(payload?.fields) ? payload.fields : [])
         .slice(0, MAX_OUTPUTS)
         .map(normalizeField)
-        .map((field) => ({
-            id: field.id,
-            name: field.name,
-            type: field.type,
-            options: field.type === "combo" ? (field.options || []).map(String) : [],
-            numberOutput: field.type === "number" ? numberOutputFormat(field).id : "",
-            modelType: field.type === "model" ? String(field.modelType || "") : "",
-            modelOptions: field.type === "model" ? optionValues(field.modelOptions, normalizeModelOption) : [],
-            promptOptions: field.type === "prompt" ? optionValues(field.promptOptions, normalizePromptOption) : [],
-            stringMultiline: field.type === "string" ? Boolean(field.stringMultiline) : false,
-            ...(field.type === "dynamic_combo" ? { dynamicCombo: field.dynamicCombo, dynamicHidden: field.dynamicHidden || [] } : {}),
-            ...(field.type === "section" && field.color ? { color: field.color } : {}),
-            ...(field.shared ? { shared: true } : {}),
-        }));
+        .map(signatureField);
     // Configs as the server stores them (_clean_configs): names trimmed (blank ones
     // dropped), only the preset's fields, and a seed's number only while locked (its lock
     // and mode always). Comparing anything the save drops would read Modified right
@@ -333,6 +342,13 @@ function normalizedPresetSignature(payload) {
         configs: sortedConfigs,
         default_config: String(payload?.default_config || ""),
     });
+}
+
+// The node's preset as the signature sees it, parsed: { fields, shared_values?, configs,
+// default_config }. The per-field dots and the change list (modified_fields.js) diff it
+// against the saved one (the same shape).
+export function currentPresetSnapshot(node) {
+    return JSON.parse(normalizedPresetSignature(currentPresetPayload(node)));
 }
 
 export function configSyncSource(node) {
@@ -586,11 +602,13 @@ export function updatePresetModifiedSlot(node) {
                 onDiscard: () => revertLoadedPreset(node),
                 // Conflict: Keep my changes = save this node over the newer saved preset.
                 onKeep: () => savePresetForNode(node),
+                changes: () => presetChangeRows(node),   // the hover card's list
             }));
         }
     }
     applyConfigPresetSaveButton(node);
     renderPresetLabel(node);
+    renderModifiedFields(node, status);
 }
 
 const MISSING_PRESET_TITLE = "This preset and its configs aren't on this server. Save to keep this workflow's configs.";

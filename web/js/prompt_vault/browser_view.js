@@ -60,7 +60,7 @@ export const browserMethods = {
       tag: "div",
       panelClass: "krc-panel krc-browser-panel",
       actionsClass: "krc-header-controls",
-      bodyClass: this.surface === "detached" ? "krc-browser-body has-profile-picker" : "krc-browser-body",
+      bodyClass: "krc-browser-body",
       controls: [
         {
           kind: "select",
@@ -118,7 +118,9 @@ export const browserMethods = {
       // chip set (visibleCategories depends only on the category list + NSFW filter)
       // or the active category, so this skips renderChips(). NSFW toggles and category
       // edits go through the full path so the chips rebuild when they must.
-      slots: [...(this.surface === "detached" ? [this.renderProfileControl()] : []), chipShell || this.facet().render(), this.renderList(), this.renderFooter()],
+      // No profile picker here: the node's is in its Options, the Portal's on Portal ▸
+      // Profiles (Portal Profile).
+      slots: [chipShell || this.facet().render(), this.renderList(), this.renderFooter()],
     });
   },
 

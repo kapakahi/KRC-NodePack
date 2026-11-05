@@ -79,6 +79,7 @@ export const infoMethods = {
     editControls.append(modifiedSlot, colorBtn, badgeBtn, favBtn, pinBtn, nsfwBtn);
     header.append(cycleControls, title, editControls);
 
+    this._pmDotEls = null;
     if (!this.draft) {
       const empty = el("div", "krc-info-empty");
       empty.append(
@@ -197,9 +198,25 @@ export const infoMethods = {
     top.style.cssText = "margin-bottom:7px;";
     const dateMeta = el("div", "krc-date-meta");
     this.updateDateMetaEl(dateMeta, d);
-    top.append(nameInp, dateMeta);
+    // The name box is positioned so its Modified dot can sit at its right end.
+    const nameWrap = el("div", "krc-pv-name-wrap");
+    nameWrap.append(nameInp);
+    top.append(nameWrap, dateMeta);
 
     panel.append(header, top, body, actions);
+    // Where the per-field Modified dots go (record_status.js renderModifiedFields): the
+    // name box, else each field's label. Keys are normalizedRecord's ("kit:<id>" per kit).
+    const label = (box) => box?.querySelector(".krc-field-label") || null;
+    this._pmDotEls = {
+      name: nameWrap,
+      category: label(category),
+      model: label(typeField),
+      llPreset: label(llPreset),
+      ...Object.fromEntries(kitRows.map((row) => [`kit:${row.dataset.kit}`, label(row)])),
+      prompt: label(promptBox),
+      promptB: label(promptBBox),
+    };
+    this.renderModifiedFields();
     return panel;
   },
 

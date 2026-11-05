@@ -46,7 +46,6 @@
 /* Body children: search, optional Portal profile picker, chips, list, footer.
    Only the card list receives the flexible row; chips keep their fixed height. */
 .krc-pm .krc-browser-body { display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:7px; flex:1 1 auto; min-height:0; }
-.krc-pm .krc-browser-body.has-profile-picker { grid-template-rows:auto auto auto minmax(0,1fr) auto; }
 .krc-pm .krc-footer { padding-top:2px; }
 
 /* card list */

@@ -38,6 +38,7 @@ import { moveSeedHoldForShare } from "./seed_field.js";
 import { fieldValueKeys, setFieldShared } from "./shared_values.js";
 import { buildNoteControl, forgetNoteRows, NOTE_TYPE, noteRowHeight } from "./note_field.js";
 import { applySectionColor, applySectionTint, buildSectionContent, SECTION_TYPE, sectionOf } from "./section_field.js";
+import { renderModifiedFields } from "./modified_fields.js";
 
 function buildShareFieldControl(node, field, editing) {
     if (!editing) return null;
@@ -301,6 +302,7 @@ export function renderFields(node) {
                 buildRemoveFieldButton(node, i, field, editing),
             ]);
         }
+        row.dataset.fieldId = field.id;   // the Modified dots find their row by it
         row.classList.toggle("is-shared", Boolean(field.shared));
         if (field.type !== SECTION_TYPE) applySectionTint(row, sectionOf(node._fields, i));
         if (editing) {
@@ -314,6 +316,7 @@ export function renderFields(node) {
         ui.addField.disabled = !editing || (node._fields || []).length >= MAX_OUTPUTS;
         ui.addFieldWrap.hidden = !editing;
     }
+    renderModifiedFields(node);
     resizeConfigNode(node);
 }
 

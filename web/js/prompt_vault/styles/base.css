@@ -52,6 +52,11 @@
 .krc-pm .krc-header-actions { display:flex; align-items:center; justify-content:flex-end; gap:3px; margin-left:auto; }
 .krc-pm .krc-info-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
+/* The name box holds its Modified dot (shared .krc-modified-dot) at its right end; the
+   name's text stops short of it. */
+.krc-pm .krc-pv-name-wrap { position:relative; }
+.krc-pm .krc-pv-name-wrap > .krc-modified-dot { right:7px; }
+.krc-pm .krc-pv-name-wrap:has(> .krc-modified-dot) > .krc-input { padding-right:22px; }
 .krc-pm .krc-date-meta { margin:2px 0 0 2px; color:var(--krc-text-muted); opacity:var(--krc-text-faint-opacity);
   display:flex; justify-content:space-between; gap:6px; min-width:0;
   font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:var(--krc-font-3xs); line-height:1.05; text-align:right; }

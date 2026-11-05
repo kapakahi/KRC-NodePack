@@ -249,3 +249,43 @@
   box-shadow: inset 0 0 0 var(--krc-selection-ring-width, 2px) var(--krc-chip-active-ring, transparent);
   color: var(--krc-chip-active-text);
 }
+
+/* Per-field Modified dot (shared/modified_dot.js): a dot in the Modified status colour
+   with a thin dark outline, absolutely placed in the field's positioned label box so it never moves the row.
+   Centred on the box's right edge by default; a node may place it otherwise. */
+.krc-node .krc-modified-dot {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(var(--krc-status-modified-rgb));
+  box-shadow: 0 0 0 1px var(--krc-bg-deeper);
+  transform: translateY(-50%);
+  cursor: help;
+}
+
+/* Inline: the dot follows a label's text ("PROMPT A •"). */
+.krc-node .krc-modified-dot.is-inline {
+  position: relative;
+  top: -1px;
+  right: auto;
+  display: inline-block;
+  margin-left: 5px;
+  vertical-align: middle;
+  transform: none;
+}
+
+/* LoRA Loadout / Model Library Info Panel: the name box (its label is hidden) holds its
+   Modified dot at its right end, 7px in like Prompt Vault's; the name stops short of it. */
+.krc-node .krc-info-name-field:has(> .krc-modified-dot) {
+  position: relative;
+}
+.krc-node .krc-info-name-field > .krc-modified-dot {
+  right: 7px;
+}
+.krc-node .krc-info-name-field:has(> .krc-modified-dot) > .krc-input {
+  padding-right: 22px;
+}

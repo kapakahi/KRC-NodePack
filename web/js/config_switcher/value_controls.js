@@ -7,7 +7,7 @@
 import { h } from "./helpers.js";
 import { armConfirmButton } from "../shared/confirm_action.js";
 import { stopCanvasEvents } from "../shared/dom.js";
-import { stepNumberText } from "./number_step.js";
+import { cleanNumberStep, defaultStepLabel, numberStepFor, stepExample, stepNumberText } from "./number_step.js";
 import { STRING_OPTION_CAP, formatStringOptionList, planStringOptionList } from "./string_option_list.js";
 import { showToast } from "../shared/toast.js";
 import { configValueStores, configValueView } from "./shared_values.js";
@@ -110,29 +110,38 @@ export function buildValueControl(node, field, disabled, editing) {
                 }
             },
         });
-        // Integer 1, Float 0.1, Auto by how the value is written (number_step.js).
+        // The field's own Step, else Integer 1, Float 0.1, Auto by how the value is written
+        // (number_step.js).
+        const mode = () => numberOutputFormat(field).id;
         const stepBy = (direction) => {
             if (disabled) return;
-            input.value = sanitize(stepNumberText(input.value, direction, numberOutputFormat(field).id));
+            input.value = sanitize(stepNumberText(input.value, direction, mode(), field.numberStep));
             set(input.value);
             input.focus();
         };
+        // The tooltip says the step and where a press lands, read when hovered (the Step can
+        // change in the popover without a re-render).
+        const stepButton = (direction, glyph, minus) => {
+            const button = h("button", {
+                class: "ddp-number-step",
+                type: "button",
+                disabled,
+                onclick: () => stepBy(direction),
+            }, h("span", { class: `ddp-number-step-glyph ddp-number-step-glyph-${minus ? "minus" : "plus"}`, text: glyph }));
+            const describe = () => {
+                const step = numberStepFor(input.value, mode(), field.numberStep);
+                const next = sanitize(stepNumberText(input.value, direction, mode(), field.numberStep));
+                button.title = `${minus ? "Decrease" : "Increase"} by ${step} (${next})`;
+            };
+            describe();
+            button.addEventListener("mouseenter", describe);
+            button.addEventListener("focus", describe);
+            return button;
+        };
         return h("div", { class: "ddp-number-value" }, [
             input,
-            h("button", {
-                class: "ddp-number-step",
-                type: "button",
-                title: "Decrease value",
-                disabled,
-                onclick: () => stepBy(-1),
-            }, h("span", { class: "ddp-number-step-glyph ddp-number-step-glyph-minus", text: "−" })),
-            h("button", {
-                class: "ddp-number-step",
-                type: "button",
-                title: "Increase value",
-                disabled,
-                onclick: () => stepBy(1),
-            }, h("span", { class: "ddp-number-step-glyph ddp-number-step-glyph-plus", text: "+" })),
+            stepButton(-1, "−", true),
+            stepButton(1, "+", false),
             buildNumberOutputButton(node, field, editing),
         ]);
     }
@@ -430,6 +439,8 @@ export function closeNumberOutputMenu(node) {
     if (node._ddp) node._ddp.numberOutputMenu = null;
 }
 
+// The output format (AUTO / INTEGER / FLOAT); Integer also makes the value and the Step
+// whole numbers.
 function setNumberOutputFormat(node, field, formatId) {
     field.numberOutput = NUMBER_OUTPUT_FORMAT_IDS.has(formatId) ? formatId : "auto";
     if (field.numberOutput === "integer") {
@@ -438,51 +449,103 @@ function setNumberOutputFormat(node, field, formatId) {
             config[field.id] = normalizeIntegerValue(config[field.id]);
         }
     }
+    setNumberStep(field, field.numberStep);
     writeData(node);
-    closeNumberOutputMenu(node);
     renderFields(node);
 }
 
-function numberOutputOptionRow(node, field, format) {
-    const selected = numberOutputFormat(field).id === format.id;
-    return h("button", {
-        class: "ddp-number-format-option" + (selected ? " is-selected" : ""),
-        type: "button",
-        title: format.title,
-        text: format.label,
-        onclick: () => setNumberOutputFormat(node, field, format.id),
-    });
+// The field's own Step, or none (the default). Returns whether `raw` was usable.
+function setNumberStep(field, raw) {
+    const step = cleanNumberStep(raw, numberOutputFormat(field).id);
+    if (step === null) delete field.numberStep;
+    else field.numberStep = step;
+    return step !== null;
 }
 
+// The number popover (the # button, edit mode): the Saved Values shell with an
+// AUTO / INTEGER / FLOAT toggle in its head, then the − / + Step and an example from the
+// field's value. Changes apply as they're made; there's nothing to save.
 function openNumberOutputMenu(node, field, anchor) {
     closeStringValuePopover(node, false);
     closeStringOptionMenu(node);
     closeNumberOutputMenu(node);
-    const menu = h("div", { class: "krc-node ddp-number-format-menu" });
-    applyFloatingMenuPalette(node, menu);
-    NUMBER_OUTPUT_FORMATS.forEach((format) => menu.append(numberOutputOptionRow(node, field, format)));
-    document.body.appendChild(menu);
-    node._ddp.numberOutputMenu = menu;
-    const rect = anchor.getBoundingClientRect();
-    const menuWidth = 132;
-    const margin = 8;
-    menu.style.width = `${menuWidth}px`;
-    menu.style.left = `${Math.max(margin, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - margin))}px`;
-    const menuH = Math.min(menu.scrollHeight, menu.offsetHeight || 120);
-    const spaceBelow = window.innerHeight - rect.bottom - margin;
-    const spaceAbove = rect.top - margin;
-    const top = (spaceBelow >= menuH || spaceBelow >= spaceAbove)
-        ? Math.min(rect.bottom + 4, window.innerHeight - menuH - margin)
-        : Math.max(margin, rect.top - 4 - menuH);
-    menu.style.top = `${Math.max(margin, top)}px`;
+    const popover = h("div", { class: "krc-node ddp-string-popover ddp-number-popover", role: "dialog", "aria-label": "Number" });
+    applyFloatingMenuPalette(node, popover);
+    stopCanvasEvents(popover);
+    const currentValue = () => String(activeConfigValues(node, true)?.[field.id] ?? "");
+    const stepInput = h("input", {
+        class: "ddp-string-popover-input ddp-number-step-input",
+        type: "text",
+        inputmode: "decimal",
+        "aria-label": "Step",
+        title: "How far − / + move the value. Empty: the default step.",
+    });
+    stopCanvasEvents(stepInput);
+    const example = h("span", { class: "ddp-string-popover-hint ddp-number-step-example" });
+    const refresh = () => {
+        const mode = numberOutputFormat(field).id;
+        stepInput.placeholder = defaultStepLabel(mode);
+        example.textContent = stepExample(currentValue(), mode, field.numberStep);
+        for (const button of modes.children) button.classList.toggle("is-active", button.dataset.mode === mode);
+    };
+    const modes = h("div", { class: "ddp-string-popover-modes", role: "group", "aria-label": "Output" },
+        NUMBER_OUTPUT_FORMATS.map((format) => h("button", {
+            class: "ddp-string-popover-mode",
+            type: "button",
+            text: format.label,
+            title: format.title,
+            "data-mode": format.id,
+            onclick: (event) => {
+                event.stopPropagation();
+                setNumberOutputFormat(node, field, format.id);
+                stepInput.value = field.numberStep ?? "";
+                stepInput.classList.remove("is-invalid");
+                refresh();
+            },
+        })));
+    stepInput.value = field.numberStep ?? "";
+    stepInput.addEventListener("input", () => {
+        const raw = stepInput.value.trim();
+        const ok = raw === "" || setNumberStep(field, raw);
+        if (raw === "") delete field.numberStep;
+        stepInput.classList.toggle("is-invalid", !ok);
+        if (ok) writeData(node);
+        refresh();
+    });
+    popover.append(
+        h("div", { class: "ddp-string-popover-head" }, [
+            h("div", { class: "ddp-string-popover-title", text: "Number" }),
+            h("div", { class: "ddp-string-popover-tools" }, [modes]),
+        ]),
+        h("div", { class: "ddp-number-step-row" }, [
+            h("span", { class: "ddp-number-step-label", text: "Step" }),
+            stepInput,
+            example,
+        ]),
+    );
+    document.body.append(popover);
+    node._ddp.numberOutputMenu = popover;
+    refresh();
+    const position = () => clampStringValuePopover({ popover, anchor, close: () => closeNumberOutputMenu(node) });
+    position();
     const closeOnOutside = (event) => {
-        if (menu.contains(event.target) || anchor.contains(event.target)) return;
+        if (popover.contains(event.target) || anchor.contains(event.target)) return;
+        closeNumberOutputMenu(node);
+    };
+    const closeOnEscape = (event) => {
+        if (event.key !== "Escape") return;
+        event.stopPropagation();
         closeNumberOutputMenu(node);
     };
     node._ddp.numberOutputClose = () => {
         document.removeEventListener("pointerdown", closeOnOutside, true);
+        document.removeEventListener("keydown", closeOnEscape, true);
     };
-    setTimeout(() => document.addEventListener("pointerdown", closeOnOutside, true), 0);
+    setTimeout(() => {
+        document.addEventListener("pointerdown", closeOnOutside, true);
+        document.addEventListener("keydown", closeOnEscape, true);
+    }, 0);
+    stepInput.focus();
 }
 
 function buildNumberOutputButton(node, field, editing) {
@@ -491,7 +554,7 @@ function buildNumberOutputButton(node, field, editing) {
     return h("button", {
         class: "ddp-icon ddp-number-format",
         type: "button",
-        title: `Number output: ${format.label}`,
+        title: `Number: ${format.label}${field.numberStep ? `, step ${field.numberStep}` : ""}`,
         text: "#",
         onclick: (event) => {
             event.stopPropagation();

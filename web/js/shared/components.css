@@ -3,12 +3,12 @@
  * their original order (later rules win ties, so the order is part of the styling).
  * Each ?v= must match SHARED_STYLE_VERSION in stylesheets.js, like the bundles' @imports.
  */
-@import url("./components/base.css?v=1.6.71");
-@import url("./components/controls.css?v=1.6.71");
-@import url("./components/card_menus.css?v=1.6.71");
-@import url("./components/glyphs_states.css?v=1.6.71");
-@import url("./components/cards.css?v=1.6.71");
-@import url("./components/node_shell.css?v=1.6.71");
-@import url("./components/options_chips.css?v=1.6.71");
+@import url("./components/base.css?v=1.6.77");
+@import url("./components/controls.css?v=1.6.77");
+@import url("./components/card_menus.css?v=1.6.77");
+@import url("./components/glyphs_states.css?v=1.6.77");
+@import url("./components/cards.css?v=1.6.77");
+@import url("./components/node_shell.css?v=1.6.77");
+@import url("./components/options_chips.css?v=1.6.77");
 
-@import url("./components/thumbnail_preview.css?v=1.6.71");
+@import url("./components/thumbnail_preview.css?v=1.6.77");

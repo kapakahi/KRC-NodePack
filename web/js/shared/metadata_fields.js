@@ -120,3 +120,18 @@ export function buildNormalizedMetadata(record = {}, fields) {
   }
   return out;
 }
+
+// The Modified badge's change list and the per-field dots (metadata_state.js
+// metadataChangeDescriptor): each snapshot field's name, and the fields that hold long
+// text or lists, which read just "Changed". Example prompts are one row per prompt.
+export const METADATA_FIELD_LABELS = {
+  display_name: "Name", version: "Version", baseModel: "Base Model", category: "Category",
+  description: "Description", creator: "Creator", usage: "Usage", nsfwLevel: "NSFW Rating",
+  trainedWords: "Trained Words", tags: "Tags", notes: "Notes",
+  modelType: "Type", family: "Family", architecture: "Architecture", variant: "Variant",
+  role: "Role", parameterCount: "Parameters", quantization: "Quantization",
+  precision: "Precision", releaseDate: "Release Date", baseModelReleaseDate: "Base Model Release Date",
+  license: "License", creatorName: "Creator Name", companyName: "Company", sourceName: "Source",
+};
+export const LONG_METADATA_FIELDS = new Set(["description", "notes", "usage", "trainedWords", "tags", "examplePrompts"]);
+

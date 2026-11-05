@@ -26,7 +26,12 @@ import { notifyNetworkDisabled } from "./network_consent.js";
 import { KRC_SYNC_EVENTS, KRC_SYNC_LANES, isOwnSyncEvent, publishKrcSync, subscribeKrcSync } from "./sync_bus.js";
 import { loadCollections } from "./collections_client.js";
 import { installLibraryHealBridge } from "./library_heal_client.js";
-import { METADATA_INSTANT_FIELDS, isInstantOnlyFields, hasDeferredDetail, clearedDeferredDetailFlags } from "./metadata_fields.js";
+import {
+  METADATA_INSTANT_FIELDS, isInstantOnlyFields, hasDeferredDetail, clearedDeferredDetailFlags,
+  METADATA_FIELD_LABELS, LONG_METADATA_FIELDS, NSFW_RATINGS,
+} from "./metadata_fields.js";
+import { markModifiedFields } from "./modified_dot.js";
+import { changeRows } from "./change_list.js";
 import { krcAlert } from "./modal.js";
 
 const METADATA_QUICK_FIELDS = new Set(["cardColor", "customBadge", "favorite", "pinned", "nsfw", "display_name", "hasName"]);
@@ -586,17 +591,79 @@ export const metadataStateMethods = {
     // Metadata-specific copy profile (LOCAL_STATUS_AND_DRAFT_GAMEPLAN.md §7): the
     // discardable info-panel badge names the object and the action in its tooltip.
     // Metadata live-sync now adopts clean sibling panels immediately; panels with
-    // local unsaved edits stay Modified instead of being overwritten.
+    // local unsaved edits stay Modified instead of being overwritten. The discardable
+    // badge (Info Panel, More Info) lists the changes in its hover card.
     return modifiedBadge({
       discardable,
       title: discardable ? localStatusCopy(LOCAL_STATUS.MODIFIED, "metadata").badge.title : "",
       onDiscard: onDiscard || (() => this.discardMetadataDraft()),
+      changes: discardable ? () => this.metadataChangeRows() : null,
     });
+  },
+
+  // Per-field Modified state for the selected record: one descriptor (shared/modified_dot.js)
+  // for the dots on the Info Panel's labels and the badge's hover-card list. Each field is
+  // one key of normalizedMetadata (example prompts one per prompt) against the saved
+  // baseline that Discard restores; long text and lists read "Changed". Shown only while
+  // the record reads Modified and that baseline is known. -> { descriptor, enabled }.
+  metadataChangeDescriptor(selected = this.loras?.find((lora) => lora.sha256 === this.selectedSha) || null) {
+    const saved = selected && this.isMetadataModified(selected) ? this.metadataBaselines?.get(selected.sha256) || null : null;
+    const current = selected ? this.normalizedMetadata(selected) : {};
+    const prompts = Math.max(2, (current.examplePrompts || []).length, (saved?.examplePrompts || []).length);
+    const fields = Object.keys(current).flatMap((key) => key === "examplePrompts"
+      ? Array.from({ length: prompts }, (_, index) => `examplePrompts.${index}`)
+      : [key]);
+    const valueOf = (record, key) => key.startsWith("examplePrompts.")
+      ? String(record?.examplePrompts?.[Number(key.split(".")[1])] || "")
+      : record?.[key];
+    const rating = (value) => (NSFW_RATINGS.find(([level]) => level === Number(value)) || [0, "None"])[1];
+    return {
+      enabled: Boolean(saved),
+      descriptor: {
+        fields,
+        current: (key) => valueOf(current, key),
+        saved: (key) => valueOf(saved, key),
+        label: (key) => key.startsWith("examplePrompts.")
+          ? `Example Prompt ${Number(key.split(".")[1]) + 1}`
+          : METADATA_FIELD_LABELS[key] || key,
+        text: (key, value) => {
+          if (LONG_METADATA_FIELDS.has(key.split(".")[0])) return null;
+          if (key === "creator") return String(value?.username || "");
+          if (key === "nsfwLevel") return rating(value);
+          return String(value ?? "");
+        },
+        inline: (key) => key !== "display_name",
+        element: (key) => this._metadataDotRoot?.querySelector(key === "display_name"
+          ? ".krc-info-name-field"
+          : `[data-meta-key="${key}"]`) || null,
+      },
+    };
+  },
+
+  // The dots on the Info Panel's fields. `root` = the panel (a fresh render passes its
+  // own; edits re-mark the one on screen). -> how many fields carry a dot.
+  renderMetadataDots(root = this.querySurface?.(".krc-info")) {
+    if (!root) return 0;
+    this._metadataDotRoot = root;
+    const { descriptor, enabled } = this.metadataChangeDescriptor();
+    return markModifiedFields(descriptor, { enabled });
+  },
+
+  // A freshly rendered Info Panel with its dots on (renderInfo's return).
+  withMetadataDots(panel) {
+    this.renderMetadataDots(panel);
+    return panel;
+  },
+
+  metadataChangeRows() {
+    const { descriptor, enabled } = this.metadataChangeDescriptor();
+    return enabled ? changeRows(descriptor) : [];
   },
 
   updateModifiedIndicators() {
     const selected = this.loras.find((lora) => lora.sha256 === this.selectedSha) || null;
     const modified = this.isMetadataModified(selected);
+    this.renderMetadataDots();
     const slot = this.querySurface(".krc-info-modified-slot");
     if (slot) {
       slot.innerHTML = "";
