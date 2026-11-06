@@ -9,7 +9,7 @@ import { applyNodePalette, ensureStylesheet, markDirty, menuSelect, openKrcModal
 import { mediaItem, mediaItems, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
 import { mediaDisplayState } from "./display.js";
 import { MEDIA_EVENT, mediaApi } from "./api.js";
-import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, clickPreviewToMute, confirmControlButton, el, fitMediaNode, mediaNodeContentHeight, mediaControlButton, nodeShell, openMedia, openNodeOptions, optionsButton, prepareDataWidget, refitOnPanelResize, slotCells } from "./panel.js";
+import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, clickPreviewToMute, confirmControlButton, el, fitMediaNode, mediaNodeContentHeight, mediaControlButton, nodeShell, openMedia, openNodeOptions, optionsButton, placeStrip, prepareDataWidget, refitOnPanelResize, slotCells, stripOnTop, stripPositionField } from "./panel.js";
 import { OUTPUT_DEFAULTS, OUTPUT_FORMATS, OUTPUT_TYPE, OUTPUT_WIDGET, mergeOutputHistory, newOutputKey, normalizeOutput, outputHistory, readOutput } from "./output_state.js";
 
 const UI_WIDGET = "krc_media_output_ui";
@@ -91,7 +91,9 @@ function openOptions(node) {
     }
   };
   fields.append(optionRow("Filename / prefix", prefix), optionRow("Image format", format), metadata, native,
-    el("div", "krc-mio-output-note", { textContent: NATIVE_TITLE }), download);
+    el("div", "krc-mio-output-note", { textContent: NATIVE_TITLE }), download,
+    // The history and the buttons sit below the preview (default) or above it, under the header.
+    stripPositionField(node, "History", () => render(node), false));
   sync();
   openNodeOptions(node, "Media Output options", uiOf(node)?.element || null, [fields]);
 }
@@ -337,12 +339,12 @@ function render(node) {
   }
   node._krcMioOutputPlayback = playback;
   const captionText = node._krcMioOutputError || item?.name || (missing ? "The saved file is no longer available" : "Ready to save outputs");
-  section(node, panel, "caption", captionText, () => captionRow("HISTORY", captionText));
+  const caption = section(node, panel, "caption", captionText, () => captionRow("HISTORY", captionText));
   const historyKey = JSON.stringify([selected, mediaLoaded(), entries.map(entry => {
     const media = itemOf(entry.id);
     return [entry.id, media?.name, media?.kind, mediaDisplayState(media)];
   })]);
-  section(node, panel, "history", historyKey, () => {
+  const historyRow = section(node, panel, "history", historyKey, () => {
     const history = slotCells(entries, { draggable: true, selected: entries.length ? selected : -1, itemOf, onPick: index => {
       if (entries[index]) { node._krcMioOutputHistoryPick = index; render(node); }
     } });
@@ -354,7 +356,7 @@ function render(node) {
     });
     return history;
   });
-  section(node, panel, "bar", JSON.stringify([item?.id, item?.filename, item?.name, state.folder, folders[0]?.id, Boolean(folders.length)]), () => {
+  const barRow = section(node, panel, "bar", JSON.stringify([item?.id, item?.filename, item?.name, state.folder, folders[0]?.id, Boolean(folders.length)]), () => {
     const bar = el("div", "krc-mio-bar krc-mio-output-bar");
     bar.append(
       arrowButton("down", "DOWNLOAD", { disabled: !item,
@@ -365,6 +367,8 @@ function render(node) {
     );
     return bar;
   });
+  // Only the caption, history and buttons move (never the preview: a playing video would stop).
+  if (placeStrip(panel, preview, [caption, historyRow, barRow], stripOnTop(node, false))) node._krcMioOutputLayoutChanged = true;
   if (node._krcMioOutputLayoutChanged) fitMediaNode(node, MIN_W);
 }
 

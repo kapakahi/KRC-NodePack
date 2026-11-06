@@ -5,7 +5,7 @@
 import { installMediaDropTarget, makeMediaDraggable } from "./drag.js";
 import { classicNodeHeight, isNode2Dom, thumbnailBox } from "./krc.js";
 import { mediaDisplayState } from "./display.js";
-import { armConfirmButton, buildNodePaletteField, closeFloatingMenu, openKrcModal, openLibraryModal, toggleFloatingMenu } from "./krc.js";
+import { armConfirmButton, buildNodePaletteField, closeFloatingMenu, markDirty, menuSelect, openKrcModal, openLibraryModal, toggleFloatingMenu } from "./krc.js";
 import { mediaApi } from "./api.js";
 import { MEDIA_PROVIDER_ID } from "./mode.js";
 import { SLOT_COUNT } from "./presets.js";
@@ -150,6 +150,52 @@ export function slotCells(slots, { selected = -1, onPick = null, itemOf = () => 
     row.append(cell);
   }
   return row;
+}
+
+// Where a node's strip (the SLOT / HISTORY caption, its cells and the button bar) sits:
+// below the big preview or above it, under the header. Saved on the node; each node type
+// has its own default (Media Loader: above, Media Output: below).
+const STRIP_POSITION_PROP = "krcMioStripPosition";
+export function stripOnTop(node, defaultTop = false) {
+  const position = node.properties?.[STRIP_POSITION_PROP];
+  return position === "top" || position === "below" ? position === "top" : defaultTop;
+}
+
+// The Options field for it: "<noun> position" ▾ Above the preview / Below the preview.
+export function stripPositionField(node, noun, onChange, defaultTop = false) {
+  const row = el("label", "krc-modal-field");
+  const select = menuSelect({
+    className: "krc-modal-select",
+    title: `Where the ${noun.toLowerCase()} and the buttons sit`,
+    value: stripOnTop(node, defaultTop) ? "top" : "below",
+    options: [["top", "Above the preview"], ["below", "Below the preview"]],
+    onChange: (value) => {
+      node.properties ||= {};
+      node.properties[STRIP_POSITION_PROP] = value === "top" ? "top" : "below";
+      markDirty(node);
+      onChange();
+    },
+  });
+  row.append(el("span", "krc-modal-field-label", { textContent: `${noun} position` }), select);
+  return row;
+}
+
+// Put the strip's rows (in order) just above or just below `preview`. Only the strip moves,
+// never the preview, so a playing video isn't interrupted. -> true when anything moved.
+export function placeStrip(panel, preview, strip, top) {
+  const rows = strip.filter(Boolean);
+  const want = top ? [...rows, preview] : [preview, ...rows];
+  if (want.every((element, index) => element.parentNode === panel && (index === 0 || want[index - 1].nextSibling === element))) return false;
+  if (top) {
+    for (const row of rows) panel.insertBefore(row, preview);
+  } else {
+    let after = preview;
+    for (const row of rows) {
+      panel.insertBefore(row, after.nextSibling);
+      after = row;
+    }
+  }
+  return true;
 }
 
 // NodePack's Options button: its CSS gear glyph in a KRC icon button (as the Loadout Kit's).

@@ -27,13 +27,15 @@ import { createPreset, onPresets, presetById, presetSlots, presetsLoaded, refres
 import { teardownMedia } from "./krc.js";
 import { mediaDisplayState } from "./display.js";
 import { mediaItem, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
-import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, clickPreviewToMute, el, fitMediaNode, mediaNodeContentHeight, iconButton, mediaControlButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, prepareDataWidget, presetButton, refitOnPanelResize, slotCells } from "./panel.js";
+import { MEDIA_NODE_DEFAULT_WIDTH, arrowButton, captionRow, clearAllButton, clickPreviewToMute, el, fitMediaNode, mediaNodeContentHeight, iconButton, mediaControlButton, nodeShell, openMedia, openNodeOptions, openSlotMenu, optionsButton, placeStrip, prepareDataWidget, presetButton, refitOnPanelResize, slotCells, stripOnTop, stripPositionField } from "./panel.js";
 
 const UI_WIDGET = "krc_media_loader_ui";
 const STYLE_VERSION = "1.0.6-shared-1677";
 const MIN_W = MEDIA_NODE_DEFAULT_WIDTH;
 const BAREBONES_MIN_W = 240;
 const BAREBONES_PROP = "krcMioBarebones";
+// The slots + buttons default to above the preview (Options can put them below).
+const SLOTS_ON_TOP = true;
 const ACCEPT = "image/*,video/*,.heic,.heif,.avif,.mkv";
 const JOB_POLL_MS = 500;
 const TAG = "[KRC Media]";
@@ -57,7 +59,9 @@ function openOptions(node) {
       render(node);
     },
   });
-  openNodeOptions(node, "Media Loader options", uiOf(node)?.element || null, [barebones]);
+  // The slots and the buttons sit above the preview (default), under the header, or below it.
+  const slotsPosition = stripPositionField(node, "Slots", () => render(node), SLOTS_ON_TOP);
+  openNodeOptions(node, "Media Loader options", uiOf(node)?.element || null, [slotsPosition, barebones]);
 }
 
 // A quiet write: keeps the stored auto flag current without marking the workflow modified
@@ -280,7 +284,7 @@ function render(node) {
   const item = slot?.id ? mediaItem(slot.id) : null;
   const pending = node._krcMioPending;
   const barebones = isBarebones(node);
-  const drawn = JSON.stringify([barebones, pick.preset, pick.slot, following, bypassed, loaded, mediaLoaded(), preset,
+  const drawn = JSON.stringify([barebones, stripOnTop(node, SLOTS_ON_TOP), pick.preset, pick.slot, following, bypassed, loaded, mediaLoaded(), preset,
     slots.map((entry) => (entry.id ? [entry.id, mediaItem(entry.id)?.name ?? null, mediaItem(entry.id)?.kind ?? null, mediaDisplayState(mediaItem(entry.id))] : "")),
     Boolean(node._krcMioSlotBatch), pending && [pending.status, Math.round((pending.progress || 0) * 100), pending.error]]);
   if (drawn === node._krcMioDrawn && panel.childElementCount) return;
@@ -375,6 +379,7 @@ function render(node) {
     }),
   );
   panel.replaceChildren(header, preview, caption, cells, bar);
+  placeStrip(panel, preview, [caption, cells, bar], stripOnTop(node, SLOTS_ON_TOP));
   if (!picker.isConnected) root.append(picker);
   fit(node);
 }

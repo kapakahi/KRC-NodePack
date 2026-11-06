@@ -3,7 +3,7 @@
 Public, for outside apps (the contract, versioned under ``/krc/ext/v1``; every handler is
 wrapped in ``guarded``, so none can skip the switch and key check):
 
-    GET  /krc/ext/v1/info          -> pack, versions, capabilities, dbId, packs, kits
+    GET  /krc/ext/v1/info          -> pack, versions, capabilities, dbId, packs, kits, palettes
     GET  /krc/ext/v1/prompts[?fields=a,b] -> {"revision", "prompts": {category: {name: record}}}
                                       (text deferred; the get-prompts shape)
     GET  /krc/ext/v1/prompts/{id}  -> {"id", "matches": [full record, …]} (404 when none)
@@ -32,9 +32,10 @@ from .request_guard import refuse_cross_site
 
 # What this build's ext/v1 offers; a client checks it instead of the pack version.
 # "thumbnails.sizes": the Prompt Vault / LoRA Loadout / Model Library thumbnail routes take
-# ?w= (utils/library/thumbnail_sizes.py SIZES).
+# ?w= (utils/library/thumbnail_sizes.py SIZES). "palettes": /info's palette fields
+# (utils/library/palettes.py), and each KRC node's palette in API exports (_meta.krc_palette).
 CAPABILITIES = ["info", "prompts.list", "prompts.fields", "prompts.byId", "prompts.detail", "revisions", "changes",
-                "thumbnails.sizes", "presets", "search.prompts", "prompts.profiles"]
+                "thumbnails.sizes", "presets", "search.prompts", "prompts.profiles", "palettes"]
 MAX_DETAIL_IDS = 200
 SEARCH_LIMIT_DEFAULT = 50
 SEARCH_LIMIT_MAX = 500
@@ -81,7 +82,22 @@ def info():
         "packs": _packs(),
         "kits": _kits(),
         "thumbnailSizes": list(SIZES),
+        **_palettes(),
     }
+
+
+def _palettes():
+    """/info's palette fields: the list, the global palette and the Portal's (as applied), and
+    what to use for Native off a node (it shows the node's own colour, so with none behind
+    it a surface uses this)."""
+    try:
+        from .library.palettes import NATIVE_FALLBACK_ID, global_palette, palette_list, portal_palette, read_settings
+
+        settings = read_settings()
+        return {"palettes": palette_list(), "globalPalette": global_palette(settings),
+                "portalPalette": portal_palette(settings), "paletteNativeFallback": NATIVE_FALLBACK_ID}
+    except Exception:  # noqa: BLE001
+        return {"palettes": [], "globalPalette": "", "portalPalette": "", "paletteNativeFallback": ""}
 
 
 def prompt_list(fields_param="", profile_id="default"):

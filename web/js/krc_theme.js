@@ -22,6 +22,7 @@ import { NETWORK_CONSENT_SETTING_ID, NETWORK_CONSENT_DEFAULT } from "./shared/ne
 import { api } from "../../scripts/api.js";
 import { DEFAULT_ID, DEFAULT_PALETTE_ID, setGlobalPalette } from "./shared/palettes.js";
 import { refreshAllNodeCanvasColors } from "./shared/node_palette.js";
+import { installPaletteExport } from "./shared/palette_export.js";
 import { ensureStylesheets, SHARED_STYLE_VERSION } from "./shared/stylesheets.js";
 import {
   THEME_SETTING_ID,
@@ -259,6 +260,8 @@ app.registerExtension({
 
   setup() {
     injectThemeStyles();
+    // API-format workflows carry each KRC node's palette (_meta.krc_palette).
+    installPaletteExport(app);
     installThumbnailPreview();
     setThumbnailPreviewEnabled(getSettingValue(THUMBNAIL_PREVIEW_SETTING_ID, THUMBNAIL_PREVIEW_DEFAULT));
     applyThumbnailFraming(getSettingValue(THUMBNAIL_FRAMING_SETTING_ID, THUMBNAIL_FRAMING_DEFAULT));
