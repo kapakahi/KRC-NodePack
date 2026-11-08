@@ -26,18 +26,15 @@ from ..upload_limits import VIDEO_UPLOAD_MAX, UploadTooLarge, save_upload
 from ..custom_badge import normalize_custom_badge
 from .bulk_attributes import update_model_attributes
 from . import selection_jobs
-from ..lora_loadout.identity import IdentityStore as LoraIdentityStore
 from ..lora_loadout.library_index import LoraLibraryIndex
 from ..lora_loadout.thumbnails import find_thumbnail_variant as find_lora_thumbnail_variant
 from .stabilize import stabilize_model_by_id, stabilize_model_off_loop
-from .identity import IdentityStore as ModelIdentityStore
 from ..library.nsfw import nsfw_rating
 from ..library.pins import pin_limit_problem
-from ..library.usage_stats import load_usage_section
 from .library_index import ModelLibraryIndex
 from ..library.response_work import prepare_library_response
 from ..library.thumbnail_sizes import parse_width, thumbnail_to_serve
-from ..library.thumbnails import thumbnail_cache_headers, thumbnail_listing_scope, thumbnail_version
+from ..library.thumbnails import thumbnail_cache_headers, thumbnail_version
 from .folders import ModelLibraryFolderStore
 from ..bundle.sections import register_section
 from .zip import bundle_sections
@@ -63,15 +60,8 @@ from .metadata import (
     read_model_metadata,
     write_model_metadata,
 )
-from .browser_rows import (
-    _browser_lora_item,
-    _browser_model_item,
-    _build_folder_rows,
-    _load_identity_aliases,
-    _load_lora_folder_store,
-    _lora_folder_name,
-    _lora_folder_store,
-)
+from .browser_rows import _lora_folder_name, _lora_folder_store
+from .listing import library_rows
 from .lora_read_through import _is_lora_read_through, _lora_detail_payload, _lora_index_get
 
 
@@ -272,40 +262,9 @@ def register_routes():
         single_array = request.query.get("rows") == "items"
 
         def prepare():
-            # Cached metadata edits replace sidecars; freeze the outer records before
-            # joining DB-backed folders, usage and aliases in this read snapshot.
-            model_records = tuple(dict(record) for record in tuple(index.records.values()))
-            lora_records = tuple(dict(record) for record in tuple(lora_index.records.values()))
-            # One listing per thumbnail dir for the whole list, not a stat per item per variant.
-            with thumbnail_listing_scope():
-                items = [_browser_model_item(record) for record in model_records]
-                # Read-through LoRA rows come from LoRA Loadout's own list serializer (schema S8), so a
-                # missing/broken LL degrades to a models-only list rather than erroring — same laziness
-                # as _lora_detail_payload.
-                try:
-                    from ..lora_loadout.serialize import _serialize_lora, _join_civitai_not_found
-                    lora_folders = _load_lora_folder_store().get("folders", {})
-                    lora_items = [
-                        _browser_lora_item(record, _serialize_lora, lora_folders)
-                        for record in lora_records
-                    ]
-                    _join_civitai_not_found(lora_items)
-                    items.extend(lora_items)
-                except Exception:  # noqa: BLE001
-                    pass
-            # Join the silent usage ledger so the browser can sort by Most Used / Last Used:
-            # model rows from the CS-fed "models" section, read-through LoRA rows from the
-            # LoRA Loadout "loras" section. Unseen ids read as zero.
-            model_usage = load_usage_section("models")
-            lora_usage = load_usage_section("loras")
-            for item in items:
-                stats = model_usage.get(item.get("sha256") or "") or lora_usage.get(item.get("sha256") or "")
-                item["useCount"] = int(stats.get("count") or 0) if isinstance(stats, dict) else 0
-                item["lastUsedMs"] = int(stats.get("lastUsedMs") or 0) if isinstance(stats, dict) else 0
-
-            items.sort(key=lambda item: (item.get("display_name") or "").lower())
-            folder_store = ModelLibraryFolderStore().load()
-            lora_store = _load_lora_folder_store()
+            # Models + LoRA read-through rows, usage, folder rail and aliases (listing.py,
+            # shared with the external API's /krc/ext/v1/models).
+            rows = library_rows(index, lora_index)
             return _json(
                 {
                     "schemaVersion": KRC_MODEL_METADATA_SCHEMA_VERSION,
@@ -313,13 +272,10 @@ def register_routes():
                     "scanIds": {"models": index.scan_id, "loras": lora_index.scan_id},
                     "scan": index.status(),
                     "status": index.status(),
-                    "items": items,
-                    **({} if single_array else {"loras": items}),
-                    "folders": _build_folder_rows(items, folder_store, lora_store),
-                    "aliases": {
-                        **_load_identity_aliases(ModelIdentityStore),
-                        **_load_identity_aliases(LoraIdentityStore),
-                    },
+                    "items": rows["items"],
+                    **({} if single_array else {"loras": rows["items"]}),
+                    "folders": rows["folders"],
+                    "aliases": rows["aliases"],
                 }
             )
 

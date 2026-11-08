@@ -27,7 +27,10 @@ def set_on_added(callback):
 
 
 def _public(job):
-    return {key: job.get(key) for key in ("id", "status", "progress", "error", "name", "item")}
+    """A job as pages and the external API see it; ``itemId`` is the Media id the item gets
+    when the conversion is done (fixed when the job is made)."""
+    return {**{key: job.get(key) for key in ("id", "status", "progress", "error", "name", "item")},
+            "itemId": (job.get("record") or {}).get("id", "")}
 
 
 def submit(source, record, settings):

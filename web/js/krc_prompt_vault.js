@@ -20,6 +20,11 @@ import { DOM_MIN_HEIGHT, MAX_NODE_SIZE, NODE_TYPE, MIN_NODE_SIZE } from "./promp
 import { el, stopCanvasWheel } from "./prompt_vault/dom.js";
 import { registerLibraryProvider } from "./shared/library_modal.js";
 import { createPromptProvider } from "./prompt_vault/modal_provider.js";
+import { registerExportMeta } from "./shared/palette_export.js";
+import { promptProfileExportMeta } from "./prompt_vault/profiles.js";
+
+// Each Prompt Vault node's profile in API-format exports (ext/v1 "prompts.profiles.meta").
+registerExportMeta(promptProfileExportMeta);
 
 // Register the shared library modal's "prompts" provider at load, so any opener
 // (Config Switcher prompt fields, a toolbar button) can summon it and the

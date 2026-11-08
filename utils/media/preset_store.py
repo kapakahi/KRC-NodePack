@@ -13,8 +13,14 @@ cleared by the first change, and an untouched auto preset is pruned at startup.
 
 Writes run inside the Media store's ``locked()`` (its lock and one krc.db transaction), so
 Flush and Purge (which spare what presets use) see the presets and the items at one moment.
+
+``version(preset)`` is a short hash of what a client sees (group, name, slot ids). A write
+given ``if_version`` (the external API's) is refused with PresetConflict when the preset
+changed since the client read it, checked under the same lock as the write.
 """
 
+import hashlib
+import json
 import re
 import time
 import uuid
@@ -31,6 +37,22 @@ AUTO_NAME = re.compile(r"^Untitled( \d+)?$")
 
 class PresetError(ValueError):
     """A request the presets refuse; the message is shown to the user."""
+
+
+class PresetConflict(PresetError):
+    """The preset changed since the client read it (``if_version`` didn't match);
+    ``current`` is the preset as it is now."""
+
+    def __init__(self, current):
+        super().__init__("That preset changed since you read it. Read it again, then retry.")
+        self.current = current
+
+
+def version(record):
+    """A short hash of the preset's group, name and slot ids: changes whenever any does."""
+    seen = {"group": record.get("group") or "", "name": record.get("name") or "",
+            "slots": [slot.get("id") or "" for slot in (record.get("payload") or {}).get("slots") or []]}
+    return hashlib.sha1(json.dumps(seen, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
 
 
 def _default_slots():
@@ -142,20 +164,22 @@ def create(name="", auto=False, numbered=False):
         return record
 
 
-def _change(preset_id, mutate):
+def _change(preset_id, mutate, if_version=None):
     preset_id = valid_id(preset_id)
     with store.locked():
         current = _read()
         record = next((item for item in current if item["id"] == preset_id), None)
         if record is None:
             raise PresetError("That preset no longer exists.")
+        if if_version is not None and version(record) != if_version:
+            raise PresetConflict(dict(record))
         mutate(record, current)
         record["auto"] = False
         _write(current)
         return dict(record)
 
 
-def rename(preset_id, name):
+def rename(preset_id, name, if_version=None):
     clean = store.clean_name(name)[:NAME_MAX]
     if not clean:
         raise PresetError("A preset name can't be empty.")
@@ -165,7 +189,7 @@ def rename(preset_id, name):
             raise PresetError(f'Another preset is already called "{clean}".')
         record["name"] = clean
 
-    return _change(preset_id, mutate)
+    return _change(preset_id, mutate, if_version)
 
 
 def set_slot(preset_id, index, *, item_id=None):
@@ -188,7 +212,7 @@ def set_slot(preset_id, index, *, item_id=None):
     return _change(preset_id, mutate)
 
 
-def set_slots(preset_id, ids, *, start=None):
+def set_slots(preset_id, ids, *, start=None, if_version=None):
     """Atomically replace six references, or patch 1–6 slots with wraparound."""
     if not isinstance(ids, list) or any(not isinstance(item_id, str) for item_id in ids):
         raise PresetError("Supply media references as a list.")
@@ -211,17 +235,19 @@ def set_slots(preset_id, ids, *, start=None):
         for offset, item_id in enumerate(ids):
             slots[(start + offset) % SLOT_COUNT]["id"] = item_id
 
-    return _change(preset_id, mutate)
+    return _change(preset_id, mutate, if_version)
 
 
-def delete(preset_id):
+def delete(preset_id, if_version=None):
     preset_id = valid_id(preset_id)
     with store.locked():
         current = _read()
-        kept = [item for item in current if item["id"] != preset_id]
-        if len(kept) == len(current):
+        record = next((item for item in current if item["id"] == preset_id), None)
+        if record is None:
             return False
-        _write(kept)
+        if if_version is not None and version(record) != if_version:
+            raise PresetConflict(dict(record))
+        _write([item for item in current if item["id"] != preset_id])
         return True
 
 

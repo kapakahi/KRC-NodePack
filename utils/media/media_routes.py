@@ -9,7 +9,7 @@ every write).
     POST /krc/media/job/{id}/cancel  stop it
     GET  /krc/media/file/{id}        the media (WebP / WebM)
     GET  /krc/media/download/{id}    image as PNG; video in its stored format
-    GET  /krc/media/thumb/{id}       the card thumbnail
+    GET  /krc/media/thumb/{id}       the card thumbnail (a still; ?w= scales it down)
     POST /krc/media/item/{id}        {favorite, pinned, color, customBadge, nsfw, name, folder} -> the record
     POST /krc/media/folders/create   {name} -> the folder
     POST /krc/media/folders/{id}     {name, color, keep, pinned} -> the folder
@@ -123,6 +123,105 @@ async def _save_part(part, dest, cap):
     return size
 
 
+def _refused(message, status=400):
+    return status, {"ok": False, "error": str(message)}
+
+
+async def receive_upload(request, check_settings=None):
+    """One upload (multipart "file" + optional "settings" JSON), the node's and the external
+    API's: checked, saved under incoming/, then a still converted to WebP at once, or a video /
+    animated GIF queued as a conversion job. ``check_settings(settings)`` may refuse the
+    settings (raise MediaError) once they're read. -> (status, body): 200 {"ok", "item"},
+    202 {"ok", "job"}, or an error {"ok": False, "error"} (400, 413, 415, 500, 503)."""
+    temp = None
+    try:
+        reader = await request.multipart()
+        settings, filename, size = {}, "", 0
+        temp = store.incoming_dir() / f"{store.new_id()}.upload"
+        received = False
+        while True:
+            part = await reader.next()
+            if part is None:
+                break
+            if part.name == "settings":
+                try:
+                    settings = json.loads(await part.text() or "{}")
+                except ValueError:
+                    settings = {}
+            elif part.name == "file" and not received:
+                filename = part.filename or ""
+                ext = Path(filename).suffix.lower()
+                if ext not in IMAGE_EXTENSIONS | VIDEO_EXTENSIONS:
+                    return _refused("Upload an image (PNG, JPEG, WebP, GIF, BMP, TIFF, HEIC, AVIF) or a video "
+                                   "(MP4, MOV, M4V, WebM, MKV, AVI).", 415)
+                if ext in (".heic", ".heif", ".avif") and not heif_available():
+                    return _refused("HEIC / AVIF needs pillow-heif on the server (pip install pillow-heif).", 415)
+                if ext in VIDEO_EXTENSIONS:
+                    try:
+                        require_encoder()
+                    except VideoProcessError as err:
+                        return _refused(err, 503)
+                size = await _save_part(part, temp, VIDEO_UPLOAD_MAX if ext in VIDEO_EXTENSIONS else IMAGE_UPLOAD_MAX)
+                received = True
+        if not received:
+            return _refused("No file in the upload.")
+        ext = Path(filename).suffix.lower()
+        settings = settings if isinstance(settings, dict) else {}
+        if check_settings is not None:
+            check_settings(settings)
+        # The picked file's own name and size (not the converted one's): what "Skip
+        # duplicates" compares a new upload with.
+        source_info = {"name": Path(filename).name[:200], "bytes": size}
+        if ext in VIDEO_EXTENSIONS or (ext == ".gif" and await asyncio.to_thread(is_animated_image, temp)):
+            if ext == ".gif":
+                try:
+                    require_encoder()
+                except VideoProcessError as err:
+                    return _refused(err, 503)
+            # A video (or an animated GIF): convert in the background; the page polls the job.
+            source = temp.with_suffix(f".source{ext}")
+            temp.rename(source)
+            temp = None
+            record = {"id": store.new_id(), "kind": "video", "ext": ".webm", "name": _display_name(filename),
+                      "folder": _upload_folder(settings), "source": source_info}
+            try:
+                job = jobs.submit(source, record, settings)
+            except Exception:
+                source.unlink(missing_ok=True)
+                raise
+            return 202, {"ok": True, "job": job}
+        megapixels = valid_megapixels(settings.get("maxMegapixels"))
+        item_id = store.new_id()
+        record = {"id": item_id, "kind": "image", "ext": ".webp", "name": _display_name(filename),
+                  "folder": _upload_folder(settings), "source": source_info}
+        record = prepare_upload(record)
+        dest, thumb = store.media_path(record), store.thumb_path(item_id)
+        try:
+            info = await asyncio.to_thread(process, temp, dest, thumb, max_megapixels=megapixels,
+                                           keep_alpha=settings.get("keepAlpha", True) is not False)
+            record.update(info)
+            store.add(record)
+        except (ImageProcessError, store.MediaError, OSError) as err:
+            for path in (dest, thumb):
+                path.unlink(missing_ok=True)
+            return _refused(err, 415 if isinstance(err, ImageProcessError) else 500)
+        print(f"[KRC Media] uploaded {record['name']} ({info['width']}x{info['height']}"
+              f"{', orientation fixed' if info['oriented'] else ''})")
+        _after_add(item_id, settings)
+        return 200, {"ok": True, "item": _public(record)}
+    except (store.MediaError, VideoProcessError) as err:
+        return _refused(err, 413 if "larger" in str(err) else 400)
+    except Exception as err:  # noqa: BLE001
+        print(f"[KRC Media] upload failed: {err}")
+        return _refused(f"The upload failed ({err}).", 500)
+    finally:
+        if temp is not None:
+            try:
+                temp.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
 def register_routes():
     jobs.set_on_added(_after_add)
     try:
@@ -159,91 +258,8 @@ def register_routes():
 
     @routes.post("/krc/media/upload")
     async def media_upload(request):
-        temp = None
-        try:
-            reader = await request.multipart()
-            settings, filename, size = {}, "", 0
-            temp = store.incoming_dir() / f"{store.new_id()}.upload"
-            received = False
-            while True:
-                part = await reader.next()
-                if part is None:
-                    break
-                if part.name == "settings":
-                    try:
-                        settings = json.loads(await part.text() or "{}")
-                    except ValueError:
-                        settings = {}
-                elif part.name == "file" and not received:
-                    filename = part.filename or ""
-                    ext = Path(filename).suffix.lower()
-                    if ext not in IMAGE_EXTENSIONS | VIDEO_EXTENSIONS:
-                        return refused("Upload an image (PNG, JPEG, WebP, GIF, BMP, TIFF, HEIC, AVIF) or a video "
-                                       "(MP4, MOV, M4V, WebM, MKV, AVI).", 415)
-                    if ext in (".heic", ".heif", ".avif") and not heif_available():
-                        return refused("HEIC / AVIF needs pillow-heif on the server (pip install pillow-heif).", 415)
-                    if ext in VIDEO_EXTENSIONS:
-                        try:
-                            require_encoder()
-                        except VideoProcessError as err:
-                            return refused(err, 503)
-                    size = await _save_part(part, temp, VIDEO_UPLOAD_MAX if ext in VIDEO_EXTENSIONS else IMAGE_UPLOAD_MAX)
-                    received = True
-            if not received:
-                return refused("No file in the upload.")
-            ext = Path(filename).suffix.lower()
-            settings = settings if isinstance(settings, dict) else {}
-            # The picked file's own name and size (not the converted one's): what "Skip
-            # duplicates" compares a new upload with.
-            source_info = {"name": Path(filename).name[:200], "bytes": size}
-            if ext in VIDEO_EXTENSIONS or (ext == ".gif" and await asyncio.to_thread(is_animated_image, temp)):
-                if ext == ".gif":
-                    try:
-                        require_encoder()
-                    except VideoProcessError as err:
-                        return refused(err, 503)
-                # A video (or an animated GIF): convert in the background; the page polls the job.
-                source = temp.with_suffix(f".source{ext}")
-                temp.rename(source)
-                temp = None
-                record = {"id": store.new_id(), "kind": "video", "ext": ".webm", "name": _display_name(filename),
-                          "folder": _upload_folder(settings), "source": source_info}
-                try:
-                    job = jobs.submit(source, record, settings)
-                except Exception:
-                    source.unlink(missing_ok=True)
-                    raise
-                return web.json_response({"ok": True, "job": job}, status=202)
-            megapixels = valid_megapixels(settings.get("maxMegapixels"))
-            item_id = store.new_id()
-            record = {"id": item_id, "kind": "image", "ext": ".webp", "name": _display_name(filename),
-                      "folder": _upload_folder(settings), "source": source_info}
-            record = prepare_upload(record)
-            dest, thumb = store.media_path(record), store.thumb_path(item_id)
-            try:
-                info = await asyncio.to_thread(process, temp, dest, thumb, max_megapixels=megapixels,
-                                               keep_alpha=settings.get("keepAlpha", True) is not False)
-                record.update(info)
-                store.add(record)
-            except (ImageProcessError, store.MediaError, OSError) as err:
-                for path in (dest, thumb):
-                    path.unlink(missing_ok=True)
-                return refused(err, 415 if isinstance(err, ImageProcessError) else 500)
-            print(f"[KRC Media] uploaded {record['name']} ({info['width']}x{info['height']}"
-                  f"{', orientation fixed' if info['oriented'] else ''})")
-            _after_add(item_id, settings)
-            return web.json_response({"ok": True, "item": _public(record)})
-        except (store.MediaError, VideoProcessError) as err:
-            return refused(err, 413 if "larger" in str(err) else 400)
-        except Exception as err:  # noqa: BLE001
-            print(f"[KRC Media] upload failed: {err}")
-            return refused(f"The upload failed ({err}).", 500)
-        finally:
-            if temp is not None:
-                try:
-                    temp.unlink(missing_ok=True)
-                except OSError:
-                    pass
+        status, body = await receive_upload(request)
+        return web.json_response(body, status=status)
 
     def _file_response(path):
         if not path.is_file():
@@ -295,11 +311,20 @@ def register_routes():
 
     @routes.get("/krc/media/thumb/{item_id}")
     async def media_thumb(request):
+        # Always a still (a video's poster frame). ?w= (outside apps, KRC_EXTERNAL_API.md)
+        # serves it scaled down to one of the shared thumbnail widths.
+        from ..library.thumbnail_sizes import thumbnail_to_serve
         try:
             item_id = store.valid_id(request.match_info["item_id"])
-            return _file_response(store.thumb_path(item_id))
+            path = store.thumb_path(item_id)
         except store.MediaError as err:
             return refused(err, 404)
+        if not path.is_file():
+            return refused("Not found.", 404)
+        try:
+            return _file_response(await thumbnail_to_serve(path, request.query))
+        except ValueError as err:
+            return refused(err, 400)
 
     @routes.post("/krc/media/bulk-operation/preview")
     async def media_preview_operation(request):

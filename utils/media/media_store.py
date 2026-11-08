@@ -8,8 +8,13 @@ match. Presets reference stable record IDs, independently of filesystem paths.
 Every read-modify-save runs inside :func:`locked`: one write transaction (so a write from
 another thread can't land between the read and the save), and the thread lock the files
 next to the records rely on. Files are removed only after the transaction commits.
+
+``item_version`` / ``folder_version`` are short hashes of what a client sees and can edit.
+A write given ``if_version`` (the external API's) is refused with MediaConflict when the
+record changed since the client read it, checked under the same lock as the write.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -49,6 +54,35 @@ def locked():
 
 class MediaError(ValueError):
     """A request the Media refuses; the message is shown to the user."""
+
+
+class MediaConflict(MediaError):
+    """The item / folder changed since the client read it (``if_version`` didn't match);
+    ``current`` is the record as it is now (the full stored record: callers project it, e.g.
+    public_item, before it leaves the server)."""
+
+    def __init__(self, current, noun="item"):
+        super().__init__(f"That {noun} changed since you read it. Read it again, then retry.")
+        self.current = current
+
+
+def _short_hash(value):
+    return hashlib.sha1(json.dumps(value, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
+
+
+def item_version(record):
+    """A short hash of an item's editable fields (name, folder and the card attributes)."""
+    return _short_hash({key: record.get(key) for key in CARD_FIELDS})
+
+
+def folder_version(folder):
+    """A short hash of a folder's editable fields."""
+    return _short_hash({key: folder.get(key) for key in ("name", "color", "keep", "pinned")})
+
+
+def _check_version(record, if_version, version, current, noun):
+    if if_version is not None and version(record) != if_version:
+        raise MediaConflict(current, noun)
 
 
 def use_root(path):
@@ -244,7 +278,7 @@ def pin_limit():
     return api().max_pinned()
 
 
-def update(item_id, fields):
+def update(item_id, fields, if_version=None):
     """Change card attributes, badge, NSFW, name, or folder ("" = Unsorted).
     -> the record."""
     item_id = valid_id(item_id)
@@ -271,6 +305,7 @@ def update(item_id, fields):
         record = next((item for item in current if item["id"] == item_id), None)
         if record is None:
             raise MediaError("Unknown Media item.")
+        _check_version(record, if_version, item_version, dict(record), "item")
         if changes.get("pinned") and not record.get("pinned"):
             if sum(1 for item in current if item.get("pinned")) >= pin_limit():
                 raise MediaError(f"Only {pin_limit()} items can be pinned.")
@@ -563,7 +598,7 @@ def output_destination(folder_id, filename, *, subfolders=False):
             raise MediaError(str(err)) from err
 
 
-def update_folder(folder_id, fields):
+def update_folder(folder_id, fields, if_version=None):
     """{name, color, keep, pinned} -> the folder. A new name renames its directory too, and
     every file in it follows."""
     folder_id = valid_id(folder_id)
@@ -573,6 +608,7 @@ def update_folder(folder_id, fields):
         folder = next((entry for entry in doc["folders"] if entry["id"] == folder_id), None)
         if folder is None:
             raise MediaError("That folder no longer exists.")
+        _check_version(folder, if_version, folder_version, dict(folder), "folder")
         side = folder_side(folder)
         old_directory = folder["directory"]
         if "name" in fields:
@@ -617,7 +653,7 @@ def update_folder(folder_id, fields):
         return dict(folder)
 
 
-def delete_folder(folder_id):
+def delete_folder(folder_id, if_version=None):
     """Remove a folder; its items move to Unsorted, their files loose into KRC-Media/, and
     the emptied directory goes. -> how many moved (None: no such folder)."""
     folder_id = valid_id(folder_id)
@@ -626,6 +662,7 @@ def delete_folder(folder_id):
         folder = next((entry for entry in doc["folders"] if entry["id"] == folder_id), None)
         if folder is None:
             return None
+        _check_version(folder, if_version, folder_version, dict(folder), "folder")
         doc["folders"] = [entry for entry in doc["folders"] if entry["id"] != folder_id]
         members = [item for item in doc["items"] if item.get("folder") == folder_id]
         for item in members:
@@ -636,7 +673,7 @@ def delete_folder(folder_id):
     return len(members)
 
 
-def purge_folder(folder_id):
+def purge_folder(folder_id, if_version=None):
     """Delete a folder AND every item in it (records, media files, thumbnails), protected
     or not, in presets or not: the explicit, armed "PURGE". -> {"removed", "bytes"}, or None
     when there's no such folder."""
@@ -646,6 +683,7 @@ def purge_folder(folder_id):
         if not any(entry["id"] == folder_id for entry in doc["folders"]):
             return None
         folder = next(entry for entry in doc["folders"] if entry["id"] == folder_id)
+        _check_version(folder, if_version, folder_version, dict(folder), "folder")
         doomed = [item for item in doc["items"] if item.get("folder") == folder_id]
         for item in doomed:
             media_path(item), thumb_path(item["id"])
@@ -665,7 +703,7 @@ def purge_folder(folder_id):
     return {"removed": len(doomed), "bytes": freed}
 
 
-def delete(item_id):
+def delete(item_id, if_version=None):
     """Remove one item: its record, media file and thumbnail. -> whether it existed."""
     item_id = valid_id(item_id)
     with locked():
@@ -673,6 +711,7 @@ def delete(item_id):
         record = next((item for item in current if item["id"] == item_id), None)
         if record is None:
             return False
+        _check_version(record, if_version, item_version, dict(record), "item")
         media_path(record), thumb_path(item_id)
         _write([item for item in current if item["id"] != item_id])
     for warning in _remove_media_files([record]):
@@ -798,27 +837,33 @@ def flush(everything=False, protected=frozenset()):
     return {"removed": len(drop), "kept": len(keep), "bytes": freed}
 
 
+def file_missing(item, available):
+    """Whether ``item``'s file is confirmed gone: its storage root is reachable and the file
+    isn't there. An unreachable root (an offline drive), an access error, a changed root or
+    an invalid record is NOT missing. ``available`` caches each root's check across calls.
+    Read-only; reconcile_missing (the node's list) and the external API share this rule."""
+    storage = item.get("storage") or "media"
+    try:
+        base = root() if storage == "media" else media_paths.configured_root(storage)
+        if storage not in available:
+            available[storage] = media_paths.storage_available(base)
+        if not available[storage]:
+            return False
+        media_path(item).stat()
+    except FileNotFoundError:
+        return True
+    except (OSError, ImportError, MediaError, media_paths.MediaPathError):
+        # Access errors, changed roots, no ComfyUI and invalid records are not deletion.
+        return False
+    return False
+
+
 def reconcile_missing():
     """Remove confirmed-missing records/cached thumbs on refresh; never heal filenames."""
     with locked():
         doc = _read_doc()
-        absent = []
         available = {}
-        for item in doc["items"]:
-            storage = item.get("storage") or "media"
-            try:
-                base = root() if storage == "media" else media_paths.configured_root(storage)
-                if storage not in available:
-                    available[storage] = media_paths.storage_available(base)
-                if not available[storage]:
-                    continue
-                path = media_path(item)
-                path.stat()
-            except FileNotFoundError:
-                absent.append(item["id"])
-            except (OSError, MediaError, media_paths.MediaPathError):
-                # Access errors, changed roots and invalid records are not deletion.
-                continue
+        absent = [item["id"] for item in doc["items"] if file_missing(item, available)]
         if not absent:
             return []
         missing = set(absent)

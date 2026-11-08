@@ -1,9 +1,12 @@
 /*
  * External API: the row under Options ▸ Network (KRC_EXTERNAL_API_GAMEPLAN.md stages 1
  * and 16). The switch, off until turned on, and the access key apps need: shown once when
- * it's made (with Copy), afterwards only its last 4 characters, plus Make a new key. The
- * server is the source of truth (krc.db settings), not a ComfyUI setting: it's read when
- * the page opens and written straight back through /krc/ext-api/*.
+ * it's made (with Copy), afterwards only its last 4 characters, plus Make a new key. Under
+ * it, while the API is on: Read only (on until turned off; it blocks every app write), then
+ * the per-area write permissions, each off until turned on: Media uploads and presets
+ * (2026-11-06) and Loadout presets (2026-11-07). The server is the source of truth (krc.db
+ * settings), not a ComfyUI setting: it's read when the page opens and written straight back
+ * through /krc/ext-api/*.
  */
 import { el } from "./dom.js";
 import { makeNodeApi } from "./api.js";
@@ -15,7 +18,16 @@ import { showToast } from "./toast.js";
 const { fetchLora, postLoraJson } = makeNodeApi("/krc/ext-api");
 
 const LABEL = "External API";
-const DESCRIPTION = "Lets other apps read your prompts, presets and libraries. They can't change anything.";
+const DESCRIPTION = "Lets other apps read your prompts, presets and libraries. They can't change anything unless you turn Read only off and allow an area below.";
+// The write switches under the key: [state key, route, label, description].
+const SWITCHES = [
+  ["readOnly", "/read-only", "Read only",
+    "On: apps can only read, whatever is allowed below. Turn it off to let apps make the changes you allow. Turning it on never undoes or stops anything already done."],
+  ["mediaWrites", "/media-writes", "Media uploads and presets",
+    "Lets apps upload, rename, move, tag and delete Media, manage its folders, and make, fill and delete Media presets."],
+  ["loadoutWrites", "/loadout-writes", "Loadout presets",
+    "Lets apps make, edit and delete LoRA Loadout and Loadout Kit (e.g. RefMod) presets."],
+];
 const KEY_HELP = "Apps need this key to connect. KRC shows it only once, when it's made; lost it? Make a new key (that disconnects every app).";
 const KEY_ONCE = "Copy it now: KRC won't show it again. Lost it? Make a new key.";
 
@@ -79,11 +91,43 @@ function renderKey(host, state, apply) {
   host.append(row, el("div", "krc-options-description krc-setting-desc", { textContent: KEY_HELP }));
 }
 
+// The write switches, under the key while the API is on. The area switches stay editable
+// while Read only is on (they take effect once it's off) and say so.
+function renderWrites(host, state, apply) {
+  host.replaceChildren();
+  if (!state?.enabled) return;
+  for (const [key, path, label, description] of SWITCHES) {
+    const toggle = switchToggle({
+      active: Boolean(state[key]),
+      title: label,
+      onClick: async () => {
+        const next = !state[key];
+        toggle.classList.toggle("is-on", next);
+        const result = await readState(path, { enabled: next });
+        if (!result) {
+          toggle.classList.toggle("is-on", Boolean(state[key]));
+          await openKrcAlert({ title: label, message: "The server didn't take the change, so it stays as it was." });
+          return;
+        }
+        apply({ ...result, key: state.key || "" });
+      },
+    });
+    const head = el("div", "krc-setting-head krc-ext-api-writes");
+    head.append(el("span", "krc-setting-label", { textContent: label }), toggle);
+    const area = key !== "readOnly";
+    const note = area && state.readOnly ? " (Read only is on, so this waits until it's off.)" : "";
+    const desc = el("div", "krc-options-description krc-setting-desc", { textContent: description + note });
+    if (area && state.readOnly) head.classList.add("is-waiting");
+    host.append(head, desc);
+  }
+}
+
 // The "External API" row, built like the page's other setting rows (settingRow).
 export function externalApiRow() {
   const wrap = el("div", "krc-setting-row");
   wrap.dataset.setting = "KRC.ExternalApi";
   const keyHost = el("div", "krc-ext-api-key-host");
+  const writesHost = el("div", "krc-ext-api-writes-host");
   let state = null;
   const toggle = switchToggle({
     active: false,
@@ -105,6 +149,7 @@ export function externalApiRow() {
     state = next;
     toggle.classList.toggle("is-on", !!state.enabled);
     renderKey(keyHost, state, apply);
+    renderWrites(writesHost, state, apply);
   };
   const head = el("div", "krc-setting-head");
   head.append(el("span", "krc-setting-label", { textContent: LABEL }), toggle);
@@ -112,6 +157,7 @@ export function externalApiRow() {
     head,
     el("div", "krc-options-description krc-setting-desc", { textContent: DESCRIPTION }),
     keyHost,
+    writesHost,
   );
   readState().then((loaded) => {
     if (loaded) apply(loaded);

@@ -5,11 +5,19 @@
 //
 // `_meta`, not an input: ComfyUI's execution and cache read only `inputs`, so a palette
 // change never re-runs the node or anything after it. Old workflows simply lack it ("").
+// Other per-node `_meta` for outside apps joins through registerExportMeta (Prompt Vault's
+// profile, ext/v1 capability "prompts.profiles.meta").
 // No `app` import here (installPaletteExport takes it), so this runs in tests.
 import { getGraphNodeById, subgraphInnerGraph } from "./graph_walk.js";
 import { nodePaletteId } from "./node_palette.js";
 
 export const PALETTE_META_KEY = "krc_palette";
+
+// More `_meta` stampers: (node) -> { key: value } | null, run for every node in the prompt.
+const metaStampers = [];
+export function registerExportMeta(stamp) {
+  if (typeof stamp === "function" && !metaStampers.includes(stamp)) metaStampers.push(stamp);
+}
 
 // The node an API-format id names: "12", or "5:3" for node 3 inside subgraph node 5.
 export function nodeForPromptId(root, id) {
@@ -26,12 +34,22 @@ export function nodeForPromptId(root, id) {
   return node;
 }
 
-// Stamp the palette on `output` (graphToPrompt's { id: { inputs, class_type, _meta } }).
+// Stamp the palette (and the registered stampers' keys) on `output` (graphToPrompt's
+// { id: { inputs, class_type, _meta } }). A stamper that throws is skipped for that node.
 export function stampPaletteMeta(output, root) {
   for (const [id, entry] of Object.entries(output || {})) {
     const node = entry && nodeForPromptId(root, id);
-    if (!node?._krcManaged) continue;
-    entry._meta = { ...(entry._meta || {}), [PALETTE_META_KEY]: nodePaletteId(node) };
+    if (!node) continue;
+    const meta = node._krcManaged ? { [PALETTE_META_KEY]: nodePaletteId(node) } : {};
+    for (const stamp of metaStampers) {
+      try {
+        const extra = stamp(node);
+        if (extra && typeof extra === "object") Object.assign(meta, extra);
+      } catch (error) {
+        console.warn("[KRC Export] a _meta stamper failed:", error);
+      }
+    }
+    if (Object.keys(meta).length) entry._meta = { ...(entry._meta || {}), ...meta };
   }
   return output;
 }

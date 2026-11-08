@@ -20,6 +20,18 @@ export const profileName = id => profiles.find(profile => profile.id === id)?.na
 export const profileExists = id => !loaded || profiles.some(profile => profile.id === id);
 export const profileSnapshot = () => profiles;
 
+// API-format exports (ext/v1 capability "prompts.profiles.meta"): each Prompt Vault node's
+// `_meta.krc_prompt_profile` (its override; "global" = follows this browser's global
+// profile) and `_meta.krc_prompt_profile_resolved` (the profile it browses right now, as
+// resolved in the browser that exported / queued it). Display only: a run never reads it.
+export const PROFILE_META_KEY = "krc_prompt_profile";
+export const PROFILE_RESOLVED_META_KEY = "krc_prompt_profile_resolved";
+export function promptProfileExportMeta(node) {
+  if (node?.comfyClass !== "KRC Prompt Vault") return null;
+  const override = node.properties?.pmProfile || FOLLOW_GLOBAL;
+  return { [PROFILE_META_KEY]: override, [PROFILE_RESOLVED_META_KEY]: effectiveProfile(override) };
+}
+
 function changed() {
   for (const control of [...controls]) {
     if (!control.isConnected) controls.delete(control);

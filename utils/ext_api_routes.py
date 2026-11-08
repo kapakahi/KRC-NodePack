@@ -17,14 +17,65 @@ wrapped in ``guarded``, so none can skip the switch and key check):
                                        "revisions": {kind: n}}
     GET  /krc/ext/v1/changes?since=<rev>[&stores=a,b][&dbId=…]
                                    -> {"dbId", "rev", "complete", "more", "changes": [...]}
+    GET  /krc/ext/v1/models[?type=a,b][&fields=a,b]
+                                   -> {"scans", "total", "items", "folders", "aliases", "collections"}
+    GET  /krc/ext/v1/models/{id}   -> {"id", "model", "scans"} (404 when none)
+    POST /krc/ext/v1/models/detail {"ids": [...]} -> {"models": {id: row}, "missing", "scans"}
+    GET  /krc/ext/v1/search/models?q=[&offset=][&limit=][&fields=][&type=][&nameMode=]
+                                   -> {"scans", "total", "offset", "limit", "items": [...]}
+    POST /krc/ext/v1/models/resolve {"refs": [...]} -> {"results": [...], "scans"}
+    (the model bodies live in ext_api_models.py)
+    GET  /krc/ext/v1/media[?view=input|output][&fields=]
+                                   -> {"revision", "presetsRevision", "total", "items", "folders"}
+    GET  /krc/ext/v1/media/{id}    -> {"id", "item", "revision", "presetsRevision"} (404 when none)
+    POST /krc/ext/v1/media/detail {"ids": [...]} -> {"items": {id: item}, "missing", "revision", "presetsRevision"}
+    GET  /krc/ext/v1/search/media?q=[&view=][&folder=][&kind=][&sort=][&offset=][&limit=][&fields=]
+                                   -> {"revision", "presetsRevision", "total", "offset", "limit", "items"}
+    (the Media bodies live in ext_api_media.py; Media presets are /presets?kind=media)
+
+Writes: refused while Read only is on (403 read_only; the master switch, on by default),
+then per area: Media (403 media_writes_disabled) and Loadout presets (403
+loadout_writes_disabled), each off by default.
+
+    GET  /krc/ext/v1/kits          -> {"kits": {id: descriptor}}   (a read; ext_api_loadout.py)
+    GET  /krc/ext/v1/kits/{id}/descriptor -> {"descriptor"}
+    POST /krc/ext/v1/presets/{kind} {group?, name, payload?} -> 201 {"preset", "revision"}  (kind ll | kit:<id>)
+    POST /krc/ext/v1/presets/{kind}/{id}/update {version, group?, name?, payload?}
+    POST /krc/ext/v1/presets/{kind}/{id}/rename {version, name, group?}
+    POST /krc/ext/v1/presets/{kind}/{id}/delete {version}
+
+Media writes (ext_api_media_writes.py):
+
+    POST /krc/ext/v1/media/upload  multipart "file" (+ "settings" JSON) -> 201 {"id", "item"}
+                                      | 202 {"id", "job"}
+    GET  /krc/ext/v1/media/jobs/{id}  -> {"job"} (an upload's conversion; a read)
+    POST /krc/ext/v1/media/presets {"name"?} -> 201 {"preset", "presetsRevision"}
+    POST /krc/ext/v1/media/presets/{id}/rename {"name", "version"} -> {"preset", "presetsRevision"}
+    POST /krc/ext/v1/media/presets/{id}/slots/{index} {"item", "version"} -> {"preset", "presetsRevision"}
+                                      (409 conflict + the current preset when version is stale)
+    POST /krc/ext/v1/media/presets/{id}/delete {"version"} -> {"deleted", "presetsRevision"}
+    POST /krc/ext/v1/media/jobs/{id}/cancel -> {"cancelled", "job"}
+    POST /krc/ext/v1/media/{id}/update {name?, folder?, favorite?, pinned?, color?, customBadge?, nsfw?, version?}
+    POST /krc/ext/v1/media/{id}/delete {version?}
+    POST /krc/ext/v1/media/bulk[/preview] {operation: move|delete, ids, destination?, confirmed?}
+    POST /krc/ext/v1/media/bulk-attributes {ids, field, value}
+    POST /krc/ext/v1/media/purge[/preview] {scope, ids?, snapshot?, confirmed?}
+    POST /krc/ext/v1/media/folders {name, view?}
+    POST /krc/ext/v1/media/folders/{id}/update {name?, color?, keep?, pinned?, version?}
+    POST /krc/ext/v1/media/folders/{id}/delete {version?}
+    POST /krc/ext/v1/media/folders/{id}/purge {confirmed: true, version?}
 
 Internal, for KRC Portal ▸ Options ▸ Network only (not part of ext/v1):
 
     GET  /krc/ext-api/state        -> {"enabled", "hasKey", "keyHint"} (never the key)
     POST /krc/ext-api/consent      {"enabled": bool} -> state (+ "key" when this made it)
     POST /krc/ext-api/new-key      -> state + "key" (the old key stops working)
-    The two POSTs only accept ComfyUI's own page (request_guard; stage 16).
+    POST /krc/ext-api/read-only    {"enabled": bool} -> state (the Read only master switch)
+    POST /krc/ext-api/media-writes {"enabled": bool} -> state (Media uploads and presets)
+    POST /krc/ext-api/loadout-writes {"enabled": bool} -> state (Loadout presets)
+    The POSTs only accept ComfyUI's own page (request_guard; stage 16).
 """
+import asyncio
 import functools
 
 from . import ext_api
@@ -34,8 +85,24 @@ from .request_guard import refuse_cross_site
 # "thumbnails.sizes": the Prompt Vault / LoRA Loadout / Model Library thumbnail routes take
 # ?w= (utils/library/thumbnail_sizes.py SIZES). "palettes": /info's palette fields
 # (utils/library/palettes.py), and each KRC node's palette in API exports (_meta.krc_palette).
+# "models.*" / "search.models": the Model Library (ext_api_models.py). "media.*" /
+# "search.media": the Media (ext_api_media.py), with "presets.media" (kind "media" in
+# /presets) and the "media" / "mediaPresets" stores in /revisions and /changes.
+# "media.upload" / "presets.media.write" / "media.items.write" / "media.folders.write": the
+# Media writes, available in this build; whether the user allows them is /info's
+# permissions. "readOnlyMode": the Read only master switch exists (permissions.readOnly).
+# "kits.descriptors" / "presets.loadout.write": Loadout Kit descriptors and LoRA Loadout /
+# kit preset writes (ext_api_loadout.py; permissions.loadoutWrites).
+# "prompts.profiles.meta": each Prompt Vault node's profile in API exports
+# (_meta.krc_prompt_profile / krc_prompt_profile_resolved). "prompts.profiles.changes": the
+# "promptProfiles" store in /revisions and /changes (profiles made, renamed, deleted).
 CAPABILITIES = ["info", "prompts.list", "prompts.fields", "prompts.byId", "prompts.detail", "revisions", "changes",
-                "thumbnails.sizes", "presets", "search.prompts", "prompts.profiles", "palettes"]
+                "thumbnails.sizes", "presets", "search.prompts", "prompts.profiles", "palettes",
+                "models.list", "models.detail", "search.models", "models.resolve",
+                "media.list", "media.detail", "search.media", "presets.media",
+                "media.upload", "presets.media.write", "media.items.write", "media.folders.write",
+                "readOnlyMode", "kits.descriptors", "presets.loadout.write",
+                "prompts.profiles.meta", "prompts.profiles.changes"]
 MAX_DETAIL_IDS = 200
 SEARCH_LIMIT_DEFAULT = 50
 SEARCH_LIMIT_MAX = 500
@@ -83,6 +150,9 @@ def info():
         "kits": _kits(),
         "thumbnailSizes": list(SIZES),
         **_palettes(),
+        # What the user allows (capabilities say what this build has).
+        "permissions": {"readOnly": ext_api.read_only(), "mediaWrites": ext_api.area_writes_enabled("media"),
+                        "loadoutWrites": ext_api.area_writes_enabled("loadout")},
     }
 
 
@@ -188,6 +258,9 @@ REVISION_STORES = {
     "collections": "collections",
     "loraMetadata": "metadata:loras",
     "modelMetadata": "metadata:models",
+    "media": "media",
+    "mediaPresets": "presets:media",
+    "promptProfiles": "prompt_profiles",
 }
 
 
@@ -195,8 +268,9 @@ _KIT_PREFIX = "presets:kit:"
 _PUBLIC_BY_INTERNAL = {internal: public for public, internal in REVISION_STORES.items()}
 # Names a client may pass in ?stores=: every public store, plus groups.
 STORE_GROUPS = {
-    "presets": ["llPresets", "csPresets", "wbPresets", "kitPresets"],
+    "presets": ["llPresets", "csPresets", "wbPresets", "kitPresets", "mediaPresets"],
     "library": ["loraMetadata", "modelMetadata", "collections"],
+    "media": ["media", "mediaPresets"],
 }
 MAX_CHANGES = 1000
 
@@ -259,13 +333,15 @@ _PRESET_HEAD = ("id", "group", "name", "modified")
 
 
 def _preset_stores():
-    """{kind: store} for every preset kind: ll, cs, wb, and kit:<id> per registered kit.
-    Each store normalizes its records on load, so listings match what the nodes see."""
+    """{kind: store} for every preset kind: ll, cs, wb, media, and kit:<id> per registered
+    kit. Each store normalizes its records on load, so listings match what the nodes see."""
     from .config_switcher_presets import ConfigSwitcherPresetStore
+    from .ext_api_media import MediaPresetStore
     from .lora_loadout.presets import PresetStore
     from .word_bank_presets import WordBankPresetStore
 
-    stores = {"ll": PresetStore(), "cs": ConfigSwitcherPresetStore(), "wb": WordBankPresetStore()}
+    stores = {"ll": PresetStore(), "cs": ConfigSwitcherPresetStore(), "wb": WordBankPresetStore(),
+              "media": MediaPresetStore()}
     try:
         from .loadout_kit.kit import all_kits
         for kit_id, kit in sorted(all_kits().items()):
@@ -282,6 +358,7 @@ def preset_list(kind="", full=False):
     revision (the /revisions numbers), so a client can cache per kind."""
     from .db import connection as db
     from .db.presets import change_store
+    from .ext_api_loadout import is_loadout_kind, preset_version
 
     stores = _preset_stores()
     kind = str(kind or "").strip()
@@ -298,6 +375,8 @@ def preset_list(kind="", full=False):
                 entry = {"kind": name, **{key: record.get(key, "" if key != "modified" else 0) for key in _PRESET_HEAD}}
                 if full:
                     entry["payload"] = {key: value for key, value in record.items() if key not in _PRESET_HEAD}
+                    if is_loadout_kind(name):
+                        entry["payload"]["version"] = preset_version(name, record)
                 presets.append(entry)
     return {"presets": presets, "revisions": revisions}
 
@@ -489,6 +568,250 @@ def register_ext_api_routes():
             return web.json_response({"error": "bad_request", "message": str(exc)}, status=400, headers=_NO_STORE)
         return web.json_response(body, headers=_NO_STORE)
 
+    # ---- the Model Library (ext_api_models.py) ---------------------------------------
+
+    def bad_request(exc):
+        return web.json_response({"error": "bad_request", "message": str(exc)}, status=400, headers=_NO_STORE)
+
+    async def json_body(request):
+        try:
+            payload = await request.json()
+        except Exception:  # noqa: BLE001
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    @routes.get("/krc/ext/v1/models")
+    @guarded
+    async def ext_v1_models(request):
+        from .ext_api_models import model_list
+        try:
+            body = await model_list(request.query.get("type", ""), request.query.get("fields", ""))
+        except BadRequest as exc:
+            return bad_request(exc)
+        return web.json_response(body, headers=_NO_STORE)
+
+    @routes.get("/krc/ext/v1/models/{id}")
+    @guarded
+    async def ext_v1_model(request):
+        from .ext_api_models import model_detail
+        body = await model_detail(request.match_info.get("id", ""))
+        if body is None:
+            return web.json_response({"error": "not_found", "message": "No model has that id."},
+                                     status=404, headers=_NO_STORE)
+        return web.json_response(body, headers=_NO_STORE)
+
+    @routes.post("/krc/ext/v1/models/detail")
+    @guarded
+    async def ext_v1_model_details(request):
+        from .ext_api_models import model_details
+        payload = await json_body(request)
+        try:
+            body = await model_details(payload.get("ids") if payload else None)
+        except BadRequest as exc:
+            return bad_request(exc)
+        return web.json_response(body, headers=_NO_STORE)
+
+    @routes.get("/krc/ext/v1/search/models")
+    @guarded
+    async def ext_v1_search_models(request):
+        from .ext_api_models import model_search
+        query = request.query
+        try:
+            body = await model_search(query.get("q", ""), query.get("offset", ""), query.get("limit", ""),
+                                      query.get("fields", ""), query.get("type", ""), query.get("nameMode", ""))
+        except BadRequest as exc:
+            return bad_request(exc)
+        return web.json_response(body, headers=_NO_STORE)
+
+    @routes.post("/krc/ext/v1/models/resolve")
+    @guarded
+    async def ext_v1_models_resolve(request):
+        from .ext_api_models import resolve_models
+        payload = await json_body(request)
+        try:
+            body = await resolve_models(payload.get("refs") if payload else None, (payload or {}).get("fields"))
+        except BadRequest as exc:
+            return bad_request(exc)
+        return web.json_response(body, headers=_NO_STORE)
+
+    # ---- the Media (ext_api_media.py) --------------------------------------------------
+
+    @routes.get("/krc/ext/v1/media")
+    @guarded
+    async def ext_v1_media(request):
+        from .ext_api_media import media_list
+        try:
+            body = await asyncio.to_thread(media_list, request.query.get("view", ""), request.query.get("fields", ""))
+        except BadRequest as exc:
+            return bad_request(exc)
+        return web.json_response(body, headers=_NO_STORE)
+
+    @routes.get("/krc/ext/v1/media/{id}")
+    @guarded
+    async def ext_v1_media_item(request):
+        from .ext_api_media import media_item
+        body = await asyncio.to_thread(media_item, request.match_info.get("id", ""))
+        if body is None:
+            return web.json_response({"error": "not_found", "message": "No Media item has that id."},
+                                     status=404, headers=_NO_STORE)
+        return web.json_response(body, headers=_NO_STORE)
+
+    @routes.post("/krc/ext/v1/media/detail")
+    @guarded
+    async def ext_v1_media_details(request):
+        from .ext_api_media import media_details
+        payload = await json_body(request)
+        try:
+            body = await asyncio.to_thread(media_details, payload.get("ids") if payload else None)
+        except BadRequest as exc:
+            return bad_request(exc)
+        return web.json_response(body, headers=_NO_STORE)
+
+    @routes.get("/krc/ext/v1/search/media")
+    @guarded
+    async def ext_v1_search_media(request):
+        from .ext_api_media import media_search
+        query = request.query
+        try:
+            body = await asyncio.to_thread(media_search, query.get("q", ""), query.get("view", ""), query.get("folder", ""),
+                                           query.get("kind", ""), query.get("sort", ""), query.get("offset", ""),
+                                           query.get("limit", ""), query.get("fields", ""))
+        except BadRequest as exc:
+            return bad_request(exc)
+        return web.json_response(body, headers=_NO_STORE)
+
+    # ---- Media writes (ext_api_media_writes.py) ----------------------------------------
+
+    def write_gate(area):
+        """A write of ``area``: refused while Read only is on (403 read_only), then while the
+        area's permission is off. Goes under ``guarded``, so the switch and key come first."""
+        def decorate(handler):
+            @functools.wraps(handler)
+            async def wrapper(request):
+                refused = ext_api.write_refusal(area)
+                if refused:
+                    status, body = refused
+                    return web.json_response(body, status=status, headers=_NO_STORE)
+                return await handler(request)
+            return wrapper
+        return decorate
+
+    media_write = write_gate("media")
+
+    def write_answer(work, status=200):
+        """Run a preset write -> its JSON answer (``status``), or 400 / 404 / 409 (with the
+        current preset)."""
+        from .ext_api_media_writes import Conflict, NotFound
+        try:
+            return web.json_response(work(), status=status, headers=_NO_STORE)
+        except BadRequest as exc:
+            return bad_request(exc)
+        except NotFound as exc:
+            return web.json_response({"error": "not_found", "message": str(exc)}, status=404, headers=_NO_STORE)
+        except Conflict as exc:
+            return web.json_response({"error": "conflict", "message": str(exc), exc.kind: exc.current},
+                                     status=409, headers=_NO_STORE)
+
+    @routes.post("/krc/ext/v1/media/upload")
+    @guarded
+    @media_write
+    async def ext_v1_media_upload(request):
+        from .ext_api_media_writes import upload
+        status, body = await upload(request)
+        return web.json_response(body, status=status, headers=_NO_STORE)
+
+    @routes.get("/krc/ext/v1/media/jobs/{id}")
+    @guarded
+    async def ext_v1_media_job(request):
+        from .ext_api_media_writes import NotFound, job
+        try:
+            return web.json_response(job(request.match_info.get("id", "")), headers=_NO_STORE)
+        except NotFound as exc:
+            return web.json_response({"error": "not_found", "message": str(exc)}, status=404, headers=_NO_STORE)
+
+    @routes.post("/krc/ext/v1/media/presets")
+    @guarded
+    @media_write
+    async def ext_v1_media_preset_create(request):
+        from .ext_api_media_writes import create_preset
+        payload = await json_body(request)
+        # On the loop, as the node's preset routes (their change announcements expect it).
+        return write_answer(lambda: create_preset(payload if payload is not None else {}), 201)
+
+    @routes.post("/krc/ext/v1/media/presets/{id}/rename")
+    @guarded
+    @media_write
+    async def ext_v1_media_preset_rename(request):
+        from .ext_api_media_writes import rename_preset
+        payload = await json_body(request)
+        return write_answer(lambda: rename_preset(request.match_info.get("id", ""), payload))
+
+    @routes.post("/krc/ext/v1/media/presets/{id}/slots/{index}")
+    @guarded
+    @media_write
+    async def ext_v1_media_preset_slot(request):
+        from .ext_api_media_writes import set_slot
+        payload = await json_body(request)
+        return write_answer(lambda: set_slot(request.match_info.get("id", ""), request.match_info.get("index", ""), payload))
+
+    def media_write_route(path, work, status=200, off_loop=True, gate=media_write):
+        """Register a write: guarded, its area's gate, the JSON body (``{}`` when empty) and
+        the URL's ids handed to ``work(match_info, payload)``. File / database work runs off
+        the loop, as the node's routes do (page announcements are thread-safe)."""
+        async def handler(request):
+            payload = await json_body(request)
+            payload = payload if payload is not None else {}
+            info = dict(request.match_info)
+            if off_loop:
+                return await asyncio.to_thread(write_answer, lambda: work(info, payload), status)
+            return write_answer(lambda: work(info, payload), status)
+        handler.__name__ = "ext_v1_" + path.rsplit("/v1/", 1)[1].replace("/", "_").replace("{", "").replace("}", "").replace("-", "_")
+        routes.post(path)(guarded(gate(handler)))
+
+    def _writes():
+        from . import ext_api_media_writes as writes
+        return writes
+
+    media_write_route("/krc/ext/v1/media/presets/{id}/delete", lambda m, p: _writes().delete_preset(m["id"], p), off_loop=False)
+    media_write_route("/krc/ext/v1/media/jobs/{id}/cancel", lambda m, p: _writes().cancel_job(m["id"]), off_loop=False)
+    media_write_route("/krc/ext/v1/media/{id}/update", lambda m, p: _writes().update_item(m["id"], p))
+    media_write_route("/krc/ext/v1/media/{id}/delete", lambda m, p: _writes().delete_item(m["id"], p))
+    media_write_route("/krc/ext/v1/media/bulk/preview", lambda m, p: _writes().bulk(p, preview=True))
+    media_write_route("/krc/ext/v1/media/bulk", lambda m, p: _writes().bulk(p))
+    media_write_route("/krc/ext/v1/media/bulk-attributes", lambda m, p: _writes().bulk_attributes(p))
+    media_write_route("/krc/ext/v1/media/purge/preview", lambda m, p: _writes().purge(p, preview=True))
+    media_write_route("/krc/ext/v1/media/purge", lambda m, p: _writes().purge(p))
+    media_write_route("/krc/ext/v1/media/folders", lambda m, p: _writes().create_folder(p), status=201)
+    media_write_route("/krc/ext/v1/media/folders/{id}/update", lambda m, p: _writes().update_folder(m["id"], p))
+    media_write_route("/krc/ext/v1/media/folders/{id}/delete", lambda m, p: _writes().delete_folder(m["id"], p))
+    media_write_route("/krc/ext/v1/media/folders/{id}/purge", lambda m, p: _writes().purge_folder(m["id"], p))
+
+    # ---- Loadout: kit descriptors (reads) and preset writes (ext_api_loadout.py) ------------
+
+    def _loadout():
+        from . import ext_api_loadout as loadout
+        return loadout
+
+    @routes.get("/krc/ext/v1/kits")
+    @guarded
+    async def ext_v1_kits(_request):
+        return web.json_response(_loadout().kit_descriptors(), headers=_NO_STORE)
+
+    @routes.get("/krc/ext/v1/kits/{id}/descriptor")
+    @guarded
+    async def ext_v1_kit_descriptor(request):
+        return write_answer(lambda: _loadout().kit_descriptor(request.match_info.get("id", "")))
+
+    loadout_write = write_gate("loadout")
+    media_write_route("/krc/ext/v1/presets/{kind}", lambda m, p: _loadout().create_preset(m["kind"], p),
+                      status=201, gate=loadout_write)
+    media_write_route("/krc/ext/v1/presets/{kind}/{id}/update", lambda m, p: _loadout().update_preset(m["kind"], m["id"], p),
+                      gate=loadout_write)
+    media_write_route("/krc/ext/v1/presets/{kind}/{id}/rename", lambda m, p: _loadout().rename_preset(m["kind"], m["id"], p),
+                      gate=loadout_write)
+    media_write_route("/krc/ext/v1/presets/{kind}/{id}/delete", lambda m, p: _loadout().delete_preset(m["kind"], m["id"], p),
+                      gate=loadout_write)
+
     # ---- internal: the Options page --------------------------------------------------
 
     @routes.get("/krc/ext-api/state")
@@ -517,6 +840,24 @@ def register_ext_api_routes():
         if not isinstance(value, bool):
             return web.json_response({"error": "enabled must be true or false"}, status=400)
         return web.json_response(ext_api.set_enabled(value), headers=_NO_STORE)
+
+    def switch_route(path, setter):
+        """An Options switch: {"enabled": bool} -> state. Same-site only, never under ext/v1."""
+        async def handler(request):
+            try:
+                payload = await request.json()
+            except Exception:  # noqa: BLE001
+                payload = {}
+            value = payload.get("enabled") if isinstance(payload, dict) else None
+            if not isinstance(value, bool):
+                return web.json_response({"error": "enabled must be true or false"}, status=400)
+            return web.json_response(setter(value), headers=_NO_STORE)
+        handler.__name__ = "ext_api_" + path.rsplit("/", 1)[1].replace("-", "_")
+        routes.post(path)(same_site_only(handler))
+
+    switch_route("/krc/ext-api/read-only", ext_api.set_read_only)
+    switch_route("/krc/ext-api/media-writes", lambda value: ext_api.set_area_writes("media", value))
+    switch_route("/krc/ext-api/loadout-writes", lambda value: ext_api.set_area_writes("loadout", value))
 
     @routes.post("/krc/ext-api/new-key")
     @same_site_only

@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-11-07 · API upgrades: Model Library, Media, Loadout Kit and Prompt Vault profile support, plus a new Read only switch (on by default) in Options ▸ Network.
 - 2026-11-06 · Media nodes: Options puts the slots / history and their buttons above or below the preview (Media Loader: above by default). Outside apps get KRC's palettes: each node's palette in API-format exports, and the palette list and picks in the external API.
 - 2026-11-05 · Modified badges now list what changed in a hover card, and an orange dot marks each changed field (Config Switcher, Prompt Vault, LoRA Loadout / Model Library, LoRA Loadout / RefMod / Word Bank presets). Config Switcher number fields get a custom Step. Media Loader runs keep the item they were queued with; click a Media preview to mute it; Media Output can auto-download. Reset ID in More Info; faster, safer metadata editing; Model Library cleans stale records. Classic-canvas layout fixes, Media folders are real folders, and the Portal's Prompts page loses a stray profile picker.
 - 2026-11-01 · Media nodes: ← / → step through slots and history; Media Loader gets a mute button; Clear asks in the button; Media Output gets a trash button for the shown file. Drop Media onto an Info Panel thumbnail (Model Library, LoRA Loadout, Prompt Vault) to make it the thumbnail.
