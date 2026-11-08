@@ -54,3 +54,77 @@ async def update_model_attributes(payload):
     if changed:
         announce_model_attributes([item_id for item_id, _is_lora, _saved in changed], field, value, payload.get("originPage"))
     return {"ok": True, "ids": ids, "updated": len(changed), "skipped": len(ids) - len(changed)}
+
+
+# ---- one card's marks at once (the external API's card marks, ext_api_prompts.py) -------
+
+MARK_FIELDS = ("favorite", "pinned", "nsfw", "cardColor", "customBadge")
+
+
+def marks_of(data):
+    """The five card marks of a record / row / sidecar, normalized."""
+    data = data if isinstance(data, dict) else {}
+    return {"favorite": bool(data.get("favorite")), "pinned": bool(data.get("pinned")), "nsfw": bool(data.get("nsfw")),
+            "cardColor": str(data.get("cardColor") or ""), "customBadge": str(data.get("customBadge") or "")}
+
+
+def marks_version(data):
+    """A short hash of a model's / LoRA's five card marks: what a marks write must send."""
+    import hashlib
+    import json
+    return hashlib.sha1(json.dumps(marks_of(data), sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
+class MarksConflict(ValueError):
+    """The card's marks changed since the client read them; ``current`` is them now."""
+
+    def __init__(self, current):
+        super().__init__("That card changed since you read it. Read it again, then retry.")
+        self.current = current
+
+
+async def update_model_marks(item_id, marks, if_version=None, origin_page=""):
+    """Set any of the five card marks on one model or LoRA in one transaction, through the
+    same writers as update_model_attributes (each field validated by its rules; the pin cap).
+    ``if_version`` (marks_version) is checked inside the transaction: MarksConflict when
+    stale. -> {"id", "marks", "marksVersion", "updated": [fields that changed]}."""
+    # The shared validator's rules, and its normalized values (e.g. the badge's).
+    marks = {field: validate_bulk_attributes({"ids": [item_id], "field": field, "value": value})[2]
+             for field, value in marks.items()}
+    loras = await LoraLibraryIndex.loaded()
+    models = await ModelLibraryIndex.loaded()
+    lora = loras.get(item_id)
+    record = lora or models.get(item_id)
+    if not record:
+        raise LookupError("No model has that id.")
+    if marks.get("pinned") is True:
+        problem = pin_limit_problem([item_id], (loras, models))
+        if problem and not marks_of(record.get("sidecar_data")).get("pinned"):
+            raise ValueError(problem)
+    with db.write():
+        stored = read_krc_metadata(item_id) if lora else read_model_metadata(item_id, record.get("modelType"))
+        metadata = dict(stored or record.get("sidecar_data") or {})
+        if if_version is not None and marks_version(metadata) != if_version:
+            raise MarksConflict(marks_of(metadata))
+        changed = [field for field, value in marks.items() if marks_of(metadata)[field] != value]
+        if changed:
+            if lora:
+                copy = {**record, "sidecar_data": metadata}
+                body, status = save_lora_metadata_record(copy, {field: marks[field] for field in changed})
+                if status != 200:
+                    raise ValueError(body.get("error", "Could not save the LoRA's marks."))
+                metadata = copy["sidecar_data"]
+            else:
+                for field in changed:
+                    metadata[field] = marks[field]
+                metadata = normalize_model_metadata(Path(record["path"]), item_id, metadata)
+                write_model_metadata(record, metadata)
+    if changed:
+        if lora:
+            loras.get(item_id)["sidecar_data"] = metadata
+        else:
+            models.refresh_record(item_id)
+        for field in changed:
+            announce_model_attributes([item_id], field, marks[field], origin_page)
+    current = marks_of(metadata)
+    return {"id": item_id, "marks": current, "marksVersion": marks_version(current), "updated": changed}

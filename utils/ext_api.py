@@ -17,10 +17,12 @@ route goes through (KRC_EXTERNAL_API_GAMEPLAN.md stage 1).
   ext/v1 write. ON until the user turns it off (nothing stored = on), and it wins over the
   per-area permissions below. Turning it on only refuses new writes; a Media conversion
   already running finishes. Only the Options page changes it (an internal, same-site route).
-- **Per-area write permissions**, each off until the user turns it on, all under Read only:
-  Media uploads and presets (MEDIA_WRITES_KEY, 2026-11-06) and Loadout presets
-  (LOADOUT_WRITES_KEY: LoRA Loadout and Loadout Kit presets, 2026-11-07). Turning the main
-  switch off stops writes without changing these.
+- **Permission areas** (WRITE_AREAS, 2026-11-07): one registry, each area off until the user
+  turns it on, all under Read only. /info lists them (``permissionAreas``) so a client can
+  show any area without knowing it in advance; the Options page draws a switch per area;
+  every write route names its area (ext_api_routes.write_gate). Today a grant is per
+  install; ``area_allowed(area, key=...)`` is the one place a later per-key grant would
+  plug in (every check already goes through it with the key that was sent).
 
 Console lines never print the key.
 """
@@ -40,10 +42,37 @@ DEFAULT_ENABLED = False
 DEFAULT_MEDIA_WRITES = False
 DEFAULT_READ_ONLY = True
 
-# Write areas: their setting, their refusal and the Options label the message names.
+# The permission areas, in Options order. ``flag``: the area's flat boolean in /info
+# permissions (older clients); ``error``: its refusal code (the first two keep their own
+# codes, newer ones answer area_disabled); ``capabilities``: the write capabilities it gates.
 WRITE_AREAS = {
-    "media": (MEDIA_WRITES_KEY, "media_writes_disabled", "Media uploads and presets"),
-    "loadout": (LOADOUT_WRITES_KEY, "loadout_writes_disabled", "Loadout presets"),
+    "media": {
+        "setting": MEDIA_WRITES_KEY, "flag": "mediaWrites", "error": "media_writes_disabled", "label": "Media",
+        "description": "Upload, rename, move, mark and delete Media; manage its folders; make, fill and delete Media presets.",
+        "capabilities": ["media.upload", "presets.media.write", "media.items.write", "media.folders.write"],
+    },
+    "cardMarks": {
+        "setting": "ext_api.card_marks_writes", "flag": "cardMarksWrites", "error": "area_disabled", "label": "Card marks",
+        "description": "Colour, custom badge, favourite, pin and NSFW on Prompt Vault prompts and Model Library models and LoRAs.",
+        "capabilities": ["cards.marks.write"],
+    },
+    "promptCategories": {
+        "setting": "ext_api.prompt_categories_writes", "flag": "promptCategoriesWrites", "error": "area_disabled",
+        "label": "Prompt categories",
+        "description": "Make, rename, merge, pin, colour, mark NSFW, delete and purge Prompt Vault categories.",
+        "capabilities": ["prompts.categories.write"],
+    },
+    "promptEditing": {
+        "setting": "ext_api.prompt_editing_writes", "flag": "promptEditingWrites", "error": "area_disabled",
+        "label": "Prompt editing",
+        "description": "Make, edit, duplicate and delete Prompt Vault prompts (name, category, type, Prompt A and B, presets, thumbnail).",
+        "capabilities": ["prompts.write"],
+    },
+    "loadoutPresets": {
+        "setting": LOADOUT_WRITES_KEY, "flag": "loadoutWrites", "error": "loadout_writes_disabled", "label": "Loadout presets",
+        "description": "Make, edit and delete LoRA Loadout and Loadout Kit (e.g. RefMod) presets.",
+        "capabilities": ["presets.loadout.write"],
+    },
 }
 EXT_API_VERSION = 1
 
@@ -90,14 +119,32 @@ def set_read_only(value):
     return _set_flag(READ_ONLY_KEY, value, DEFAULT_READ_ONLY, "Read only")
 
 
+def area_allowed(area, key=None):
+    """Whether writes of ``area`` (a WRITE_AREAS id) are allowed. Off when nothing is stored,
+    and fails closed. (Read only is checked separately.) ``key``: the access key the request
+    sent; grants are per install today, so it isn't consulted yet: a per-key grant would."""
+    return _flag(WRITE_AREAS[area]["setting"], False)
+
+
 def area_writes_enabled(area):
-    """Whether the user allows writes of ``area`` ("media", "loadout"). Off when nothing is
-    stored, and fails closed. (Read only is checked separately.)"""
-    return _flag(WRITE_AREAS[area][0], False)
+    return area_allowed(area)
 
 
 def set_area_writes(area, value):
-    return _set_flag(WRITE_AREAS[area][0], value, False, f"Writes to {WRITE_AREAS[area][2]}:")
+    if area not in WRITE_AREAS:
+        raise KeyError(area)
+    return _set_flag(WRITE_AREAS[area]["setting"], value, False, f"Writes to {WRITE_AREAS[area]['label']}:")
+
+
+def permission_areas(key=None):
+    """/info's permissionAreas (and the Options page's switches): every area in order."""
+    return [{"id": area, "label": spec["label"], "description": spec["description"], "enabled": area_allowed(area, key),
+             "capabilities": list(spec["capabilities"])} for area, spec in WRITE_AREAS.items()]
+
+
+def permissions(key=None):
+    """/info's flat permissions: readOnly and one boolean per area (older clients)."""
+    return {"readOnly": read_only(), **{spec["flag"]: area_allowed(area, key) for area, spec in WRITE_AREAS.items()}}
 
 
 def media_writes_enabled():
@@ -149,12 +196,11 @@ def new_key():
 
 
 def state():
-    """What the Options page shows: {"enabled", "hasKey", "keyHint", "readOnly",
-    "mediaWrites", "loadoutWrites"}. Never the key itself. Internal route only."""
+    """What the Options page shows: {"enabled", "hasKey", "keyHint", "readOnly", <each area's
+    flat flag>, "areas": [...]}. Never the key itself. Internal route only."""
     key = access_key()
     return {"enabled": enabled(), "hasKey": bool(key), "keyHint": key[-4:] if key else "",
-            "readOnly": read_only(), "mediaWrites": area_writes_enabled("media"),
-            "loadoutWrites": area_writes_enabled("loadout")}
+            **permissions(), "areas": permission_areas()}
 
 
 def db_id():
@@ -176,14 +222,16 @@ def _bearer(authorization):
     return token.strip() if scheme.lower() == "bearer" else ""
 
 
-def write_refusal(area):
+def write_refusal(area, key=None):
     """Why a write of ``area`` is refused after the switch and key passed -> (status, body),
-    or None. Read only first (it wins), then the area's own permission."""
+    or None. Read only first (it wins), then the area's own permission: 403 with the
+    area's code (area_disabled, or the first two areas' own), ``area`` and a message."""
     if read_only():
         return 403, {"error": "read_only", "message": READ_ONLY_MESSAGE}
-    key, error, label = WRITE_AREAS[area]
-    if not area_writes_enabled(area):
-        return 403, {"error": error, "message": f"Turn on {label} under External API in KRC Portal ▸ Options ▸ Network."}
+    spec = WRITE_AREAS[area]
+    if not area_allowed(area, key):
+        return 403, {"error": spec["error"], "area": area,
+                     "message": f"Turn on {spec['label']} under External API in KRC Portal ▸ Options ▸ Network."}
     return None
 
 

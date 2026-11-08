@@ -33,7 +33,7 @@ from .utils.pack_network import krc_fetch, network_enabled
 from .utils.bundle.pack_sections import register_bundle_section
 from .utils import krc_video as _krc_video
 
-KRC_API_VERSION = (2, 9)
+KRC_API_VERSION = (2, 10)
 
 __all__ = [
     "validate_card_ids",
@@ -63,6 +63,7 @@ __all__ = [
     "resolve_prompts",
     "resolve_prompts_async",
     "video_info",
+    "register_ext_provider",
 ]
 
 
@@ -99,3 +100,15 @@ def video_info():
         "opus": "libopus" in codecs,
         "vorbis": "libvorbis" in codecs,
     }
+
+
+def register_ext_provider(name, provider):
+    """(2.10) Plug a pack's node-specific logic into NodePack's external API routes (one
+    provider per name; today "resizer", interface 1: utils/ext_api_providers.py says what
+    the object must have). NodePack keeps the routes, the switch and key, permissions,
+    capability discovery, sources and limits. -> True when in use; False (logged) when
+    NodePack doesn't know the name or speak the provider's interface. Call it once every
+    pack has loaded (load order isn't fixed): from PromptServer.instance.app.on_startup."""
+    from .utils.ext_api_providers import register_ext_provider as register
+
+    return register(name, provider)

@@ -7,9 +7,12 @@
 // change never re-runs the node or anything after it. Old workflows simply lack it ("").
 // Other per-node `_meta` for outside apps joins through registerExportMeta (Prompt Vault's
 // profile, ext/v1 capability "prompts.profiles.meta").
+// Standby branches (muted KRC Resizers and what only fed them) are recorded too
+// (standby_export.js, ext/v1 capability "workflows.standby").
 // No `app` import here (installPaletteExport takes it), so this runs in tests.
 import { getGraphNodeById, subgraphInnerGraph } from "./graph_walk.js";
 import { nodePaletteId } from "./node_palette.js";
+import { recordStandby } from "./standby_export.js";
 
 export const PALETTE_META_KEY = "krc_palette";
 
@@ -64,6 +67,11 @@ export function installPaletteExport(app) {
       stampPaletteMeta(result?.output, app.graph);
     } catch (error) {
       console.warn("[KRC Palette] could not add node palettes to the prompt:", error);
+    }
+    try {
+      await recordStandby(result, app.graph, () => original.apply(this, args), (output) => stampPaletteMeta(output, app.graph));
+    } catch (error) {
+      console.warn("[KRC Export] could not record standby branches:", error);
     }
     return result;
   };

@@ -37,6 +37,13 @@ Writes: refused while Read only is on (403 read_only; the master switch, on by d
 then per area: Media (403 media_writes_disabled) and Loadout presets (403
 loadout_writes_disabled), each off by default.
 
+    POST /krc/ext/v1/resizer/previews {source} -> {"preview", "prepared"}   (reads; ext_api_resizer.py,
+    GET  /krc/ext/v1/resizer/previews/{handle} -> {"preview"}               with the Extras provider)
+    GET  /krc/ext/v1/resizer/previews/{handle}/frames/{index} -> image/jpeg
+    POST /krc/ext/v1/resizer/inputs {handle | source, settings} -> {"inputs", "settings", "source"}
+    POST /krc/ext/v1/resizer/settings {inputs, handle? | source?} -> {"settings", "source", "stale"?, "fallback"?}
+    POST /krc/ext/v1/workflows/branches {workflow} -> {"standbyRecord", "resizers"}   (stateless reads;
+    POST /krc/ext/v1/workflows/prepare {workflow, enabled} -> {"workflow", "resizers"}  ext_api_workflows.py)
     GET  /krc/ext/v1/kits          -> {"kits": {id: descriptor}}   (a read; ext_api_loadout.py)
     GET  /krc/ext/v1/kits/{id}/descriptor -> {"descriptor"}
     POST /krc/ext/v1/presets/{kind} {group?, name, payload?} -> 201 {"preset", "revision"}  (kind ll | kit:<id>)
@@ -96,13 +103,22 @@ from .request_guard import refuse_cross_site
 # "prompts.profiles.meta": each Prompt Vault node's profile in API exports
 # (_meta.krc_prompt_profile / krc_prompt_profile_resolved). "prompts.profiles.changes": the
 # "promptProfiles" store in /revisions and /changes (profiles made, renamed, deleted).
+# "permissionAreas": /info's permissionAreas registry (ext_api.WRITE_AREAS).
+# "prompts.categories": GET /prompt-categories; "prompts.versions": a version on every prompt
+# read; "models.marksVersion": marksVersion on Model Library rows. Writes (ext_api_prompts.py):
+# "cards.marks.write" (area cardMarks), "prompts.categories.write" (promptCategories),
+# "prompts.write" (promptEditing). "workflows.standby": standby branches recorded in API exports
+# (_meta.krc_standby) and /workflows/branches + /workflows/prepare (ext_api_workflows.py).
 CAPABILITIES = ["info", "prompts.list", "prompts.fields", "prompts.byId", "prompts.detail", "revisions", "changes",
                 "thumbnails.sizes", "presets", "search.prompts", "prompts.profiles", "palettes",
                 "models.list", "models.detail", "search.models", "models.resolve",
                 "media.list", "media.detail", "search.media", "presets.media",
                 "media.upload", "presets.media.write", "media.items.write", "media.folders.write",
                 "readOnlyMode", "kits.descriptors", "presets.loadout.write",
-                "prompts.profiles.meta", "prompts.profiles.changes"]
+                "prompts.profiles.meta", "prompts.profiles.changes",
+                "permissionAreas", "prompts.categories", "prompts.versions", "models.marksVersion",
+                "cards.marks.write", "prompts.categories.write", "prompts.write",
+                "workflows.standby"]
 MAX_DETAIL_IDS = 200
 SEARCH_LIMIT_DEFAULT = 50
 SEARCH_LIMIT_MAX = 500
@@ -144,16 +160,35 @@ def info():
         "pack": "krc-nodepack",
         "packVersion": _pack_version(),
         "extApi": ext_api.EXT_API_VERSION,
-        "capabilities": list(CAPABILITIES),
+        # This build's, plus those registered providers bring (ext_api_providers.py).
+        "capabilities": [*CAPABILITIES, *_provider_capabilities()],
+        "providers": _provider_info(),
         "dbId": ext_api.db_id(),
         "packs": _packs(),
         "kits": _kits(),
         "thumbnailSizes": list(SIZES),
         **_palettes(),
         # What the user allows (capabilities say what this build has).
-        "permissions": {"readOnly": ext_api.read_only(), "mediaWrites": ext_api.area_writes_enabled("media"),
-                        "loadoutWrites": ext_api.area_writes_enabled("loadout")},
+        "permissions": ext_api.permissions(),
+        # Every write area, so a client can show one it doesn't know yet (ext_api.WRITE_AREAS).
+        "permissionAreas": ext_api.permission_areas(),
     }
+
+
+def _provider_capabilities():
+    try:
+        from .ext_api_providers import provider_capabilities
+        return provider_capabilities()
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _provider_info():
+    try:
+        from .ext_api_providers import provider_info
+        return provider_info()
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def _palettes():
@@ -185,7 +220,11 @@ def prompt_list(fields_param="", profile_id="default"):
         revision, library = load_prompts_with_revision(profile_id)
     except ValueError as exc:
         raise BadRequest(str(exc)) from None
-    return {"revision": revision, "prompts": select_fields(prompts_for_response(library, profile_id=profile_id), fields)}
+    from .ext_api_prompts import add_versions
+
+    # Every prompt carries its version (capability "prompts.versions"), fields= or not.
+    return {"revision": revision,
+            "prompts": add_versions(select_fields(prompts_for_response(library, profile_id=profile_id), fields), library)}
 
 
 def _int_param(value, name, default, low, high):
@@ -230,6 +269,9 @@ def prompt_search(query="", offset="", limit="", fields_param="", profile_id="de
     if fields is not None:
         keep = fields | {"category", "name"}
         page = [{key: value for key, value in item.items() if key in keep} for item in page]
+    from .ext_api_prompts import prompt_version
+    for item in page:
+        item["version"] = prompt_version(item["category"], item["name"], library[item["category"]][item["name"]])
     return {"revision": revision, "total": len(found), "offset": offset, "limit": limit, "items": page}
 
 
@@ -243,7 +285,10 @@ def prompt_matches(record_id):
     matches = prompts_by_id(record_id)
     if not matches:
         return None
-    return {"id": str(record_id).strip(), "matches": [prompt_detail(*match) for match in matches]}
+    from .ext_api_prompts import prompt_version
+
+    return {"id": str(record_id).strip(),
+            "matches": [{**prompt_detail(*match), "version": prompt_version(*match)} for match in matches]}
 
 
 # The public store names (the contract) -> krc.db's `changes` store names (internal, free to
@@ -449,9 +494,11 @@ def prompt_details(ids):
     revision, found = prompts_by_ids(wanted)
     order = [(record_id, match) for record_id in wanted for match in found.get(record_id, [])]
     details = details_for([match for _record_id, match in order])
+    from .ext_api_prompts import prompt_version
+
     prompts = {}
-    for (record_id, _match), detail in zip(order, details):
-        prompts.setdefault(record_id, []).append(detail)
+    for (record_id, match), detail in zip(order, details):
+        prompts.setdefault(record_id, []).append({**detail, "version": prompt_version(*match)})
     return {
         "prompts": prompts,
         "missing": [record_id for record_id in wanted if record_id not in found],
@@ -683,12 +730,16 @@ def register_ext_api_routes():
     # ---- Media writes (ext_api_media_writes.py) ----------------------------------------
 
     def write_gate(area):
-        """A write of ``area``: refused while Read only is on (403 read_only), then while the
-        area's permission is off. Goes under ``guarded``, so the switch and key come first."""
+        """A write of ``area`` (an ext_api.WRITE_AREAS id): refused while Read only is on (403
+        read_only), then while the area isn't allowed for the key sent. Goes under
+        ``guarded``, so the switch and key come first."""
+        if area not in ext_api.WRITE_AREAS:
+            raise KeyError(area)
+
         def decorate(handler):
             @functools.wraps(handler)
             async def wrapper(request):
-                refused = ext_api.write_refusal(area)
+                refused = ext_api.write_refusal(area, ext_api._bearer(request.headers.get("Authorization", "")))
                 if refused:
                     status, body = refused
                     return web.json_response(body, status=status, headers=_NO_STORE)
@@ -761,7 +812,7 @@ def register_ext_api_routes():
         async def handler(request):
             payload = await json_body(request)
             payload = payload if payload is not None else {}
-            info = dict(request.match_info)
+            info = {**dict(request.match_info), "_profile": request.query.get("profile", "default")}
             if off_loop:
                 return await asyncio.to_thread(write_answer, lambda: work(info, payload), status)
             return write_answer(lambda: work(info, payload), status)
@@ -802,7 +853,7 @@ def register_ext_api_routes():
     async def ext_v1_kit_descriptor(request):
         return write_answer(lambda: _loadout().kit_descriptor(request.match_info.get("id", "")))
 
-    loadout_write = write_gate("loadout")
+    loadout_write = write_gate("loadoutPresets")
     media_write_route("/krc/ext/v1/presets/{kind}", lambda m, p: _loadout().create_preset(m["kind"], p),
                       status=201, gate=loadout_write)
     media_write_route("/krc/ext/v1/presets/{kind}/{id}/update", lambda m, p: _loadout().update_preset(m["kind"], m["id"], p),
@@ -811,6 +862,123 @@ def register_ext_api_routes():
                       gate=loadout_write)
     media_write_route("/krc/ext/v1/presets/{kind}/{id}/delete", lambda m, p: _loadout().delete_preset(m["kind"], m["id"], p),
                       gate=loadout_write)
+
+    # ---- Prompt Vault and card marks (ext_api_prompts.py) ------------------------------
+
+    def _prompts():
+        from . import ext_api_prompts as prompts
+        return prompts
+
+    @routes.get("/krc/ext/v1/prompt-categories")
+    @guarded
+    async def ext_v1_prompt_categories(request):
+        return write_answer(lambda: _prompts().category_list(request.query.get("profile", "default")))
+
+    card_marks = write_gate("cardMarks")
+    media_write_route("/krc/ext/v1/prompts/{id}/marks", lambda m, p: _prompts().prompt_marks(m["_profile"], m["id"], p),
+                      gate=card_marks)
+
+    @routes.post("/krc/ext/v1/models/{id}/marks")
+    @guarded
+    @card_marks
+    async def ext_v1_model_marks(request):
+        from .ext_api_media_writes import Conflict, NotFound
+        payload = await json_body(request)
+        try:
+            body = await _prompts().model_marks(request.match_info.get("id", ""), payload if payload is not None else {})
+        except BadRequest as exc:
+            return bad_request(exc)
+        except NotFound as exc:
+            return web.json_response({"error": "not_found", "message": str(exc)}, status=404, headers=_NO_STORE)
+        except Conflict as exc:
+            return web.json_response({"error": "conflict", "message": str(exc), exc.kind: exc.current},
+                                     status=409, headers=_NO_STORE)
+        return web.json_response(body, headers=_NO_STORE)
+
+    categories = write_gate("promptCategories")
+    for action, status in (("create", 201), ("update", 200), ("rename", 200), ("delete", 200), ("purge", 200)):
+        media_write_route(f"/krc/ext/v1/prompt-categories/{action}",
+                          (lambda name: lambda m, p: getattr(_prompts(), f"category_{name}")(m["_profile"], p))(action),
+                          status=status, gate=categories)
+
+    editing = write_gate("promptEditing")
+    media_write_route("/krc/ext/v1/prompts/create", lambda m, p: _prompts().prompt_create(m["_profile"], p),
+                      status=201, gate=editing)
+    media_write_route("/krc/ext/v1/prompts/{id}/update", lambda m, p: _prompts().prompt_update(m["_profile"], m["id"], p),
+                      gate=editing)
+    media_write_route("/krc/ext/v1/prompts/{id}/duplicate", lambda m, p: _prompts().prompt_duplicate(m["_profile"], m["id"], p),
+                      status=201, gate=editing)
+    media_write_route("/krc/ext/v1/prompts/{id}/delete", lambda m, p: _prompts().prompt_delete(m["_profile"], m["id"], p),
+                      gate=editing)
+    media_write_route("/krc/ext/v1/prompts/{id}/thumbnail", lambda m, p: _prompts().prompt_thumbnail(m["_profile"], m["id"], p),
+                      gate=editing)
+    media_write_route("/krc/ext/v1/prompts/{id}/thumbnail/clear",
+                      lambda m, p: _prompts().prompt_thumbnail(m["_profile"], m["id"], p, clear=True), gate=editing)
+
+    # ---- KRC Resizer (ext_api_resizer.py; the logic is the Extras provider's) -------------
+
+    def _resizer():
+        from . import ext_api_resizer as resizer
+        return resizer
+
+    def resizer_answer(result):
+        status, body = result
+        if isinstance(body, (bytes, bytearray)):
+            return web.Response(body=bytes(body), content_type="image/jpeg",
+                                headers={"Cache-Control": "private, max-age=3600"})
+        return web.json_response(body, status=status, headers=_NO_STORE)
+
+    @routes.post("/krc/ext/v1/resizer/previews")
+    @guarded
+    async def ext_v1_resizer_prepare(request):
+        payload = await json_body(request)
+        return resizer_answer(await asyncio.to_thread(_resizer().prepare, payload))
+
+    @routes.get("/krc/ext/v1/resizer/previews/{handle}")
+    @guarded
+    async def ext_v1_resizer_preview(request):
+        return resizer_answer(await asyncio.to_thread(_resizer().preview, request.match_info.get("handle", "")))
+
+    @routes.get("/krc/ext/v1/resizer/previews/{handle}/frames/{index}")
+    @guarded
+    async def ext_v1_resizer_frame(request):
+        return resizer_answer(await asyncio.to_thread(
+            _resizer().frame, request.match_info.get("handle", ""), request.match_info.get("index", "")))
+
+    @routes.post("/krc/ext/v1/resizer/inputs")
+    @guarded
+    async def ext_v1_resizer_inputs(request):
+        payload = await json_body(request)
+        return resizer_answer(await asyncio.to_thread(_resizer().inputs, payload))
+
+    @routes.post("/krc/ext/v1/resizer/settings")
+    @guarded
+    async def ext_v1_resizer_settings(request):
+        payload = await json_body(request)
+        return resizer_answer(await asyncio.to_thread(_resizer().settings, payload))
+
+    # ---- workflow preparation (ext_api_workflows.py): stateless reads ------------------
+
+    def workflow_answer(work, payload):
+        from .ext_api_workflows import WorkflowError
+        try:
+            return web.json_response(work(payload), headers=_NO_STORE)
+        except WorkflowError as exc:
+            return web.json_response({"error": exc.code, "message": str(exc)}, status=exc.status, headers=_NO_STORE)
+
+    @routes.post("/krc/ext/v1/workflows/branches")
+    @guarded
+    async def ext_v1_workflow_branches(request):
+        from .ext_api_workflows import branches
+        payload = await json_body(request)
+        return await asyncio.to_thread(workflow_answer, branches, payload)
+
+    @routes.post("/krc/ext/v1/workflows/prepare")
+    @guarded
+    async def ext_v1_workflow_prepare(request):
+        from .ext_api_workflows import prepare
+        payload = await json_body(request)
+        return await asyncio.to_thread(workflow_answer, prepare, payload)
 
     # ---- internal: the Options page --------------------------------------------------
 
@@ -857,7 +1025,21 @@ def register_ext_api_routes():
 
     switch_route("/krc/ext-api/read-only", ext_api.set_read_only)
     switch_route("/krc/ext-api/media-writes", lambda value: ext_api.set_area_writes("media", value))
-    switch_route("/krc/ext-api/loadout-writes", lambda value: ext_api.set_area_writes("loadout", value))
+    switch_route("/krc/ext-api/loadout-writes", lambda value: ext_api.set_area_writes("loadoutPresets", value))
+
+    @routes.post("/krc/ext-api/area")
+    @same_site_only
+    async def ext_api_area(request):
+        """Any permission area's switch: {"area": <id>, "enabled": bool} -> state."""
+        try:
+            payload = await request.json()
+        except Exception:  # noqa: BLE001
+            payload = {}
+        payload = payload if isinstance(payload, dict) else {}
+        area, value = payload.get("area"), payload.get("enabled")
+        if area not in ext_api.WRITE_AREAS or not isinstance(value, bool):
+            return web.json_response({"error": "area must be a permission area id and enabled true or false"}, status=400)
+        return web.json_response(ext_api.set_area_writes(area, value), headers=_NO_STORE)
 
     @routes.post("/krc/ext-api/new-key")
     @same_site_only

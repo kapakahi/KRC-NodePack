@@ -42,10 +42,15 @@ def _fields(value):
 
 
 def _keep(items, fields):
-    """Only ``fields`` in each row; ``libraryId`` and ``modelType`` always stay."""
+    """Only ``fields`` in each row; ``libraryId``, ``modelType`` and ``marksVersion`` always
+    stay. Every row gets ``marksVersion`` (capability "models.marksVersion"): what a card
+    marks write sends (model_library.bulk_attributes.marks_version)."""
+    from .model_library.bulk_attributes import marks_version
+
+    items = [{**item, "marksVersion": marks_version(item)} for item in items]
     if fields is None:
         return items
-    keep = fields | {"libraryId", "modelType"}
+    keep = fields | {"libraryId", "modelType", "marksVersion"}
     return [{key: value for key, value in item.items() if key in keep} for item in items]
 
 
@@ -151,7 +156,7 @@ async def model_detail(library_id):
     found = await _read(lambda: _detail_rows(index, lora_index, [library_id]))
     if library_id not in found:
         return None
-    return {"id": library_id, "model": found[library_id], "scans": _scans(index, lora_index)}
+    return {"id": library_id, "model": _keep([found[library_id]], None)[0], "scans": _scans(index, lora_index)}
 
 
 async def model_details(ids):
@@ -159,6 +164,7 @@ async def model_details(ids):
     wanted = _wanted_ids(ids)
     index, lora_index = await _indexes()
     found = await _read(lambda: _detail_rows(index, lora_index, wanted))
+    found = {library_id: _keep([row], None)[0] for library_id, row in found.items()}
     return {"models": found, "missing": [library_id for library_id in wanted if library_id not in found],
             "scans": _scans(index, lora_index)}
 
