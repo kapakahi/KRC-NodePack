@@ -114,8 +114,8 @@ export const optionsPageMethods = {
       const rows = group.rows.map(settingRow);
       // The video status sits with the media settings.
       if (group.title === "Media") rows.push(videoStatusSection(({ body: status }) => status));
-      // Where KRC (and its packs) may connect, then the external API's switch and access key.
-      if (group.title === "Network") rows.push(networkHostsRow(), externalApiRow());
+      // Where KRC (and its packs) may connect, then a shortcut to KRC Portal ▸ API.
+      if (group.title === "Network") rows.push(networkHostsRow(), externalApiRow({ openApiPage: () => this.openPortalPage("api") }));
       // Where KRC keeps its data (krc.db), with the support tools.
       if (group.title === "Support") rows.push(dbStatusSection(({ body: status }) => status));
       body.append(infoPageSection(group.title, rows));

@@ -34,7 +34,7 @@ separate prompt libraries with **profiles**.
 A home for your images and videos, in the Portal's **Media** tab.
 
 - **KRC Media Loader** loads an image or video from a six-slot preset. Upload straight
-  into a slot, or drag a card onto one.
+  into a slot (pick up to six files to fill the next slots too), or drag a card onto one.
 - **KRC Media Output** saves your results to Media and shows the last six on the node.
   They also appear in ComfyUI's queue and Assets.
 

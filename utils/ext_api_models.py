@@ -70,6 +70,36 @@ def _collections():
     return CollectionStore().ordered()
 
 
+def _scoped(body):
+    """The Model Library list as the caller may see it (ext_api_policy, scope "models" by
+    type folder): rows of other types left out, their folder rows, aliases and Collection
+    members too; a Collection left with no visible member is left out (its name with it)."""
+    from . import ext_api_policy as policy
+
+    if policy.unrestricted("models"):
+        return body
+    items = [row for row in body["items"] if policy.model_row_readable(row)]
+    visible = {row.get("libraryId") for row in items}
+    out = {**body, "items": items}
+    if "folders" in body:
+        out["folders"] = [row for row in body["folders"]
+                          if row.get("kind") == "home" or not row.get("modelType") or policy.model_row_readable(row)]
+    if "aliases" in body:
+        out["aliases"] = {old: new for old, new in (body.get("aliases") or {}).items() if new in visible}
+    if "collections" in body:
+        out["collections"] = [{**entry, "members": [m for m in entry.get("members") or [] if m in visible]}
+                              for entry in body["collections"]
+                              if any(m in visible for m in entry.get("members") or [])]
+    return out
+
+
+def _visible_rows(found):
+    """{id: row} of detail rows, only the readable ones (the rest read as missing)."""
+    from . import ext_api_policy as policy
+
+    return {key: row for key, row in found.items() if policy.model_row_readable(row)}
+
+
 async def model_list(type_param="", fields_param=""):
     """The body of GET /krc/ext/v1/models: the Model Library's list (models of every type
     folder and the LoRAs), its folder rows, identity aliases and Collections."""
@@ -82,7 +112,7 @@ async def model_list(type_param="", fields_param=""):
         rows = library_rows(index, lora_index, types)
         return {**rows, "collections": _collections()}
 
-    body = await _read(work)
+    body = _scoped(await _read(work))
     return {"scans": _scans(index, lora_index), "total": len(body["items"]), "items": _keep(body["items"], fields),
             "folders": body["folders"], "aliases": body["aliases"], "collections": body["collections"]}
 
@@ -100,7 +130,7 @@ async def model_search(query="", offset="", limit="", fields_param="", type_para
     if name_mode not in NAME_MODES:
         raise BadRequest(f"nameMode must be one of {', '.join(NAME_MODES)}")
     index, lora_index = await _indexes()
-    items = (await _read(lambda: library_rows(index, lora_index, types)))["items"]
+    items = _scoped(await _read(lambda: library_rows(index, lora_index, types)))["items"]
     found = search_items(items, query, name_mode)
     return {"scans": _scans(index, lora_index), "total": len(found), "offset": offset, "limit": limit,
             "items": _keep(found[offset:offset + limit], fields)}
@@ -153,7 +183,7 @@ async def model_detail(library_id):
     if not library_id:
         return None
     index, lora_index = await _indexes()
-    found = await _read(lambda: _detail_rows(index, lora_index, [library_id]))
+    found = _visible_rows(await _read(lambda: _detail_rows(index, lora_index, [library_id])))
     if library_id not in found:
         return None
     return {"id": library_id, "model": _keep([found[library_id]], None)[0], "scans": _scans(index, lora_index)}
@@ -163,7 +193,7 @@ async def model_details(ids):
     """The body of POST /krc/ext/v1/models/detail: several models' full rows at once."""
     wanted = _wanted_ids(ids)
     index, lora_index = await _indexes()
-    found = await _read(lambda: _detail_rows(index, lora_index, wanted))
+    found = _visible_rows(await _read(lambda: _detail_rows(index, lora_index, wanted)))
     found = {library_id: _keep([row], None)[0] for library_id, row in found.items()}
     return {"models": found, "missing": [library_id for library_id in wanted if library_id not in found],
             "scans": _scans(index, lora_index)}
@@ -202,7 +232,9 @@ async def resolve_models(refs, fields=None):
     keep = _fields(",".join(fields) if isinstance(fields, list) else (fields or ""))
     entries = [_ref_entry(ref) for ref in refs]
     index, lora_index = await _indexes()
-    rows = await _read(lambda: library_rows(index, lora_index))
+    # A restricted caller resolves only against the types it may read: another type's model
+    # answers MISSING, as if it weren't there (a reference grants nothing).
+    rows = _scoped(await _read(lambda: library_rows(index, lora_index)))
     results = []
     for entry, (status, item) in zip(entries, model_card_status(entries, rows["items"], rows["aliases"])):
         relative = str((item or {}).get("relativePath") or "")

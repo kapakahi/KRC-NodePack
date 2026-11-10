@@ -85,7 +85,7 @@ Internal, for KRC Portal ▸ Options ▸ Network only (not part of ext/v1):
 import asyncio
 import functools
 
-from . import ext_api
+from . import ext_api, ext_api_policy
 from .request_guard import refuse_cross_site
 
 # What this build's ext/v1 offers; a client checks it instead of the pack version.
@@ -118,7 +118,7 @@ CAPABILITIES = ["info", "prompts.list", "prompts.fields", "prompts.byId", "promp
                 "prompts.profiles.meta", "prompts.profiles.changes",
                 "permissionAreas", "prompts.categories", "prompts.versions", "models.marksVersion",
                 "cards.marks.write", "prompts.categories.write", "prompts.write",
-                "workflows.standby"]
+                "workflows.standby", "apiProfiles", "files"]
 MAX_DETAIL_IDS = 200
 SEARCH_LIMIT_DEFAULT = 50
 SEARCH_LIMIT_MAX = 500
@@ -152,8 +152,71 @@ def _kits():
         return []
 
 
-def info():
-    """The body of GET /krc/ext/v1/info."""
+# Which capability each ext/v1 handler needs (an API profile's ``capabilities`` list limits
+# them; "all" allows every one). /info needs none. The dev check requires every ext/v1 handler
+# here, so a new route can't skip it.
+HANDLER_CAPABILITY = {
+    "ext_v1_info": None,
+    "ext_v1_revisions": "revisions", "ext_v1_changes": "changes",
+    "ext_v1_prompt_profiles": "prompts.profiles",
+    "ext_v1_prompts": "prompts.list", "ext_v1_prompt": "prompts.byId", "ext_v1_prompt_details": "prompts.detail",
+    "ext_v1_search_prompts": "search.prompts", "ext_v1_presets": "presets",
+    "ext_v1_models": "models.list", "ext_v1_model": "models.detail", "ext_v1_model_details": "models.detail",
+    "ext_v1_search_models": "search.models", "ext_v1_models_resolve": "models.resolve",
+    "ext_v1_media": "media.list", "ext_v1_media_item": "media.detail", "ext_v1_media_details": "media.detail",
+    "ext_v1_search_media": "search.media",
+    "ext_v1_media_upload": "media.upload", "ext_v1_media_job": "media.upload", "ext_v1_media_jobs_id_cancel": "media.upload",
+    "ext_v1_media_preset_create": "presets.media.write", "ext_v1_media_preset_rename": "presets.media.write",
+    "ext_v1_media_preset_slot": "presets.media.write", "ext_v1_media_presets_id_delete": "presets.media.write",
+    "ext_v1_media_id_update": "media.items.write", "ext_v1_media_id_delete": "media.items.write",
+    "ext_v1_media_bulk": "media.items.write", "ext_v1_media_bulk_preview": "media.items.write",
+    "ext_v1_media_bulk_attributes": "media.items.write", "ext_v1_media_purge": "media.items.write",
+    "ext_v1_media_purge_preview": "media.items.write",
+    "ext_v1_media_folders": "media.folders.write", "ext_v1_media_folders_id_update": "media.folders.write",
+    "ext_v1_media_folders_id_delete": "media.folders.write", "ext_v1_media_folders_id_purge": "media.folders.write",
+    "ext_v1_kits": "kits.descriptors", "ext_v1_kit_descriptor": "kits.descriptors",
+    "ext_v1_presets_kind": "presets.loadout.write", "ext_v1_presets_kind_id_update": "presets.loadout.write",
+    "ext_v1_presets_kind_id_rename": "presets.loadout.write", "ext_v1_presets_kind_id_delete": "presets.loadout.write",
+    "ext_v1_prompt_categories": "prompts.categories",
+    **{f"ext_v1_prompt_categories_{action}": "prompts.categories.write"
+       for action in ("create", "update", "rename", "delete", "purge")},
+    "ext_v1_prompts_id_marks": "cards.marks.write", "ext_v1_model_marks": "cards.marks.write",
+    **{name: "prompts.write" for name in ("ext_v1_prompts_create", "ext_v1_prompts_id_update", "ext_v1_prompts_id_duplicate",
+                                          "ext_v1_prompts_id_delete", "ext_v1_prompts_id_thumbnail",
+                                          "ext_v1_prompts_id_thumbnail_clear")},
+    "ext_v1_resizer_prepare": "resizer.previews", "ext_v1_resizer_preview": "resizer.previews",
+    "ext_v1_resizer_frame": "resizer.previews", "ext_v1_resizer_inputs": "resizer.settings",
+    "ext_v1_resizer_settings": "resizer.settings",
+    "ext_v1_workflow_branches": "workflows.standby", "ext_v1_workflow_prepare": "workflows.standby",
+    "ext_v1_media_file": "media.detail", "ext_v1_media_thumb": "media.detail", "ext_v1_media_download": "media.detail",
+    "ext_v1_prompt_thumbnail": "prompts.byId", "ext_v1_model_thumbnail": "models.detail",
+    "ext_v1_file_links": "files",
+    # The link route checks its token and the kind's capability itself (ext_api_files.readable).
+    "ext_v1_file_link": None,
+}
+
+PRINCIPAL = "krc_ext_principal"          # the request key holding the caller (ext_api_policy.Principal)
+CLIENT_LABEL_HEADER = "X-KRC-Client"     # an optional, unverified client label (usage display only)
+
+
+def _set_principal(request, principal):
+    try:
+        request[PRINCIPAL] = principal
+    except TypeError:                     # a test double without item assignment
+        setattr(request, "_" + PRINCIPAL, principal)
+
+
+def principal_of(request):
+    """The caller ``guarded`` authorized for this request (ext_api_policy.Principal)."""
+    try:
+        return request[PRINCIPAL]
+    except (KeyError, TypeError):
+        return getattr(request, "_" + PRINCIPAL, None)
+
+
+def info(principal=None):
+    """The body of GET /krc/ext/v1/info. With the caller's ``principal``: its API profile,
+    and what it may effectively do (global switches AND its profile)."""
     from .library.thumbnail_sizes import SIZES
 
     return {
@@ -169,10 +232,75 @@ def info():
         "thumbnailSizes": list(SIZES),
         **_palettes(),
         # What the user allows (capabilities say what this build has).
-        "permissions": ext_api.permissions(),
+        "permissions": ext_api.permissions(principal),
         # Every write area, so a client can show one it doesn't know yet (ext_api.WRITE_AREAS).
-        "permissionAreas": ext_api.permission_areas(),
+        "permissionAreas": ext_api.permission_areas(principal),
+        **_profile_info(principal),
     }
+
+
+def _profile_info(principal):
+    """/info's API profile part: who the key belongs to, what it may use, which resources."""
+    if principal is None:
+        return {}
+    capabilities = [*CAPABILITIES, *_provider_capabilities()]
+    from .ext_api_policy import scope_names
+    return {
+        "profile": {"id": principal.profile_id, "name": principal.profile_name},
+        "effective": {
+            "capabilities": [cap for cap in capabilities if principal.capability_allowed(cap)],
+            "writeAreas": [area for area in ext_api.WRITE_AREAS
+                           if not ext_api.read_only() and ext_api.area_allowed(area, principal)],
+            "fileSources": principal.file_sources,
+            "scopes": {name: principal.summary(name) for name in scope_names()},
+        },
+        "policyRevision": principal.revision(),
+    }
+
+
+_SCOPE_LABELS = {"prompts": "Prompt Vault profiles", "mediaFolders": "Media folders", "models": "Model Library types",
+                 "presets.ll": "LoRA Loadout presets", "presets.cs": "Config Switcher presets",
+                 "presets.wb": "Word Bank presets", "presets.media": "Media presets"}
+
+
+async def admin_resources():
+    """GET /krc/ext-api/resources (KRC Portal ▸ API only): {scopes: [{name, label, items:
+    [{id, label}]}], capabilities, writeAreas}. Names here are for the owner's own page."""
+    from .ext_api_policy import UNSORTED_INPUT, UNSORTED_OUTPUT, scope_names
+
+    def items_for(name):
+        if name == "prompts":
+            from .prompt_profiles import list_profiles
+            return [{"id": entry["id"], "label": entry["name"]} for entry in list_profiles()]
+        if name == "mediaFolders":
+            from .media import media_store as store
+            return ([{"id": UNSORTED_INPUT, "label": "Unsorted (Input)"}, {"id": UNSORTED_OUTPUT, "label": "Unsorted (Output)"}]
+                    + [{"id": folder["id"], "label": f"{folder['name']} ({'Output' if folder.get('storage') == 'output' else 'Input'})"}
+                       for folder in store.folders()])
+        if name.startswith("presets."):
+            store = _preset_stores().get(name[len("presets."):])
+            records = (store.load().get("presets") or []) if store else []
+            return [{"id": record.get("id", ""), "label": "/".join(part for part in (record.get("group"), record.get("name")) if part)}
+                    for record in records if isinstance(record, dict)]
+        return []
+
+    def work():
+        return [{"name": name, "label": _SCOPE_LABELS.get(name, name.replace("presets.kit:", "Kit presets: ")),
+                 "items": items_for(name)} for name in scope_names()]
+
+    scopes = await asyncio.to_thread(work)
+    try:
+        from .model_library.library_index import ModelLibraryIndex
+        index = await ModelLibraryIndex.loaded()
+        types = sorted({str(record.get("modelType") or "") for record in index.all()} - {""})
+    except Exception:  # noqa: BLE001
+        types = []
+    for entry in scopes:
+        if entry["name"] == "models":
+            entry["items"] = [{"id": "lora", "label": "LoRAs"}] + [{"id": kind, "label": kind} for kind in types if kind != "lora"]
+    return {"scopes": scopes, "capabilities": [*CAPABILITIES, *_provider_capabilities()],
+            "writeAreas": [{"id": area, "label": spec["label"]} for area, spec in ext_api.WRITE_AREAS.items()],
+            "recentSeconds": 15 * 60}
 
 
 def _provider_capabilities():
@@ -205,7 +333,7 @@ def _palettes():
         return {"palettes": [], "globalPalette": "", "portalPalette": "", "paletteNativeFallback": ""}
 
 
-def prompt_list(fields_param="", profile_id="default"):
+def prompt_list(fields_param="", profile_id=""):
     """The body of GET /krc/ext/v1/prompts: the Prompt Vault library as get-prompts answers
     it (text deferred; fetch text with /prompts/detail), only ``fields`` when given, plus the
     ``prompts`` revision it was read at."""
@@ -216,6 +344,7 @@ def prompt_list(fields_param="", profile_id="default"):
         fields = parse_fields(fields_param)
     except ValueError as exc:
         raise BadRequest(str(exc)) from None
+    profile_id = ext_api_policy.prompt_profile(profile_id)
     try:
         revision, library = load_prompts_with_revision(profile_id)
     except ValueError as exc:
@@ -223,8 +352,9 @@ def prompt_list(fields_param="", profile_id="default"):
     from .ext_api_prompts import add_versions
 
     # Every prompt carries its version (capability "prompts.versions"), fields= or not.
-    return {"revision": revision,
-            "prompts": add_versions(select_fields(prompts_for_response(library, profile_id=profile_id), fields), library)}
+    response = ext_api_policy.scrub_library(prompts_for_response(library, profile_id=profile_id))
+    return {"revision": revision, "profileId": profile_id,
+            "prompts": add_versions(select_fields(response, fields), library)}
 
 
 def _int_param(value, name, default, low, high):
@@ -240,7 +370,7 @@ def _int_param(value, name, default, low, high):
     return number
 
 
-def prompt_search(query="", offset="", limit="", fields_param="", profile_id="default"):
+def prompt_search(query="", offset="", limit="", fields_param="", profile_id=""):
     """The body of GET /krc/ext/v1/search/prompts: Prompt Vault's in-node search on the
     server (the same key:value syntax and matches; utils/prompt_vault_search.py), ordered by
     category then name, a page at a time. Items are ``{category, name, ...record}`` with text
@@ -256,6 +386,7 @@ def prompt_search(query="", offset="", limit="", fields_param="", profile_id="de
         fields = parse_fields(fields_param)
     except ValueError as exc:
         raise BadRequest(str(exc)) from None
+    profile_id = ext_api_policy.prompt_profile(profile_id)
     try:
         revision, library = load_prompts_with_revision(profile_id)
     except ValueError as exc:
@@ -263,7 +394,7 @@ def prompt_search(query="", offset="", limit="", fields_param="", profile_id="de
     # Match on the full records (prompt: searches Prompt A / B), answer with the list's
     # records (text held back), as /prompts does.
     found = search_items(library_items(library), query)
-    response = prompts_for_response(library, profile_id=profile_id)
+    response = ext_api_policy.scrub_library(prompts_for_response(library, profile_id=profile_id))
     page = [{"category": item["category"], "name": item["name"], **response[item["category"]][item["name"]]}
             for item in found[offset:offset + limit]]
     if fields is not None:
@@ -272,7 +403,7 @@ def prompt_search(query="", offset="", limit="", fields_param="", profile_id="de
     from .ext_api_prompts import prompt_version
     for item in page:
         item["version"] = prompt_version(item["category"], item["name"], library[item["category"]][item["name"]])
-    return {"revision": revision, "total": len(found), "offset": offset, "limit": limit, "items": page}
+    return {"revision": revision, "profileId": profile_id, "total": len(found), "offset": offset, "limit": limit, "items": page}
 
 
 def prompt_matches(record_id):
@@ -282,13 +413,19 @@ def prompt_matches(record_id):
     from .prompt_vault_serialization import prompt_detail
     from .prompt_vault_store import prompts_by_id
 
-    matches = prompts_by_id(record_id)
+    if ext_api_policy.unrestricted("prompts"):
+        matches = prompts_by_id(record_id)
+    else:   # only the profiles the caller may read (knowing an id grants nothing)
+        record_id = str(record_id or "").strip()
+        matches = [match for profile_id in ext_api_policy.readable_prompt_matches([record_id]).get(record_id, [])
+                   for match in prompts_by_id(record_id, profile_id=profile_id)]
     if not matches:
         return None
     from .ext_api_prompts import prompt_version
 
     return {"id": str(record_id).strip(),
-            "matches": [{**prompt_detail(*match), "version": prompt_version(*match)} for match in matches]}
+            "matches": [ext_api_policy.scrub_prompt_links({**prompt_detail(*match), "version": prompt_version(*match)})
+                        for match in matches]}
 
 
 # The public store names (the contract) -> krc.db's `changes` store names (internal, free to
@@ -415,7 +552,8 @@ def preset_list(kind="", full=False):
         for name in kinds:
             revisions[name] = db.revision(change_store(name), conn)
             for record in stores[name].load().get("presets") or []:
-                if not isinstance(record, dict):
+                # Only presets the caller may read (ext_api_policy, scope presets.<kind>).
+                if not isinstance(record, dict) or not ext_api_policy.preset_readable(name, record.get("id", "")):
                     continue
                 entry = {"kind": name, **{key: record.get(key, "" if key != "modified" else 0) for key in _PRESET_HEAD}}
                 if full:
@@ -472,10 +610,12 @@ def changes(since, stores_param="", client_db_id=""):
         store_prefixes=[_KIT_PREFIX] if "kitPresets" in public else [],
         limit=MAX_CHANGES,
     )
-    listed = [_public_change(change) for change in result["changes"]]
-    # The next `since`: the last change listed when there are more, else the newest rev of
-    # the same read (so a write landing after it is never skipped).
-    rev = listed[-1]["rev"] if result["more"] else result["newest"]
+    every = [_public_change(change) for change in result["changes"]]
+    listed = ext_api_policy.filter_changes(every)
+    # The next `since`: the last change read when there are more (filtered rows included, so
+    # a restricted caller never re-reads them), else the newest rev of the same read (so a
+    # write landing after it is never skipped).
+    rev = every[-1]["rev"] if result["more"] and every else result["newest"]
     return {"dbId": db_id, "rev": rev, "complete": result["complete"], "more": result["more"], "changes": listed}
 
 
@@ -491,14 +631,25 @@ def prompt_details(ids):
     wanted = list(dict.fromkeys(value.strip() for value in ids if value.strip()))
     if len(wanted) > MAX_DETAIL_IDS:
         raise BadRequest(f"At most {MAX_DETAIL_IDS} ids per call")
-    revision, found = prompts_by_ids(wanted)
+    if ext_api_policy.unrestricted("prompts"):
+        revision, found = prompts_by_ids(wanted)
+    else:   # only the profiles the caller may read; the rest answer as missing
+        revision, found = prompts_by_ids([])
+        by_profile = {}
+        for record_id, profile_ids in ext_api_policy.readable_prompt_matches(wanted).items():
+            for profile_id in profile_ids:
+                by_profile.setdefault(profile_id, []).append(record_id)
+        for profile_id, record_ids in sorted(by_profile.items()):
+            revision, part = prompts_by_ids(record_ids, profile_id=profile_id)
+            for record_id, matches in part.items():
+                found.setdefault(record_id, []).extend(matches)
     order = [(record_id, match) for record_id in wanted for match in found.get(record_id, [])]
     details = details_for([match for _record_id, match in order])
     from .ext_api_prompts import prompt_version
 
     prompts = {}
     for (record_id, match), detail in zip(order, details):
-        prompts.setdefault(record_id, []).append({**detail, "version": prompt_version(*match)})
+        prompts.setdefault(record_id, []).append(ext_api_policy.scrub_prompt_links({**detail, "version": prompt_version(*match)}))
     return {
         "prompts": prompts,
         "missing": [record_id for record_id in wanted if record_id not in found],
@@ -525,11 +676,29 @@ def register_ext_api_routes():
         @functools.wraps(handler)
         async def wrapper(request):
             try:
-                refused = ext_api.refusal(request.headers.get("Authorization", ""))
+                principal, refused = ext_api_policy.authorize(request.headers.get("Authorization", ""),
+                                               request.headers.get(CLIENT_LABEL_HEADER, ""))
                 if refused:
                     status, body = refused
                     return web.json_response(body, status=status, headers=_NO_STORE)
-                return await handler(request)
+                _set_principal(request, principal)
+                capability = HANDLER_CAPABILITY.get(handler.__name__)
+                refused = ext_api_policy.capability_refusal(capability, principal) if capability else None
+                if refused:
+                    status, body = refused
+                    return web.json_response(body, status=status, headers=_NO_STORE)
+                token = ext_api_policy.bind(principal)
+                try:
+                    response = await handler(request)
+                except ext_api_policy.Denied as denied:
+                    response = web.json_response(denied.body, status=denied.status, headers=_NO_STORE)
+                finally:
+                    ext_api_policy.unbind(token)
+                try:
+                    response.headers["X-KRC-Policy-Revision"] = principal.revision()
+                except Exception:  # noqa: BLE001 - a streamed answer may already be sent
+                    pass
+                return response
             except Exception as exc:  # storage/service failure; cancellation still propagates
                 print(f"[KRC External API] {handler.__name__} failed: {type(exc).__name__}: {exc}")
                 return web.json_response({"error": "internal_error", "message": "KRC could not read the requested data. Try again."},
@@ -538,20 +707,21 @@ def register_ext_api_routes():
 
     @routes.get("/krc/ext/v1/info")
     @guarded
-    async def ext_v1_info(_request):
-        return web.json_response(info(), headers=_NO_STORE)
+    async def ext_v1_info(request):
+        return web.json_response(info(principal_of(request)), headers=_NO_STORE)
 
     @routes.get("/krc/ext/v1/prompt-profiles")
     @guarded
     async def ext_v1_prompt_profiles(_request):
         from .prompt_profiles import list_profiles
-        return web.json_response({"profiles": list_profiles()}, headers=_NO_STORE)
+        listed = [entry for entry in list_profiles() if ext_api_policy.readable("prompts", entry["id"])]
+        return web.json_response({"profiles": listed}, headers=_NO_STORE)
 
     @routes.get("/krc/ext/v1/prompts")
     @guarded
     async def ext_v1_prompts(request):
         try:
-            body = prompt_list(request.query.get("fields", ""), request.query.get("profile", "default"))
+            body = prompt_list(request.query.get("fields", ""), request.query.get("profile", ""))
         except BadRequest as exc:
             return web.json_response({"error": "bad_request", "message": str(exc)}, status=400, headers=_NO_STORE)
         return web.json_response(body, headers=_NO_STORE)
@@ -576,7 +746,7 @@ def register_ext_api_routes():
         query = request.query
         try:
             body = prompt_search(query.get("q", ""), query.get("offset", ""), query.get("limit", ""),
-                                 query.get("fields", ""), query.get("profile", "default"))
+                                 query.get("fields", ""), query.get("profile", ""))
         except BadRequest as exc:
             return web.json_response({"error": "bad_request", "message": str(exc)}, status=400, headers=_NO_STORE)
         return web.json_response(body, headers=_NO_STORE)
@@ -739,7 +909,7 @@ def register_ext_api_routes():
         def decorate(handler):
             @functools.wraps(handler)
             async def wrapper(request):
-                refused = ext_api.write_refusal(area, ext_api._bearer(request.headers.get("Authorization", "")))
+                refused = ext_api_policy.write_refusal(area, principal_of(request))
                 if refused:
                     status, body = refused
                     return web.json_response(body, status=status, headers=_NO_STORE)
@@ -812,7 +982,7 @@ def register_ext_api_routes():
         async def handler(request):
             payload = await json_body(request)
             payload = payload if payload is not None else {}
-            info = {**dict(request.match_info), "_profile": request.query.get("profile", "default")}
+            info = {**dict(request.match_info), "_profile": request.query.get("profile", "")}
             if off_loop:
                 return await asyncio.to_thread(write_answer, lambda: work(info, payload), status)
             return write_answer(lambda: work(info, payload), status)
@@ -872,7 +1042,7 @@ def register_ext_api_routes():
     @routes.get("/krc/ext/v1/prompt-categories")
     @guarded
     async def ext_v1_prompt_categories(request):
-        return write_answer(lambda: _prompts().category_list(request.query.get("profile", "default")))
+        return write_answer(lambda: _prompts().category_list(request.query.get("profile", "")))
 
     card_marks = write_gate("cardMarks")
     media_write_route("/krc/ext/v1/prompts/{id}/marks", lambda m, p: _prompts().prompt_marks(m["_profile"], m["id"], p),
@@ -980,6 +1150,70 @@ def register_ext_api_routes():
         payload = await json_body(request)
         return await asyncio.to_thread(workflow_answer, prepare, payload)
 
+    # ---- files: authenticated delivery (ext_api_files.py) -----------------------------
+
+    def file_not_found():
+        return web.json_response({"error": "not_found", "message": "Not found."}, status=404, headers=_NO_STORE)
+
+    async def serve_file(kind, resource_id, variant, query):
+        from .ext_api_files import FileDenied, serve
+        try:
+            return await serve(web, kind, resource_id, variant, query)
+        except FileDenied:
+            return file_not_found()
+
+    def file_route(path, kind, variant, name):
+        async def handler(request):
+            return await serve_file(kind, request.match_info.get("id", ""), variant, request.query)
+        handler.__name__ = name
+        routes.get(path)(guarded(handler))
+
+    file_route("/krc/ext/v1/media/{id}/file", "media", "file", "ext_v1_media_file")
+    file_route("/krc/ext/v1/media/{id}/thumb", "media", "thumb", "ext_v1_media_thumb")
+    file_route("/krc/ext/v1/media/{id}/download", "media", "download", "ext_v1_media_download")
+    file_route("/krc/ext/v1/prompts/{id}/thumbnail", "prompt", "thumb", "ext_v1_prompt_thumbnail")
+    file_route("/krc/ext/v1/models/{id}/thumbnail", "model", "thumb", "ext_v1_model_thumbnail")
+
+    @routes.post("/krc/ext/v1/files/links")
+    @guarded
+    async def ext_v1_file_links(request):
+        from . import ext_api_files as files
+        payload = await json_body(request)
+        try:
+            entries = files.parse_links(payload)
+        except ValueError as exc:
+            return bad_request(exc)
+        for entry in entries:
+            entry["readable"] = await files.readable(entry["kind"], entry["id"])
+        return web.json_response(files.sign(entries, principal_of(request)), headers=_NO_STORE)
+
+    @routes.get("/krc/ext/v1/files/{token}")
+    async def ext_v1_file_link(request):
+        """A file link: the token is the credential (no header; never the API key). Checked
+        again on every request: an expired link, a regenerated key, a disabled profile or any
+        policy change answers 401, a resource no longer readable 404."""
+        from . import ext_api_files as files
+        if not ext_api.enabled():
+            return web.json_response({"error": "external_api_disabled", "message": ext_api.DISABLED_MESSAGE},
+                                     status=403, headers=_NO_STORE)
+        found = await asyncio.to_thread(files.read_token, request.match_info.get("token", ""))
+        if found is None:
+            return web.json_response({"error": "external_api_key",
+                                      "message": "This file link expired or was revoked: ask for a new one."},
+                                     status=401, headers=_NO_STORE)
+        principal, kind, resource_id, variant = found
+        from . import ext_api_profiles as profiles
+        profiles.record_use(principal.profile_id, principal.key_id)
+        token = ext_api_policy.bind(principal)
+        try:
+            return await serve_file(kind, resource_id, variant, request.query)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[KRC External API] file link failed: {type(exc).__name__}")
+            return web.json_response({"error": "internal_error", "message": "KRC could not read that file. Try again."},
+                                     status=500, headers=_NO_STORE)
+        finally:
+            ext_api_policy.unbind(token)
+
     # ---- internal: the Options page --------------------------------------------------
 
     @routes.get("/krc/ext-api/state")
@@ -1045,3 +1279,49 @@ def register_ext_api_routes():
     @same_site_only
     async def ext_api_new_key(_request):
         return web.json_response(ext_api.new_key(), headers=_NO_STORE)
+
+    # ---- internal: KRC Portal ▸ API (API profiles and their keys) ----------------------------
+    # Same-site only and never under ext/v1: an API client can't make keys, widen its own
+    # policy or see other profiles. Whoever can open the Portal can (ComfyUI has no login).
+
+    @routes.get("/krc/ext-api/profiles")
+    async def ext_api_profiles_list(_request):
+        from . import ext_api_profiles as profiles
+        return web.json_response({**profiles.list_profiles(), "state": ext_api.state()}, headers=_NO_STORE)
+
+    @routes.get("/krc/ext-api/resources")
+    async def ext_api_resources(_request):
+        """What a policy can name, for the API page's pickers: every scope with its resources
+        (ids and names), the capabilities and the write areas. Local Portal only."""
+        return web.json_response(await admin_resources(), headers=_NO_STORE)
+
+    def admin_route(path, work):
+        """An API page action: JSON body -> work(match_info, payload) -> answer (400 with the
+        message on a refusal)."""
+        from . import ext_api_profiles as profiles
+
+        async def handler(request):
+            try:
+                payload = await request.json()
+            except Exception:  # noqa: BLE001
+                payload = {}
+            payload = payload if isinstance(payload, dict) else {}
+            try:
+                answer = await asyncio.to_thread(work, request.match_info, payload)
+            except profiles.ProfileError as exc:
+                return web.json_response({"error": "bad_request", "message": str(exc)}, status=400, headers=_NO_STORE)
+            return web.json_response(answer, headers=_NO_STORE)
+        handler.__name__ = "ext_api_admin_" + path.strip("/").replace("/", "_").replace("{", "").replace("}", "").replace("-", "_")
+        routes.post(path)(same_site_only(handler))
+
+    def _profiles():
+        from . import ext_api_profiles as profiles
+        return profiles
+
+    admin_route("/krc/ext-api/profiles/create",
+                lambda m, p: _profiles().create_profile(p.get("name"), p.get("policy")))
+    admin_route("/krc/ext-api/profiles/{id}/update",
+                lambda m, p: _profiles().update_profile(m["id"], name=p.get("name"), enabled=p.get("enabled"),
+                                                        policy=p.get("policy")))
+    admin_route("/krc/ext-api/profiles/{id}/delete", lambda m, p: _profiles().delete_profile(m["id"]))
+    admin_route("/krc/ext-api/profiles/{id}/key", lambda m, p: _profiles().regenerate_key(m["id"]))

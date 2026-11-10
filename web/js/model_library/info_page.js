@@ -19,6 +19,7 @@ const PORTAL_PAGE_OPENERS = {
   options: "openOptionsPage",
   profiles: "openProfilesPage",
   extraOptions: "openExtraOptionsPage",
+  api: "openApiPage",
 };
 
 export const infoPageMethods = {

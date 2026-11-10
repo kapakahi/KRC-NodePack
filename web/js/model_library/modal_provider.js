@@ -39,7 +39,7 @@ function waitFrame() {
 }
 
 // The ids of the Info panel pages a remembered state may reopen (model_library/*_page.js).
-const RESTORABLE_PAGES = new Set(["civitaiFetch", "stats", "transfer", "options", "profiles", "extraOptions"]);
+const RESTORABLE_PAGES = new Set(["civitaiFetch", "stats", "transfer", "options", "profiles", "extraOptions", "api"]);
 
 // The Portal's ONE Model Library panel: the Models tab and the Home tab (its menu cards,
 // home_provider.js) drive the same detached panel.

@@ -23,7 +23,9 @@ every write).
     GET  /krc/media/presets          the media presets
     POST /krc/media/presets/create   {name, auto, numbered} -> the new preset
     POST /krc/media/presets/{id}     {name} -> the preset (renamed)
-    POST /krc/media/presets/{id}/slot/{n}  {id} (n = 0-5) -> the preset
+    POST /krc/media/presets/{id}/slot/{n}  {id, version?} (n = 0-5) -> the preset; with
+                                        version, 409 {conflict, preset, version} when the
+                                        preset changed (the Loader's multi-file Upload)
     POST /krc/media/presets/{id}/slots  {ids: [1–6 references], start?} -> the preset
     POST /krc/media/presets/{id}/delete
 
@@ -31,6 +33,7 @@ An upload's settings: {"maxMegapixels"} (0 = as is), {"keepAlpha"} (stills), {"f
 "trimIn", "trimOut", "maxLength"} (videos); {"folder": id} (the Media's selected chip; "" = Unsorted) and
 {"assign": {"preset", "slot"}}: the new item goes into that slot when it's added (a still at
 once, a video when its conversion is done).
+Every preset answer (list included) carries ``version`` (preset_store.version).
 A change publishes MEDIA_EVENT / PRESETS_EVENT so every open page refreshes.
 """
 
@@ -222,6 +225,26 @@ async def receive_upload(request, check_settings=None):
                 pass
 
 
+async def download_response(web, record, path):
+    """The Media's Download for one item (also ext/v1's): a video as is, a still as PNG (an
+    existing PNG keeps its embedded metadata), named after the card."""
+    video = record.get("kind") == "video"
+    extension = path.suffix if video else ".png"
+    name = store.clean_name(record.get("name") or path.stem).replace("\\", "_").replace("/", "_")
+    if Path(name).suffix.lower() in IMAGE_EXTENSIONS | VIDEO_EXTENSIONS:
+        name = Path(name).stem
+    filename = (name or "media") + extension
+    headers = {
+        "Content-Disposition": "attachment; filename*=UTF-8''" + quote(filename, safe=""),
+        "Cache-Control": "no-store",
+        "Content-Type": (mimetypes.guess_type(path.name)[0] or "application/octet-stream") if video else "image/png",
+    }
+    # Stream videos unchanged; existing PNGs retain their embedded metadata.
+    if video or path.suffix.lower() == ".png":
+        return web.FileResponse(path, headers=headers)
+    return web.Response(body=await asyncio.to_thread(png_bytes, path), headers=headers)
+
+
 def register_routes():
     jobs.set_on_added(_after_add)
     try:
@@ -289,21 +312,7 @@ def register_routes():
             path = store.media_path(record)
             if not path.is_file():
                 return refused("Not found.", 404)
-            video = record.get("kind") == "video"
-            extension = path.suffix if video else ".png"
-            name = store.clean_name(record.get("name") or path.stem).replace("\\", "_").replace("/", "_")
-            if Path(name).suffix.lower() in IMAGE_EXTENSIONS | VIDEO_EXTENSIONS:
-                name = Path(name).stem
-            filename = (name or "media") + extension
-            headers = {
-                "Content-Disposition": "attachment; filename*=UTF-8''" + quote(filename, safe=""),
-                "Cache-Control": "no-store",
-                "Content-Type": (mimetypes.guess_type(path.name)[0] or "application/octet-stream") if video else "image/png",
-            }
-            # Stream videos unchanged; existing PNGs retain their embedded metadata.
-            if video or path.suffix.lower() == ".png":
-                return web.FileResponse(path, headers=headers)
-            return web.Response(body=await asyncio.to_thread(png_bytes, path), headers=headers)
+            return await download_response(web, record, path)
         except (store.MediaError, FileNotFoundError) as err:
             return refused(err, 404)
         except ImageProcessError as err:
@@ -484,12 +493,13 @@ def register_routes():
 
     # ---- media presets ---------------------------------------------------------------
     def preset_json(record):
-        return web.json_response({"ok": True, "preset": record})
+        return web.json_response({"ok": True, "preset": record, "version": presets.version(record)})
 
     @routes.get("/krc/media/presets")
     async def presets_list(_request):
         try:
-            return web.json_response({"ok": True, "presets": presets.presets(), "slots": presets.SLOT_COUNT})
+            listed = [{**record, "version": presets.version(record)} for record in presets.presets()]
+            return web.json_response({"ok": True, "presets": listed, "slots": presets.SLOT_COUNT})
         except Exception as err:  # noqa: BLE001
             return refused(err, 500)
 
@@ -517,9 +527,15 @@ def register_routes():
     @routes.post("/krc/media/presets/{preset_id}/slot/{index}")
     async def presets_slot(request):
         payload = await body(request)
+        if_version = payload.get("version")
+        if if_version is not None and not isinstance(if_version, str):
+            return refused("version must be a string")
         try:
             record = presets.set_slot(request.match_info["preset_id"], request.match_info["index"],
-                                      item_id=payload["id"] if "id" in payload else None)
+                                      item_id=payload["id"] if "id" in payload else None, if_version=if_version)
+        except presets.PresetConflict as err:
+            return web.json_response({"ok": False, "error": str(err), "conflict": True, "preset": err.current,
+                                      "version": presets.version(err.current)}, status=409)
         except (presets.PresetError, store.MediaError) as err:
             return refused(err)
         _announce_presets("slot", record["id"])

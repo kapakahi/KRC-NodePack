@@ -23,7 +23,7 @@ import { fetchPromptLibraryJson } from "../prompt_vault/api.js";
 import { lendInfoPage, modelLibraryPanel, reclaimInfoPage } from "./modal_provider.js";
 
 // Menu cards whose page opens on Home (home_menu.js / extra_options_page.js ids).
-const PAGE_CARDS = new Set(["civitai-fetch", "stats", "import-export", "options", "profiles", "extra-options"]);
+const PAGE_CARDS = new Set(["civitai-fetch", "stats", "import-export", "options", "profiles", "extra-options", "api"]);
 const RECENT_COUNT = 4;
 
 const plural = (count, one, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`;

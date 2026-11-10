@@ -3,13 +3,13 @@ route goes through (KRC_EXTERNAL_API_GAMEPLAN.md stage 1).
 
 - **Off until the user turns it on** (settings key ENABLED_KEY). Nothing stored, an
   unreadable value or an unreadable database all mean off.
-- **The access key** (settings key KEY_KEY) is made the first time the switch is turned
-  on, survives turning it off and on, and is replaced only by "Make a new key". Every
-  ``ext/v1`` call sends it as ``Authorization: Bearer <key>``. It pairs an app with this
-  install; it doesn't protect against someone who can already use ComfyUI itself, which
-  has no login (the Options help text says so).
-- **Shown once** (stage 16): ``state()`` gives only a hint (the last 4 characters); the full
-  key is returned once, by the call that made it (``set_enabled`` / ``new_key``).
+- **Keys belong to API profiles** (ext_api_profiles.py, 2026-11-09): each profile has its
+  own keys, policy and enabled flag; ext_api_policy.authorize checks every request. The
+  first time the switch is turned on with no key anywhere, profile Default gets one. Every
+  ``ext/v1`` call sends a key as ``Authorization: Bearer <key>``. Keys don't protect against
+  someone who can already use ComfyUI itself, which has no login.
+- **Shown once**: ``state()`` gives only a hint (the last 4 characters); a full key is
+  returned once, by the call that made it. Only its hash is stored.
 - **dbId** (settings key DB_ID_KEY) is a random id made with the database, so an app can
   tell one KRC install from another. It's never sent anywhere.
 
@@ -20,20 +20,17 @@ route goes through (KRC_EXTERNAL_API_GAMEPLAN.md stage 1).
 - **Permission areas** (WRITE_AREAS, 2026-11-07): one registry, each area off until the user
   turns it on, all under Read only. /info lists them (``permissionAreas``) so a client can
   show any area without knowing it in advance; the Options page draws a switch per area;
-  every write route names its area (ext_api_routes.write_gate). Today a grant is per
-  install; ``area_allowed(area, key=...)`` is the one place a later per-key grant would
-  plug in (every check already goes through it with the key that was sent).
+  every write route names its area (ext_api_routes.write_gate). These are the global
+  switches; each API profile's own write areas are checked after them
+  (ext_api_policy.write_refusal), so a profile never gets past a global switch.
 
 Console lines never print the key.
 """
-import hmac
-import secrets
 import uuid
 
 from .db import connection as db
 
 ENABLED_KEY = "ext_api.enabled"
-KEY_KEY = "ext_api.key"
 DB_ID_KEY = "db.id"
 MEDIA_WRITES_KEY = "ext_api.media_writes"
 LOADOUT_WRITES_KEY = "ext_api.loadout_writes"
@@ -76,9 +73,9 @@ WRITE_AREAS = {
 }
 EXT_API_VERSION = 1
 
-DISABLED_MESSAGE = "Turn on External API in KRC Portal ▸ Options ▸ Network."
-KEY_MESSAGE = "Paste the key from KRC Portal ▸ Options ▸ Network."
-READ_ONLY_MESSAGE = "External API is read only. Turn Read only off in KRC Portal ▸ Options ▸ Network to allow changes."
+DISABLED_MESSAGE = "Turn on External API in KRC Portal ▸ API."
+KEY_MESSAGE = "Paste a key from KRC Portal ▸ API (the key may have been revoked)."
+READ_ONLY_MESSAGE = "External API is read only. Turn Read only off in KRC Portal ▸ API to allow changes."
 
 
 def enabled():
@@ -119,11 +116,12 @@ def set_read_only(value):
     return _set_flag(READ_ONLY_KEY, value, DEFAULT_READ_ONLY, "Read only")
 
 
-def area_allowed(area, key=None):
-    """Whether writes of ``area`` (a WRITE_AREAS id) are allowed. Off when nothing is stored,
-    and fails closed. (Read only is checked separately.) ``key``: the access key the request
-    sent; grants are per install today, so it isn't consulted yet: a per-key grant would."""
-    return _flag(WRITE_AREAS[area]["setting"], False)
+def area_allowed(area, principal=None):
+    """Whether writes of ``area`` (a WRITE_AREAS id) are allowed: the global switch (off when
+    nothing is stored; fails closed), and with ``principal`` (ext_api_policy.Principal) the
+    API profile's own permission too. Read only is checked separately."""
+    allowed = _flag(WRITE_AREAS[area]["setting"], False)
+    return allowed and (principal is None or principal.area_permitted(area))
 
 
 def area_writes_enabled(area):
@@ -136,15 +134,23 @@ def set_area_writes(area, value):
     return _set_flag(WRITE_AREAS[area]["setting"], value, False, f"Writes to {WRITE_AREAS[area]['label']}:")
 
 
-def permission_areas(key=None):
-    """/info's permissionAreas (and the Options page's switches): every area in order."""
-    return [{"id": area, "label": spec["label"], "description": spec["description"], "enabled": area_allowed(area, key),
-             "capabilities": list(spec["capabilities"])} for area, spec in WRITE_AREAS.items()]
+def permission_areas(principal=None):
+    """/info's permissionAreas (and the Portal's switches): every area in order. ``enabled``
+    is the effective answer; with a principal, ``global`` and ``profile`` say which layer
+    refuses (a global switch always wins)."""
+    out = []
+    for area, spec in WRITE_AREAS.items():
+        entry = {"id": area, "label": spec["label"], "description": spec["description"],
+                 "enabled": area_allowed(area, principal), "capabilities": list(spec["capabilities"])}
+        if principal is not None:
+            entry.update({"global": area_allowed(area), "profile": principal.area_permitted(area)})
+        out.append(entry)
+    return out
 
 
-def permissions(key=None):
+def permissions(principal=None):
     """/info's flat permissions: readOnly and one boolean per area (older clients)."""
-    return {"readOnly": read_only(), **{spec["flag"]: area_allowed(area, key) for area, spec in WRITE_AREAS.items()}}
+    return {"readOnly": read_only(), **{spec["flag"]: area_allowed(area, principal) for area, spec in WRITE_AREAS.items()}}
 
 
 def media_writes_enabled():
@@ -155,52 +161,46 @@ def set_media_writes(value):
     return set_area_writes("media", value)
 
 
-def access_key():
-    """The current key, or "" when none was made yet (or it can't be read)."""
-    try:
-        value = db.get_setting(db.connection(), KEY_KEY, "")
-    except Exception:  # noqa: BLE001
-        return ""
-    return value if isinstance(value, str) else ""
-
-
-def _make_key():
-    return secrets.token_urlsafe(32)
+def _default_key():
+    """A (new) key for profile Default (made with it if it's gone). -> the key, shown once."""
+    from . import ext_api_profiles as profiles
+    if not any(p["id"] == profiles.DEFAULT_PROFILE_ID for p in profiles.load()["profiles"]):
+        profiles.create_profile("Default", profiles.unrestricted_policy(), profile_id=profiles.DEFAULT_PROFILE_ID)
+    return profiles.regenerate_key(profiles.DEFAULT_PROFILE_ID)["key"]
 
 
 def set_enabled(value):
-    """Turn the external API on or off. Turning it on makes the key if there isn't one.
-    Logs once per actual change. -> state(), plus ``key`` when this call made it (the only
-    time it's returned)."""
+    """Turn the external API on or off. Turning it on with no key in any API profile makes
+    one for profile Default. Logs once per actual change. -> state(), plus ``key`` when this
+    call made it (the only time it's returned)."""
+    from . import ext_api_profiles as profiles
     value = bool(value)
-    made = ""
     with db.write() as conn:
         before = db.get_setting(conn, ENABLED_KEY, DEFAULT_ENABLED) is True
         db.set_setting(conn, ENABLED_KEY, value)
-        if value and not db.get_setting(conn, KEY_KEY, ""):
-            made = _make_key()
-            db.set_setting(conn, KEY_KEY, made)
+    made = _default_key() if value and not profiles.has_keys() else ""
     if before != value:
         print(f"[KRC External API] {'enabled' if value else 'disabled'}")
     return {**state(), "key": made} if made else state()
 
 
 def new_key():
-    """Replace the key; apps using the old one stop working at once. -> state(), plus the
-    new ``key`` (the only time it's returned)."""
-    made = _make_key()
-    with db.write() as conn:
-        db.set_setting(conn, KEY_KEY, made)
-    print("[KRC External API] new key")
+    """The older "Make a new key" route: regenerates profile Default's key (apps using the
+    old one stop at once). Other profiles are untouched. -> state(), plus the new ``key``
+    (the only time it's returned)."""
+    made = _default_key()
     return {**state(), "key": made}
 
 
 def state():
-    """What the Options page shows: {"enabled", "hasKey", "keyHint", "readOnly", <each area's
-    flat flag>, "areas": [...]}. Never the key itself. Internal route only."""
-    key = access_key()
-    return {"enabled": enabled(), "hasKey": bool(key), "keyHint": key[-4:] if key else "",
-            **permissions(), "areas": permission_areas()}
+    """What the Portal shows: {"enabled", "hasKey", "keyHint" (profile Default's key),
+    "readOnly", <each area's flat flag>, "areas": [...], "profilesRevision"}. Never a key."""
+    from . import ext_api_profiles as profiles
+    doc = profiles.load()
+    default = next((p for p in doc["profiles"] if p["id"] == profiles.DEFAULT_PROFILE_ID), None)
+    key = (default or {}).get("key") or {}
+    return {"enabled": enabled(), "hasKey": profiles.has_keys(), "keyHint": key.get("hint", ""),
+            **permissions(), "areas": permission_areas(), "profilesRevision": int(doc.get("revision") or 0)}
 
 
 def db_id():
@@ -217,21 +217,17 @@ def db_id():
     return value
 
 
-def _bearer(authorization):
-    scheme, _, token = str(authorization or "").strip().partition(" ")
-    return token.strip() if scheme.lower() == "bearer" else ""
-
-
-def write_refusal(area, key=None):
-    """Why a write of ``area`` is refused after the switch and key passed -> (status, body),
-    or None. Read only first (it wins), then the area's own permission: 403 with the
-    area's code (area_disabled, or the first two areas' own), ``area`` and a message."""
+def write_refusal(area):
+    """Why a write of ``area`` is refused by the global switches -> (status, body), or None.
+    Read only first (it wins), then the area's own switch: 403 with the area's code
+    (area_disabled, or the first two areas' own), ``area`` and a message. The API profile's
+    own permission is checked after this (ext_api_policy.write_refusal)."""
     if read_only():
         return 403, {"error": "read_only", "message": READ_ONLY_MESSAGE}
     spec = WRITE_AREAS[area]
-    if not area_allowed(area, key):
+    if not area_allowed(area):
         return 403, {"error": spec["error"], "area": area,
-                     "message": f"Turn on {spec['label']} under External API in KRC Portal ▸ Options ▸ Network."}
+                     "message": f"Turn on {spec['label']} under External API in KRC Portal ▸ API."}
     return None
 
 
@@ -240,12 +236,7 @@ def media_write_refusal():
 
 
 def refusal(authorization):
-    """Why an ext/v1 call is refused -> (status, body), or None when it may go ahead.
-    Off -> 403 external_api_disabled; on, with a missing or wrong key -> 401."""
-    if not enabled():
-        return 403, {"error": "external_api_disabled", "message": DISABLED_MESSAGE}
-    key = access_key()
-    sent = _bearer(authorization)
-    if not key or not sent or not hmac.compare_digest(sent.encode("utf-8"), key.encode("utf-8")):
-        return 401, {"error": "external_api_key", "message": KEY_MESSAGE}
-    return None
+    """Why an ext/v1 call is refused -> (status, body), or None (ext_api_policy.authorize
+    without the principal; kept for callers that only need yes / no)."""
+    from .ext_api_policy import authorize
+    return authorize(authorization)[1]

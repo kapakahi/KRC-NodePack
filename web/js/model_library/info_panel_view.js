@@ -29,6 +29,7 @@ export const infoPanelMethods = {
       return this.renderTransferPage();
     }
     if (this.infoPage === "profiles") return this.renderProfilesPage();
+    if (this.infoPage === "api") return this.renderApiPage();
     if (this.infoPage === OPTIONS_PAGE) {
       return this.renderOptionsPage();
     }

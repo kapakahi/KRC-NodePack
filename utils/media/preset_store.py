@@ -15,7 +15,7 @@ Writes run inside the Media store's ``locked()`` (its lock and one krc.db transa
 Flush and Purge (which spare what presets use) see the presets and the items at one moment.
 
 ``version(preset)`` is a short hash of what a client sees (group, name, slot ids). A write
-given ``if_version`` (the external API's) is refused with PresetConflict when the preset
+given ``if_version`` (the external API's, a Media Loader's Upload) is refused with PresetConflict when the preset
 changed since the client read it, checked under the same lock as the write.
 """
 
@@ -192,8 +192,9 @@ def rename(preset_id, name, if_version=None):
     return _change(preset_id, mutate, if_version)
 
 
-def set_slot(preset_id, index, *, item_id=None):
-    """Fill / empty slot ``index`` (0-5; ``item_id`` "" empties it)."""
+def set_slot(preset_id, index, *, item_id=None, if_version=None):
+    """Fill / empty slot ``index`` (0-5; ``item_id`` "" empties it). With ``if_version``
+    (a Media Loader's multi-file Upload, the external API) a changed preset is refused."""
     try:
         index = int(index)
     except (TypeError, ValueError):
@@ -209,7 +210,7 @@ def set_slot(preset_id, index, *, item_id=None):
         if item_id is not None:
             slots[index]["id"] = item_id
 
-    return _change(preset_id, mutate)
+    return _change(preset_id, mutate, if_version)
 
 
 def set_slots(preset_id, ids, *, start=None, if_version=None):

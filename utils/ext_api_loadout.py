@@ -21,6 +21,7 @@ import hashlib
 import json
 import math
 
+from . import ext_api_policy as policy
 from .ext_api_media_writes import Conflict, NotFound
 from .ext_api_routes import BadRequest
 
@@ -242,11 +243,11 @@ def _check_known(kind, kit, stacks, existing=None):
         from .lora_loadout.library_index import LoraLibraryIndex
         index = LoraLibraryIndex()
         index.refresh(check_folders=False)
-        unknown = [card_id for card_id in wanted if index.get(card_id) is None]
+        # A caller restricted from LoRAs sees every new id as unknown (no probing by id).
+        unknown = [card_id for card_id in wanted if index.get(card_id) is None or not policy.readable("models", "lora")]
     elif kit.source["kind"] == "prompt":
-        from .prompt_vault_store import prompts_by_ids
-        _revision, found = prompts_by_ids(wanted)
-        unknown = [card_id for card_id in wanted if card_id not in found]
+        readable = policy.readable_prompt_matches(wanted)
+        unknown = [card_id for card_id in wanted if not readable.get(card_id)]
     else:
         from .lora_loadout.library_index import LoraLibraryIndex
         from .model_library.library_index import ModelLibraryIndex
@@ -263,7 +264,8 @@ def _check_known(kind, kit, stacks, existing=None):
             for lineage, index in indexes:
                 record = index.get(card_id)
                 if record is not None and (not folder or lineage == "lora" or record.get("modelType") == folder):
-                    return True
+                    kind_key = "lora" if lineage == "lora" else policy.model_type_key(record)
+                    return policy.readable("models", kind_key)
             return False
 
         unknown = [card_id for card_id in wanted if not known(card_id)]
@@ -319,6 +321,7 @@ def _save(kind, store, record_id, group, name, stacks, enabled):
 
 def _current(kind, store, preset_id, expected):
     """The stored preset, after the version check (inside the caller's transaction)."""
+    policy.require_preset(kind, preset_id, write=True, message="No preset of that kind has that id.")
     record = store.find_by_id(preset_id)
     if record is None:
         raise NotFound("No preset of that kind has that id.")
@@ -335,6 +338,7 @@ def create_preset(kind, payload):
 
     payload = _object(payload)
     store, kit = _store(kind)
+    policy.require_create(policy.preset_scope(kind), "presets of that kind")
     group = _text(payload, "group", False) or ""
     name = _text(payload, "name", True)
     _name(kind, group, name)
@@ -344,6 +348,7 @@ def create_preset(kind, payload):
         record = _save(kind, store, "", group, name, stacks, enabled)
     if record is None:
         raise BadRequest("That name is reserved")
+    policy.created(policy.preset_scope(kind), record["id"])
     _announce(kind)
     return _answer(kind, record)
 

@@ -65,7 +65,7 @@ async function change(call, what) {
   try {
     const answer = await call();
     await refreshPresets();
-    return { ok: true, preset: answer.preset || null };
+    return { ok: true, preset: answer.preset || null, version: answer.version || "" };
   } catch (error) {
     const message = String(error?.message || error);
     console.warn(`${TAG} couldn't ${what}: ${message}`);
@@ -79,6 +79,21 @@ export const renamePreset = (id, name) => change(() => presetsApi.rename(id, nam
 export const setPresetSlot = (id, index, fields) => change(() => presetsApi.setSlot(id, index, fields), "change the slot");
 export const setPresetSlots = (id, ids, start = null) => change(() => presetsApi.setSlots(id, ids, start), "replace the preset slots");
 export const deletePreset = (id) => change(() => presetsApi.remove(id), "delete the preset");
+
+// One slot, only if the preset is still at `version` (the Loader's multi-file Upload carries
+// each answer's version to the next save). -> { ok, version } | { ok: false, conflict, error }.
+export async function savePresetSlotAt(id, index, itemId, version) {
+  try {
+    const answer = await presetsApi.setSlot(id, index, { id: itemId, ...(version ? { version } : {}) });
+    await refreshPresets();
+    return { ok: true, preset: answer.preset || null, version: answer.version || "" };
+  } catch (error) {
+    const message = String(error?.message || error);
+    console.warn(`${TAG} couldn't change the slot: ${message}`);
+    await refreshPresets();
+    return { ok: false, conflict: error?.status === 409, error: message };
+  }
+}
 
 const el = (tag, className = "", props = {}) => Object.assign(document.createElement(tag), className ? { className } : {}, props);
 

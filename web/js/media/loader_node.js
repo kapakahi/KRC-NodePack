@@ -4,18 +4,19 @@ import { bindMediaKeys, wrapIndex } from "./keyboard.js";
 // one slot of a media preset (6 slots, saved on every change):
 //
 //   header   preset ▾                                                    [Options]
-//   preview  1:1, fit to the box (a video's poster plays on hover; a pending upload says
-//            "Uploading…", then a conversion's progress and Stop), the file name under it
+//   preview  1:1, fit to the box (a video's poster plays on hover; while uploading it says
+//            which file and slot, a conversion's progress, and Stop), the file name under it
 //   cells    the preset's 6 slots: click one to load it (the selected one ringed green)
 //   bar      [Upload] [MEDIA]
 //
 // Barebones (Options; per node): one row, [preset ▾] [slot ▾] [Options]; the slot
 // button shows the file name (or "Empty"), its menu "n · file name".
 //
-// Upload picks a file and uploads it at once with the defaults (no resize / trim, source
-// fps, audio kept, orientation fixed) into Media and into the selected slot (the server
-// assigns it when the upload is done). The Media Portal's own upload strip still stages a
-// file for its Add. With the `preset` input connected the node follows that preset (Upload
+// Upload picks one to six files and uploads them at once with the defaults (no resize / trim,
+// source fps, audio kept, orientation fixed) into Media: one into the selected slot, more into
+// the next slots, wrapping after 6 (loader_upload.js: one at a time, each slot saved at the
+// preset's version; more than six refuses the lot). The Media Portal's own upload strip still
+// stages a file for its Add, and its Batch page stays separate. With the `preset` input connected the node follows that preset (Upload
 // is off: which preset arrives is only known at run time). There's no bypass button (the
 // Resizer's DISABLE covers it); a node bypassed with Ctrl+B still dims its preview. A new
 // node starts on a new "Untitled n" preset.
@@ -23,7 +24,8 @@ import { app } from "../../../scripts/app.js";
 import { applyNodePalette, ensureStylesheet, markDirty, subscribeKrcSync, switchToggle } from "./krc.js";
 import { MEDIA_EVENT, displayName, mediaApi } from "./api.js";
 import { LOADER_TYPE, LOADER_WIDGET, NODES_EVENT, isBypassed, isFollowing, loaderPromptValue, readLoader, writeLoader } from "./nodes.js";
-import { createPreset, onPresets, presetById, presetSlots, presetsLoaded, refreshPresets, setPresetSlot, setPresetSlots } from "./presets.js";
+import { createPreset, onPresets, presetById, presetSlots, presetsLoaded, refreshPresets, savePresetSlotAt, setPresetSlot, setPresetSlots } from "./presets.js";
+import { MAX_LOADER_FILES, batchLabel, batchReport, loaderFiles, newLoaderBatch, runLoaderBatch, stopLoaderBatch } from "./loader_upload.js";
 import { teardownMedia } from "./krc.js";
 import { mediaDisplayState } from "./display.js";
 import { mediaItem, mediaLoaded, mediaPreview, onMediaItems, refreshMediaItems } from "./preview.js";
@@ -37,7 +39,6 @@ const BAREBONES_PROP = "krcMioBarebones";
 // The slots + buttons default to above the preview (Options can put them below).
 const SLOTS_ON_TOP = true;
 const ACCEPT = "image/*,video/*,.heic,.heif,.avif,.mkv";
-const JOB_POLL_MS = 500;
 const TAG = "[KRC Media]";
 
 const uiOf = (node) => node.widgets?.find((widget) => widget.name === UI_WIDGET) || null;
@@ -71,105 +72,95 @@ function quietLoader(node, fields) {
   if (widget) widget.value = JSON.stringify({ ...readLoader(node), ...fields });
 }
 
-// ---- the upload in progress (kept on the node: { file, status, progress, error, jobId })
-// Picking a file uploads it straight away; the preview says "Uploading…" meanwhile.
-function upload(node, file) {
-  if (!file || isFollowing(node)) return;
-  drop(node);
-  node._krcMioPending = { file, status: "uploading", progress: 0, error: "" };
-  send(node);
+// ---- the upload in progress (kept on the node: a loader_upload.js batch, or after one
+// ends with something to say, { report }). Picking files uploads them straight away.
+const batchDeps = (node, batch) => ({
+  upload: (file, signal) => mediaApi.upload(file, {}, signal),
+  job: (id) => mediaApi.job(id),
+  cancelJob: (id) => mediaApi.cancelJob(id),
+  save: (preset, slot, itemId, version) => savePresetSlotAt(preset, slot, itemId, version),
+  changed: () => { if (node._krcMioPending === batch) render(node); },
+});
+
+const isUploading = (node) => Boolean(node._krcMioPending?.active);
+
+function upload(node, fileList) {
+  if (isFollowing(node) || isUploading(node)) return;
+  const { files, error } = loaderFiles(fileList);
+  if (error) {
+    // Refused whole, before any upload, conversion or preset change.
+    node._krcMioPending = { report: error };
+    render(node);
+    return;
+  }
+  if (files.length) send(node, files);
 }
 
+// Drops the pending state; an upload in progress stops first (a removed node).
 function drop(node) {
+  const pending = node._krcMioPending;
+  if (pending?.active) stopLoaderBatch(pending, { cancelJob: (id) => mediaApi.cancelJob(id) });
   node._krcMioPending = null;
 }
 
-async function pollJob(node, pending) {
-  if (node._krcMioPending !== pending || pending.status !== "converting") return;
-  try {
-    const { job } = await mediaApi.job(pending.jobId);
-    if (node._krcMioPending !== pending) return;
-    pending.progress = job.progress || 0;
-    if (job.status === "done" || job.status === "cancelled") { drop(node); render(node); return; }
-    if (job.status === "error") { pending.status = "error"; pending.error = job.error || "The conversion failed."; render(node); return; }
-    render(node);
-  } catch (error) {
-    console.warn(`${TAG} couldn't read the conversion's progress: ${error?.message || error}`);
-  }
-  setTimeout(() => pollJob(node, pending), JOB_POLL_MS);
-}
-
-async function send(node) {
-  const pending = node._krcMioPending;
-  if (!pending) return;
+async function send(node, files) {
+  // The preset and the first slot as they are now: later picks don't redirect the batch.
+  const pick = readLoader(node);
+  const batch = newLoaderBatch(files, { preset: pick.preset, start: pick.slot });
+  node._krcMioPending = batch;
   render(node);
   // An upload always works. Decide only once the presets are read (before that every
   // preset looks missing), then a node with no preset (deleted, or none yet) gets a new
-  // "Preset n" (the first is "Preset 1") for the upload.
+  // "Preset n" (the first is "Preset 1"), once for the whole batch.
   if (!presetsLoaded()) await refreshPresets();
-  let pick = readLoader(node);
-  if (!presetById(pick.preset)) {
+  const preset = presetById(pick.preset);
+  if (preset) {
+    batch.version = preset.version || "";
+  } else if (!batch.stopped) {
     const created = await createPreset({ numbered: true });
-    if (!created.ok) { pending.status = "error"; pending.error = created.error; render(node); return; }
-    writeLoader(node, { preset: created.preset.id, autoPreset: false });
-    pick = readLoader(node);
-  }
-  try {
-    const answer = await mediaApi.upload(pending.file, { assign: { preset: pick.preset, slot: pick.slot } });
-    if (answer.job) {
-      pending.status = "converting";
-      pending.jobId = answer.job.id;
+    if (!created.ok) {
+      batch.active = false;
+      if (node._krcMioPending === batch) node._krcMioPending = { report: `Couldn't make a preset for the upload: ${created.error}` };
       render(node);
-      pollJob(node, pending);
       return;
     }
-    drop(node);
-    render(node);
-  } catch (error) {
-    pending.status = "error";
-    pending.error = String(error?.message || error);
-    render(node);
+    batch.preset = created.preset.id;
+    batch.version = created.version || "";
+    if (readLoader(node).preset === pick.preset) writeLoader(node, { preset: created.preset.id, autoPreset: false });
   }
+  await runLoaderBatch(batch, batchDeps(node, batch));
+  if (batch.conflict) await refreshPresets();
+  if (node._krcMioPending !== batch) return;
+  const report = batchReport(batch);
+  node._krcMioPending = report ? { report } : null;
+  render(node);
 }
 
-async function stop(node) {
+function stop(node) {
   const pending = node._krcMioPending;
-  if (pending?.status === "converting" && pending.jobId) {
-    try {
-      await mediaApi.cancelJob(pending.jobId);
-    } catch (error) {
-      console.warn(`${TAG} couldn't stop the conversion: ${error?.message || error}`);
-    }
-  }
-  drop(node);
+  if (pending?.active) stopLoaderBatch(pending, { cancelJob: (id) => mediaApi.cancelJob(id) });
+  else node._krcMioPending = null;   // dismiss a report
   render(node);
 }
 
 // ---- the preview -------------------------------------------------------------------------
-// No local preview of the file: the box says "Uploading…" until the server has it, then
-// shows the slot's media (a converting video keeps its progress and Stop at the bottom).
+// No local preview of the files: the box says which file and slot it's on (with a
+// conversion's progress) and has Stop until the batch ends, then what failed, if anything.
 function pendingPreview(node, pending) {
-  const busy = pending.status === "uploading" || pending.status === "converting";
-  const box = mediaPreview(null, {
-    empty: pending.status === "uploading" ? "Uploading…" : "",
-    full: true,
-    className: "krc-mio-pick-preview is-pending",
-  });
+  const busy = Boolean(pending.active);
+  const box = mediaPreview(null, { empty: "", full: true, className: "krc-mio-pick-preview is-pending" });
   box.classList.toggle("is-busy", busy);
-  if (pending.status === "uploading") return box;
   const overlay = el("div", "krc-mio-pending-overlay");
-  overlay.append(el("span", `krc-mio-pending-text${pending.status === "error" ? " is-error" : ""}`, {
-    textContent: pending.status === "converting" ? `Converting… ${Math.round((pending.progress || 0) * 100)}%`
-      : pending.error || "The upload failed.",
+  overlay.append(el("span", `krc-mio-pending-text${busy ? "" : " is-error"}`, {
+    textContent: busy ? batchLabel(pending) : pending.report || "The upload failed.",
   }));
-  if (pending.status === "converting") {
+  if (busy && pending.status === "converting") {
     const bar = el("div", "krc-mio-progress");
     bar.append(el("div", "krc-mio-progress-fill", { style: `width: ${Math.round((pending.progress || 0) * 100)}%` }));
     overlay.append(bar);
   }
-  if (pending.status !== "uploading") {
-    overlay.append(iconButton(pending.status === "converting" ? "■" : "✕", pending.status === "converting" ? "Stop converting" : "Dismiss", () => stop(node), "krc-mio-pending-close"));
-  }
+  overlay.append(iconButton(busy ? "■" : "✕", busy ? "Stop (filled slots are kept, the rest are skipped)" : "Dismiss",
+    () => stop(node), "krc-mio-pending-close"));
   box.append(overlay);
   return box;
 }
@@ -211,9 +202,8 @@ function muteButton(node) {
 
 // Drop only references an existing record; the saved file stays in input/output.
 function canFillSlot(node, presetId) {
-  const pending = node._krcMioPending;
   return Boolean(node.graph && !node._krcMioSlotBatch && !isFollowing(node) && readLoader(node).preset === presetId
-    && presetById(presetId) && !["uploading", "converting"].includes(pending?.status));
+    && presetById(presetId) && !isUploading(node));
 }
 
 async function fillSlot(node, presetId, index, id) {
@@ -286,7 +276,8 @@ function render(node) {
   const barebones = isBarebones(node);
   const drawn = JSON.stringify([barebones, stripOnTop(node, SLOTS_ON_TOP), pick.preset, pick.slot, following, bypassed, loaded, mediaLoaded(), preset,
     slots.map((entry) => (entry.id ? [entry.id, mediaItem(entry.id)?.name ?? null, mediaItem(entry.id)?.kind ?? null, mediaDisplayState(mediaItem(entry.id))] : "")),
-    Boolean(node._krcMioSlotBatch), pending && [pending.status, Math.round((pending.progress || 0) * 100), pending.error]]);
+    Boolean(node._krcMioSlotBatch), pending && [pending.active, pending.status, pending.index, pending.slot,
+      Math.round((pending.progress || 0) * 100), pending.report]]);
   if (drawn === node._krcMioDrawn && panel.childElementCount) return;
   node._krcMioDrawn = drawn;
 
@@ -363,13 +354,14 @@ function render(node) {
     onDropMany: (index, ids) => replaceSlots(node, preset?.id, ids, index),
   });
 
-  const picker = root.querySelector(".krc-mio-file") || el("input", "krc-mio-file", { type: "file", accept: ACCEPT, hidden: true });
-  picker.onchange = () => { upload(node, picker.files?.[0]); picker.value = ""; };
-  const busy = pending?.status === "uploading" || pending?.status === "converting";
+  const picker = root.querySelector(".krc-mio-file") || el("input", "krc-mio-file", { type: "file", accept: ACCEPT, hidden: true, multiple: true });
+  picker.onchange = () => { const files = Array.from(picker.files || []); picker.value = ""; upload(node, files); };
+  const busy = isUploading(node);
   const bar = el("div", "krc-mio-bar");
   bar.append(
     arrowButton("up", busy ? "…" : "UPLOAD", {
-      title: following ? "Off while the preset input is connected" : `Upload an image or video into Media and slot ${pick.slot + 1}`,
+      title: following ? "Off while the preset input is connected"
+        : `Upload up to ${MAX_LOADER_FILES} images or videos into Media: slot ${pick.slot + 1}, then the next slots (after 6, slot 1)`,
       disabled: busy || following,
       onclick: () => picker.click(),
     }, "krc-mio-upload"),

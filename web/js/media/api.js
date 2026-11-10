@@ -44,7 +44,8 @@ async function json(response) {
     payload = {};
   }
   if (!response.ok || payload.ok === false) {
-    throw new Error(payload.error || `HTTP ${response.status}`);
+    // The status and answer ride along (a 409 conflict carries the preset as it is now).
+    throw Object.assign(new Error(payload.error || `HTTP ${response.status}`), { status: response.status, payload });
   }
   return payload;
 }
@@ -60,11 +61,12 @@ export const mediaApi = {
   // `settings`: { maxSize, folder } (+ for video: fps, audio, trimIn, trimOut; seconds; + assign:
   // { preset, slot } puts the new item into that preset slot when it's added). A still
   // -> { item }; a video / animated GIF -> { job } (converting in the background).
-  upload: (file, settings = {}) => {
+  // `signal` (an AbortController's) stops the request while it's sending.
+  upload: (file, settings = {}, signal = undefined) => {
     const form = new FormData();
     form.append("settings", JSON.stringify(settings));
     form.append("file", file, file.name);
-    return api.fetchApi("/krc/media/upload", { method: "POST", body: form }).then(json);
+    return api.fetchApi("/krc/media/upload", { method: "POST", body: form, ...(signal ? { signal } : {}) }).then(json);
   },
   previewOperation: (ids, operation) => post("/krc/media/bulk-operation/preview", { ids, operation }),
   bulkOperation: (ids, operation, options) => post("/krc/media/bulk-operation", { ids, operation, ...options }),
@@ -105,7 +107,8 @@ export const presetsApi = {
   list: () => api.fetchApi("/krc/media/presets", { cache: "no-store" }).then(json),
   create: ({ name = "", auto = false, numbered = false } = {}) => post("/krc/media/presets/create", { name, auto, numbered }),
   rename: (id, name) => post(presetPath(id), { name }),
-  // `fields`: { id } (a Media item, "" empties) and / or { name }; `index` 0-5.
+  // `fields`: { id } (a Media item, "" empties) and / or { name }; `index` 0-5; + { version }:
+  // refused with a 409 conflict when the preset changed since that version.
   setSlot: (id, index, fields) => post(`${presetPath(id)}/slot/${Number(index) || 0}`, fields),
   setSlots: (id, ids, start = null) => post(`${presetPath(id)}/slots`, { ids, ...(start === null ? {} : { start }) }),
   remove: (id) => post(`${presetPath(id)}/delete`),

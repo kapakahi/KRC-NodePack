@@ -62,9 +62,10 @@ def add_versions(response, library):
     return response
 
 
-def category_list(profile_id="default"):
+def category_list(profile_id=""):
     """GET /krc/ext/v1/prompt-categories: a profile's category chips, in the library's order
     (Unsorted first, then by name; the node draws pinned ones first)."""
+    profile_id = _scoped_profile(profile_id)
     from .prompt_vault_search import UNASSIGNED_LABEL
     from .prompt_vault_store import UNASSIGNED_CATEGORY, load_prompts_with_revision
 
@@ -84,6 +85,13 @@ def category_list(profile_id="default"):
 
 
 # ---- shared ---------------------------------------------------------------------------
+
+def _scoped_profile(profile_id, write=False):
+    """The Prompt Vault profile the caller works in (ext_api_policy.prompt_profile: an API
+    profile only reaches the ones its policy allows; omitted -> its default)."""
+    from . import ext_api_policy
+    return ext_api_policy.prompt_profile(profile_id, write=write)
+
 
 def _store(profile_id):
     from ..nodes.krc_prompt_vault import KRCPromptVault
@@ -141,7 +149,8 @@ def _detail(category, name, record, profile_id):
     detail = prompt_detail(category, name, record)
     detail["profileId"] = profile_id
     detail["version"] = prompt_version(category, name, record)
-    return detail
+    from . import ext_api_policy
+    return ext_api_policy.scrub_prompt_links(detail)
 
 
 def _current(store, prompt_id, expected, profile_id):
@@ -201,6 +210,7 @@ def _only(payload, allowed, what):
 
 def prompt_marks(profile_id, prompt_id, payload):
     """POST /krc/ext/v1/prompts/{id}/marks?profile= {version, <marks>} -> {prompt, revision}."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .db import connection as db
 
     payload = _object(payload)
@@ -217,6 +227,20 @@ def prompt_marks(profile_id, prompt_id, payload):
     return _answer(store, prompt_id, profile_id)
 
 
+async def _require_model_write(model_id):
+    """A restricted caller may mark only models of the types its policy lets it write; any
+    other id answers as missing."""
+    from . import ext_api_policy
+    if ext_api_policy.unrestricted("models") and ext_api_policy.writable("models", "*"):
+        return
+    from .ext_api_models import _detail_rows, _indexes, _read
+    index, lora_index = await _indexes()
+    row = (await _read(lambda: _detail_rows(index, lora_index, [model_id]))).get(model_id)
+    if row is None:
+        raise NotFound("No model has that id.")
+    ext_api_policy.require_write("models", ext_api_policy.model_type_key(row), "No model has that id.")
+
+
 async def model_marks(model_id, payload):
     """POST /krc/ext/v1/models/{id}/marks {marksVersion, <marks>} -> {id, marks, marksVersion}."""
     from .model_library.bulk_attributes import MarksConflict, update_model_marks
@@ -229,6 +253,7 @@ async def model_marks(model_id, payload):
     if not marks:
         raise BadRequest(f"Nothing to change: send one of {', '.join(MARK_KEYS)}")
     expected = _version(payload, "marksVersion")
+    await _require_model_write(str(model_id or ""))
     try:
         result = await update_model_marks(str(model_id or ""), marks, if_version=expected)
     except MarksConflict as exc:
@@ -273,6 +298,7 @@ def _category_current(store, payload, profile_id):
 
 def category_create(profile_id, payload):
     """POST /krc/ext/v1/prompt-categories/create {name, nsfw?} -> 201 {category, revision}."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .db import connection as db
 
     payload = _object(payload)
@@ -300,6 +326,7 @@ def category_create(profile_id, payload):
 
 def category_update(profile_id, payload):
     """POST /krc/ext/v1/prompt-categories/update {category, version, pinned?, cardColor?, nsfw?}."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .db import connection as db
 
     payload = _object(payload)
@@ -331,6 +358,7 @@ def category_rename(profile_id, payload):
     """POST /krc/ext/v1/prompt-categories/rename {category, version, name, merge?}: its prompts
     go with it (ids kept). Into an existing name only with "merge": true (clashing prompt
     names get a suffix, as in the node)."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .db import connection as db
 
     payload = _object(payload)
@@ -363,6 +391,7 @@ def category_rename(profile_id, payload):
 def category_delete(profile_id, payload):
     """POST /krc/ext/v1/prompt-categories/delete {category, version}: the chip goes, its
     prompts move to Unsorted (clashing names get a suffix), as the node's Delete."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .db import connection as db
     from .prompt_vault_store import UNASSIGNED_CATEGORY
 
@@ -384,6 +413,7 @@ def category_delete(profile_id, payload):
 def category_purge(profile_id, payload):
     """POST /krc/ext/v1/prompt-categories/purge {category, version, confirmed: true}: the chip
     AND its prompts (and their thumbnails), as the node's PURGE."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .db import connection as db
 
     payload = _object(payload)
@@ -417,7 +447,8 @@ def _preset_label(kind, preset_id):
         if kit is None:
             raise BadRequest(f"No Loadout Kit {kind!r} (see /info kits)")
         found = kit.presets().find_by_id(preset_id)
-    if found is None:
+    from . import ext_api_policy
+    if found is None or not ext_api_policy.preset_readable("ll" if kind == "ll" else f"kit:{kind}", preset_id):
         raise BadRequest(f"No {'LoRA Loadout' if kind == 'll' else kind} preset has the id {preset_id!r}")
     return found.get("name", "")
 
@@ -458,6 +489,7 @@ def prompt_create(profile_id, payload):
     """POST /krc/ext/v1/prompts/create?profile= {category, name, text?, promptB?, appendPromptB?,
     model?, notes?, llPreset?, kitPresets?} -> 201 {prompt, revision}. A category that doesn't
     exist yet is made (as the Card API does)."""
+    profile_id = _scoped_profile(profile_id, write=True)
     payload = _object(payload)
     _only(payload, EDIT_KEYS, "prompt")
     fields = _edit_fields(payload)
@@ -472,6 +504,7 @@ def prompt_create(profile_id, payload):
 def prompt_update(profile_id, prompt_id, payload):
     """POST /krc/ext/v1/prompts/{id}/update?profile= {version, <Editor fields>}: what's left out
     stays; a new name / category renames / moves it, keeping its id."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .db import connection as db
 
     payload = _object(payload)
@@ -492,6 +525,7 @@ def prompt_duplicate(profile_id, prompt_id, payload):
     """POST /krc/ext/v1/prompts/{id}/duplicate?profile= {name?, category?, toProfile?}: a copy
     with a new id (thumbnail too), as the Editor's Duplicate / Copy to profile. The name
     defaults to "<name> copy" (numbered when taken)."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .prompt_profile_copy import copy_prompt_response
     from .prompt_vault_routes import _save_prompt_response
 
@@ -505,7 +539,7 @@ def prompt_duplicate(profile_id, prompt_id, payload):
     source_store = _store(profile_id)
     prompts = source_store.load_prompts()
     category, name = _locate(prompts, prompt_id)
-    target_profile = payload.get("toProfile") or profile_id
+    target_profile = _scoped_profile(payload.get("toProfile") or profile_id, write=True)
     target = _store(target_profile)
     target_prompts = target.load_prompts()
     new_category = target._normalize_category_name(payload.get("category") or category)
@@ -530,6 +564,7 @@ def prompt_duplicate(profile_id, prompt_id, payload):
 
 def prompt_delete(profile_id, prompt_id, payload):
     """POST /krc/ext/v1/prompts/{id}/delete?profile= {version}: the prompt and its thumbnail."""
+    profile_id = _scoped_profile(profile_id, write=True)
     from .db import connection as db
 
     payload = _object(payload)
@@ -547,6 +582,7 @@ def prompt_delete(profile_id, prompt_id, payload):
 def prompt_thumbnail(profile_id, prompt_id, payload, clear=False):
     """POST /krc/ext/v1/prompts/{id}/thumbnail?profile= {version, image: "data:image/…;base64,…"}
     sets a still thumbnail (stored as a constrained WebP); /thumbnail/clear {version} removes it."""
+    profile_id = _scoped_profile(profile_id, write=True)
     import uuid
 
     from .db import connection as db

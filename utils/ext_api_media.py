@@ -91,11 +91,25 @@ def _snapshot():
 
 
 def _present(items):
-    """The items whose file isn't confirmed gone (the node lists only these)."""
+    """The items whose file isn't confirmed gone (the node lists only these), and that the
+    caller may read (ext_api_policy: an item is reachable through its folder)."""
+    from . import ext_api_policy as policy
     from .media import media_store as store
 
     available = {}
-    return [item for item in items if not store.file_missing(item, available)]
+    return [item for item in items if policy.media_item_readable(item) and not store.file_missing(item, available)]
+
+
+def _visible_folders(folders):
+    from . import ext_api_policy as policy
+
+    return [folder for folder in folders if policy.media_folder_readable(folder)]
+
+
+def _visible_presets(presets):
+    from . import ext_api_policy as policy
+
+    return [preset for preset in presets if policy.preset_readable("media", preset["id"])]
 
 
 def _row(record):
@@ -119,7 +133,7 @@ def media_list(view_param="", fields_param=""):
     rows = [_row(item) for item in _present(items) if not view or item_view(item) == view]
     return {"revision": revision, "presetsRevision": presets_revision, "total": len(rows),
             "items": _keep(rows, fields),
-            "folders": [folder_row(folder) for folder in folders if not view or folder_view(folder) == view]}
+            "folders": [folder_row(folder) for folder in _visible_folders(folders) if not view or folder_view(folder) == view]}
 
 
 def _sort_key(sort):
@@ -199,7 +213,11 @@ def media_details(ids):
     if len(wanted) > MAX_DETAIL_IDS:
         raise BadRequest(f"At most {MAX_DETAIL_IDS} ids per call")
     items, folders, presets, revision, presets_revision = _snapshot()
-    by_id = {item["id"]: item for item in items}
+    from . import ext_api_policy as policy
+
+    # An item the caller can't read answers as missing (knowing its id grants nothing).
+    by_id = {item["id"]: item for item in items if policy.media_item_readable(item)}
+    folders, presets = _visible_folders(folders), _visible_presets(presets)
     available = {}
     found = {item_id: _detail(by_id[item_id], folders, presets, available) for item_id in wanted if item_id in by_id}
     return {"items": found, "missing": [item_id for item_id in wanted if item_id not in found],
@@ -220,11 +238,30 @@ def media_item(item_id):
 
 def _preset_fields(preset):
     """A Media preset's fields past {id, group, name}: created, auto, slots, and ``version``
-    (what a write's ``version`` must match)."""
+    (what a write's ``version`` must match). A slot holding an item the caller can't read
+    shows as ``{"name", "id": "", "hidden": true}``: being in a preset it may read grants no
+    access to the item (its id, name and file stay hidden)."""
     from .media import preset_store
 
-    return {"created": preset["created"], "auto": preset["auto"], "slots": preset["payload"]["slots"],
+    return {"created": preset["created"], "auto": preset["auto"], "slots": scoped_slots(preset["payload"]["slots"]),
             "version": preset_store.version(preset)}
+
+
+def scoped_slots(slots):
+    from . import ext_api_policy as policy
+    from .media import media_store as store
+
+    if policy.unrestricted("mediaFolders"):
+        return slots
+    out = []
+    for slot in slots:
+        item = store.get(slot["id"]) if slot.get("id") else None
+        if slot.get("id") and (item is None or not policy.media_item_readable(item)):
+            # A deleted item reads the same as a hidden one: nothing tells them apart.
+            out.append({**slot, "id": "", "hidden": True})
+        else:
+            out.append(slot)
+    return out
 
 
 def media_preset_entry(preset):
@@ -243,4 +280,4 @@ class MediaPresetStore:
         from .media import preset_store
 
         return {"presets": [{"id": preset["id"], "group": preset["group"], "name": preset["name"], **_preset_fields(preset)}
-                            for preset in preset_store.presets()]}
+                            for preset in _visible_presets(preset_store.presets())]}

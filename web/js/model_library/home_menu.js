@@ -68,6 +68,12 @@ export const homeMenuMethods = {
         cardColor: "purple", glyphSvg: svg('<circle cx="6" cy="5" r="2.5"/><path d="M1.5 14v-2a4.5 4.5 0 0 1 9 0v2M11 3a2.5 2.5 0 0 1 0 5M12 10a4 4 0 0 1 2.5 4"/>'),
         action: () => this.openPortalPage("profiles"),
       },
+      // KRC Portal ▸ API: the external API's switches, API profiles and keys.
+      {
+        id: "api", name: "API", subtitle: "Apps, API profiles and keys",
+        cardColor: "blue", glyphSvg: svg('<path d="M6 4 2 8l4 4M10 4l4 4-4 4"/>'),
+        action: () => this.openPortalPage("api"),
+      },
       // The global Options page; the gear opens this panel's own Options.
       {
         id: "options",

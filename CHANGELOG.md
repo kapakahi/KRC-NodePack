@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-11-10 · Media Loader: UPLOAD takes up to six files and fills the next slots. New KRC Portal ▸ API page: API profiles, each with its own key and its own access to prompts, Media folders, models and presets.
 - 2026-11-08 · More API upgrades: per-area permissions in Options ▸ Network (card marks, prompt categories, prompt editing), KRC Resizer support (with NodePack Extras), and disabled KRC Resizer branches can be turned back on in exported workflows.
 - 2026-11-07 · API upgrades: Model Library, Media, Loadout Kit and Prompt Vault profile support, plus a new Read only switch (on by default) in Options ▸ Network.
 - 2026-11-06 · Media nodes: Options puts the slots / history and their buttons above or below the preview (Media Loader: above by default). Outside apps get KRC's palettes: each node's palette in API-format exports, and the palette list and picks in the external API.

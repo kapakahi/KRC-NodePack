@@ -44,13 +44,32 @@ def _public(meta):
     return {key: value for key, value in meta.items() if key != "identity"}
 
 
+def _source_allowed(spec):
+    """Whether the caller may read this source (ext_api_policy): a Media item through its
+    folder; a Load Image file by name only with the profile's ``fileSources``. Checked when a
+    preview is made AND every time one is read, so a handle (or a source named in a
+    caller-supplied workflow) never reaches what the caller can't."""
+    from . import ext_api_policy as policy
+
+    if policy.current() is None:
+        return True
+    if spec.get("kind") == "media":
+        from .media import media_store as store
+        try:
+            record = store.get(spec.get("id", ""))
+        except store.MediaError:
+            record = None
+        return record is not None and policy.media_item_readable(record)
+    return policy.current().file_sources
+
+
 def _fresh(provider, handle):
     """(meta, None) for a live preview whose source is unchanged, else (None, error)."""
     from .ext_api_sources import SourceError, identity
 
     handle = str(handle or "").strip()
     meta = provider.get(handle) if handle else None
-    if not meta:
+    if not meta or not _source_allowed(meta.get("source") or {}):
         return None, _error(404, "not_found", "No preview has that handle (it expired, or the server restarted): prepare it again.")
     try:
         current = identity(meta["source"])
@@ -75,6 +94,11 @@ def prepare(payload):
         return _error(400, "bad_request", "The body is {\"source\": {...}}")
     try:
         spec = normalize(payload.get("source"))
+        if not _source_allowed(spec):
+            if spec["kind"] == "media":
+                raise SourceError("not_found", "No Media item has that id, or its file is gone")
+            from . import ext_api_policy as policy
+            policy.require_file_sources()
         current = identity(spec)
     except SourceError as err:
         return _source_error(err)

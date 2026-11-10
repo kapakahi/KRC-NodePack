@@ -15,6 +15,7 @@ import { civitaiFetchPageMethods } from "./civitai_fetch_page.js";
 import { infoPageMethods } from "./info_page.js";
 import { statsPageMethods } from "./stats_page.js";
 import { profilesPageMethods } from "./profiles_page.js";
+import { apiPageMethods } from "./api_page.js";
 import { optionsPageMethods } from "./options_page.js";
 import { extraOptionsPageMethods } from "./extra_options_page.js";
 import { transferPageMethods } from "./transfer_page.js";
@@ -306,6 +307,7 @@ Object.assign(
   transferPageMethods,
   optionsPageMethods,
   profilesPageMethods,
+  apiPageMethods,
   extraOptionsPageMethods,
   sharedInfoPanelControlMethods,
   infoPanelControlMethods,

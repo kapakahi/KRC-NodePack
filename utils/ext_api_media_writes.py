@@ -17,6 +17,9 @@ global Purge (preview -> snapshot -> confirm) are the node's own, unchanged. Bat
 node's client side (a queue of uploads, job polling, cancel, and a duplicate check against
 each item's ``source``): it needs nothing else here. Nothing counts usage.
 """
+import json
+
+from . import ext_api_policy as policy
 from .ext_api_routes import BadRequest
 
 UPLOAD_SETTINGS = ("maxMegapixels", "keepAlpha", "fps", "audio", "trimIn", "trimOut", "maxLength", "folder")
@@ -80,23 +83,57 @@ async def upload(request):
     from .media import media_store as store
     from .media.media_routes import receive_upload
 
+    principal = policy.current()
+
     def check(settings):
         try:
             check_upload_settings(settings)
+            # Where it goes: a folder this caller may write (omitted -> its default).
+            settings["folder"] = policy.upload_folder(settings.get("folder"), "input")
+            target = settings.get("assign")
+            if isinstance(target, dict) and target.get("preset"):
+                policy.require_preset("media", str(target["preset"]), write=True, message="No Media preset has that id.")
         except BadRequest as exc:
             raise store.MediaError(f"bad_request:{exc}") from None
+        except policy.Denied as denied:
+            raise store.MediaError("denied:" + json.dumps([denied.status, denied.body])) from None
 
     status, body = await receive_upload(request, check)
     if body.get("ok"):
         if "job" in body:
+            remember_job(body["job"]["id"], principal)
             return 202, {"id": body["job"]["itemId"], "job": body["job"]}
         item = store.get(body["item"]["id"]) or {}
         return 201, {"id": body["item"]["id"], "item": _row(item) if item else body["item"]}
     message = str(body.get("error") or "The upload failed.")
+    if message.startswith("denied:"):
+        denied_status, denied_body = json.loads(message[len("denied:"):])
+        return denied_status, denied_body
     if message.startswith("bad_request:"):
         return 400, {"error": "bad_request", "message": message[len("bad_request:"):]}
     code = {400: "bad_request", 413: "too_large", 415: "unsupported_media", 503: "unavailable"}.get(status, "internal_error")
     return status, {"error": code, "message": message}
+
+
+# Which API profile started each upload job (in memory, like the jobs). A restricted caller
+# sees and cancels only its own; an unrestricted one also those started in KRC Portal.
+_JOB_OWNERS = {}
+_JOB_OWNERS_MAX = 500
+
+
+def remember_job(job_id, principal):
+    if principal is not None:
+        _JOB_OWNERS[str(job_id)] = principal.profile_id
+        while len(_JOB_OWNERS) > _JOB_OWNERS_MAX:
+            _JOB_OWNERS.pop(next(iter(_JOB_OWNERS)))
+
+
+def _job_visible(job_id):
+    p = policy.current()
+    if p is None:
+        return True
+    owner = _JOB_OWNERS.get(str(job_id))
+    return owner == p.profile_id or (owner is None and p.unrestricted("mediaFolders"))
 
 
 def job(job_id):
@@ -104,7 +141,7 @@ def job(job_id):
     50 finished ones are kept, and none survive a restart)."""
     from .media import media_jobs
 
-    found = media_jobs.get(job_id)
+    found = media_jobs.get(job_id) if _job_visible(job_id) else None
     if found is None:
         raise NotFound("No upload job has that id (finished jobs are forgotten after a while, and on restart).")
     return {"job": found}
@@ -143,9 +180,10 @@ def _version(payload):
     return value
 
 
-def _existing(preset_id):
+def _existing(preset_id, write=True):
     from .media import preset_store
 
+    policy.require_preset("media", preset_id, write=write, message="No Media preset has that id.")
     try:
         record = preset_store.get(preset_id)
     except preset_store.PresetError:
@@ -181,7 +219,9 @@ def create_preset(payload):
     if not isinstance(payload, dict):
         raise BadRequest("The body must be a JSON object")
     name = _text(payload, "name", required=False) or ""
+    policy.require_create("presets.media", "Media presets")
     record = _run(lambda: preset_store.create(name))
+    policy.created("presets.media", record["id"])
     _announce("create", record["id"])
     return _preset_body(record)
 
@@ -220,7 +260,9 @@ def set_slot(preset_id, index, payload):
             found = store.get(item_id)
         except store.MediaError:
             found = None
-        if found is None:
+        # The caller must be able to read the item it puts in a slot (an id it guessed
+        # reads as missing): a slot assignment never grants access across folders.
+        if found is None or not policy.media_item_readable(found):
             raise BadRequest("No Media item has that id")
     record = _run(lambda: preset_store.set_slots(preset_id, [item_id], start=slot, if_version=expected))
     _announce("slot", record["id"])
@@ -234,7 +276,7 @@ def cancel_job(job_id):
     Stop). -> {"cancelled", "job"}; ``cancelled`` false when it had already finished."""
     from .media import media_jobs
 
-    if media_jobs.get(job_id) is None:
+    if not _job_visible(job_id) or media_jobs.get(job_id) is None:
         raise NotFound("No upload job has that id (finished jobs are forgotten after a while, and on restart).")
     cancelled = media_jobs.cancel(job_id)
     return {"cancelled": cancelled, "job": media_jobs.get(job_id)}
@@ -278,16 +320,50 @@ def _store_call(work, noun="item"):
         raise BadRequest(text) from None
 
 
-def _item_or_404(item_id):
+def _item_or_404(item_id, write=True):
+    """The item, if the caller may change it (unreadable = missing, readable only = 403)."""
     from .media import media_store as store
 
     try:
         record = store.get(item_id)
     except store.MediaError:
         record = None
-    if record is None:
+    if record is None or not policy.media_item_readable(record):
         raise NotFound("No Media item has that id.")
+    if write and not policy.media_item_writable(record):
+        raise policy.read_only_resource()
     return record
+
+
+def _check_destination(folder_id, items):
+    """A move: the caller must write the destination ("" = Unsorted of the items' side)."""
+    if folder_id:
+        policy.require_write("mediaFolders", folder_id, "No Media folder has that id.")
+        return
+    for item in items:
+        policy.require_write("mediaFolders", policy.UNSORTED_OUTPUT if item.get("storage") == "output"
+                             else policy.UNSORTED_INPUT, "No Media folder has that id.")
+
+
+def _require_items(ids):
+    """Every id in a selection must be one the caller may change; any other refuses the whole
+    operation (404, as missing), so nothing is applied in part."""
+    from .media import media_store as store
+
+    if not isinstance(ids, list):
+        return []
+    records = []
+    for item_id in ids:
+        try:
+            record = store.get(item_id) if isinstance(item_id, str) else None
+        except store.MediaError:
+            record = None
+        if record is None or not policy.media_item_readable(record):
+            raise NotFound("No Media item has that id.")
+        if not policy.media_item_writable(record):
+            raise policy.read_only_resource()
+        records.append(record)
+    return records
 
 
 def update_item(item_id, payload):
@@ -310,7 +386,9 @@ def update_item(item_id, payload):
         if key in fields and not isinstance(fields[key], str):
             raise BadRequest(f"{key} must be a string")
     expected = _optional_version(payload)
-    _item_or_404(item_id)
+    current = _item_or_404(item_id)
+    if "folder" in fields:
+        _check_destination(fields["folder"], [current])
     record = _store_call(lambda: store.update(item_id, fields, if_version=expected))
     _announce("update", record["id"])
     return {"item": _row(record), "revision": db.revision(store.STORE)}
@@ -340,6 +418,11 @@ def bulk(payload, preview=False):
     from .media.media_routes import _announce
 
     payload = _object(payload)
+    selected = _require_items(payload.get("ids"))
+    if payload.get("operation") == "move" and not preview:
+        destination = payload.get("destination")
+        if isinstance(destination, str):
+            _check_destination(destination, selected)
     try:
         result = store.bulk_operation(payload, preview=preview)
     except store.MediaError as exc:
@@ -347,6 +430,14 @@ def bulk(payload, preview=False):
     except ValueError as exc:
         raise BadRequest(str(exc)) from None
     result.pop("ok", None)
+    if "destinations" in result and not policy.unrestricted("mediaFolders"):
+        # Only folders the caller may move into (no other folder's name).
+        sides = {item.get("storage") == "output" for item in selected}
+        unsorted_ok = all(policy.writable("mediaFolders", policy.UNSORTED_OUTPUT if side else policy.UNSORTED_INPUT)
+                          for side in sides)
+        result["destinations"] = [entry for entry in result["destinations"]
+                                  if (entry["value"] == "" and unsorted_ok)
+                                  or (entry["value"] and policy.writable("mediaFolders", entry["value"]))]
     if not preview and result.get("updated"):
         _announce(payload["operation"])
     return {**result, "revision": db.revision(store.STORE)}
@@ -361,6 +452,7 @@ def bulk_attributes(payload):
     from .media.media_routes import _announce
 
     payload = _object(payload)
+    _require_items(payload.get("ids"))
     try:
         result = store.bulk_attributes(payload)
     except (store.MediaError, ValueError) as exc:
@@ -381,6 +473,13 @@ def purge(payload, preview=False):
     from .media.media_routes import _announce
 
     payload = _object(payload)
+    # A restricted caller purges only a selection it may change; the whole-Media scopes
+    # (unsorted / output / all) need every folder writable.
+    if payload.get("scope") == "selected":
+        _require_items(payload.get("ids"))
+    elif not (policy.unrestricted("mediaFolders") and policy.writable("mediaFolders", policy.UNSORTED_INPUT)):
+        raise policy.Denied(403, {"error": "scope_not_permitted",
+                                  "message": "This API profile may purge only a selection of its own items (scope selected)."})
     try:
         result = run_purge(payload, preview=preview)
     except (store.MediaError, ValueError) as exc:
@@ -410,7 +509,9 @@ def create_folder(payload):
         raise BadRequest("name must be a string")
     if view not in ("input", "output"):
         raise BadRequest("view must be input or output")
+    policy.require_create("mediaFolders", "Media folders")
     folder = _store_call(lambda: store.create_folder(name, storage="output" if view == "output" else "media"), "folder")
+    policy.created("mediaFolders", folder["id"])
     _announce("folder", folder["id"])
     return {"folder": folder_row(folder), "revision": db.revision(store.STORE)}
 
@@ -420,6 +521,8 @@ def _folder_or_404(folder_id):
 
     if not store.ID_PATTERN.match(str(folder_id or "")) or not any(entry["id"] == folder_id for entry in store.folders()):
         raise NotFound("No Media folder has that id.")
+    policy.require_write("mediaFolders", folder_id, "No Media folder has that id.")
+    return next(entry for entry in store.folders() if entry["id"] == folder_id)
 
 
 def update_folder(folder_id, payload):
@@ -463,7 +566,11 @@ def delete_folder(folder_id, payload):
 
     payload = _object(payload)
     expected = _optional_version(payload)
-    _folder_or_404(folder_id)
+    folder = _folder_or_404(folder_id)
+    # Its items move to Unsorted: the caller must write that Unsorted too, or deleting the
+    # folder would hand its items to whoever reads Unsorted.
+    policy.require_write("mediaFolders", policy.UNSORTED_OUTPUT if folder.get("storage") == "output"
+                         else policy.UNSORTED_INPUT, "No Media folder has that id.")
     moved = _store_call(lambda: store.delete_folder(folder_id, if_version=expected), "folder")
     if moved is None:
         raise NotFound("No Media folder has that id.")
