@@ -16,7 +16,7 @@ const { fetchLora, postLoraJson } = makeNodeApi("/krc/ext-api");
 
 const LABEL = "External API";
 const GLOBAL_DESCRIPTION = "Lets other apps use KRC with a key from an API profile below. These switches cover every profile: a profile can be allowed less, never more. Apps can't change anything while Read only is on.";
-const SHORTCUT_DESCRIPTION = "Apps that use KRC (such as KRC LegitComfy): the switches, API profiles and their keys are on KRC Portal's API page.";
+const SHORTCUT_DESCRIPTION = "For apps that use KRC: the switches, API profiles and their keys are on KRC Portal's API page.";
 const READ_ONLY_DESCRIPTION = "On: apps can only read, whatever is allowed below. Turn it off to let apps make the changes you allow. Turning it on never undoes or stops anything already done.";
 
 // → the server state {enabled, readOnly, areas, …} or null; a refused POST -> null.

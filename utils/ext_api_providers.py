@@ -1,4 +1,4 @@
-"""External API providers: a KRC pack (KRC NodePack Extras) plugs node-specific logic into
+"""External API providers: a KRC pack plugs node-specific logic into
 NodePack's ``/krc/ext/v1`` routes (public API 2.10 ``register_ext_provider``).
 
 NodePack keeps everything an outside app touches first: the routes, the switch and key, the
@@ -7,31 +7,22 @@ A provider only answers the node-specific questions. The routes for a provider a
 registered, so the contract is fixed; while no compatible provider is registered they answer
 ``503 provider_unavailable`` and /info lists none of its capabilities.
 
-Known providers, and the provider interface versions this NodePack speaks:
-
-    "resizer" (KRC Resizer, in KRC NodePack Extras): interface 1. The provider object has
-        PROVIDER_API = 1, VERSION (its own, a string), PACK (its pack id), CAPABILITIES
-        (a subset of RESIZER_CAPABILITIES), and the methods
-            prepare(source) -> preview dict            (source: ext_api_sources.Source)
-            get(handle) -> preview dict | None
-            frame(handle, index) -> JPEG bytes | None
-            drop(handle)
-            build_inputs(identity, settings) -> {"inputs", "settings"}   (ValueError -> 400)
-            read_settings(inputs, identity|None) -> {"settings", "source", "stale"?, "fallback"?}
+Known providers: none today. The KRC Resizer was the first (interface 1: PROVIDER_API,
+VERSION, PACK, CAPABILITIES; prepare / get / frame / drop / build_inputs / read_settings); it
+moved into NodePack on 2026-11-10 and is called directly (ext_api_resizer.py), so a pack that
+still registers "resizer" (an older KRC NodePack Extras) is ignored without a word. The
+function stays in the public API for future packs: a name gets an entry in PROVIDERS along
+with its routes.
 
 Registering again replaces the earlier object (a pack reloaded). An unknown name, a missing
-method or an interface version this NodePack doesn't speak is refused with one log line,
-and the routes keep answering ``provider_unavailable``.
+method or an interface version this NodePack doesn't speak is refused with one log line.
+Registering works quietly: nothing is logged when it succeeds.
 """
 import threading
 
-PROVIDERS = {
-    "resizer": {
-        "interfaces": (1,),
-        "methods": ("prepare", "get", "frame", "drop", "build_inputs", "read_settings"),
-        "capabilities": ("resizer.previews", "resizer.settings"),
-    },
-}
+PROVIDERS = {}
+# Names NodePack now handles itself: a registration is ignored quietly (no log line).
+BUILT_IN = ("resizer",)
 
 _registered = {}
 _lock = threading.Lock()
@@ -40,6 +31,8 @@ _lock = threading.Lock()
 def register_ext_provider(name, provider):
     """Register ``provider`` for ``name``. -> True when it's in use, False when refused
     (logged once per refusal)."""
+    if name in BUILT_IN:
+        return False
     spec = PROVIDERS.get(name)
     if spec is None:
         print(f"[KRC External API] ignored provider {name!r}: NodePack has no routes for it")
@@ -56,8 +49,6 @@ def register_ext_provider(name, provider):
         return False
     with _lock:
         _registered[name] = provider
-    print(f"[KRC External API] provider {name!r} {getattr(provider, 'VERSION', '?')} "
-          f"from {getattr(provider, 'PACK', '?')} (interface {interface})")
     return True
 
 

@@ -1,0 +1,10 @@
+/* KRC NodePack's shared sheets (tokens, themes, components) aren't @imported here:
+   NodePack's folder name depends on how it was installed. resizer/styles.js loads them
+   first with the public API's ensureSharedStylesheets(), then this bundle. */
+@import url("./resizer/styles/base.css?v=1.0.36-resizable");
+@import url("./resizer/styles/frame_controls.css?v=1.0.36-resizable");
+@import url("./resizer/styles/mode_crop_controls.css?v=1.0.27-rz-disable");
+@import url("./resizer/styles/mask_controls.css?v=1.0.25-rz-mask-controls");
+@import url("./resizer/styles/transform_controls.css?v=1.0.26-krc-range");
+@import url("./resizer/styles/output_controls.css?v=1.0.25-rz-mask-controls");
+@import url("./resizer/styles/pad_controls.css?v=1.0.25-rz-mask-controls");

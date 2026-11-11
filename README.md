@@ -38,6 +38,13 @@ A home for your images and videos, in the Portal's **Media** tab.
 - **KRC Media Output** saves your results to Media and shows the last six on the node.
   They also appear in ComfyUI's queue and Assets.
 
+## KRC Resizer
+
+<a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/resizer.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/resizer.webp" width="560" alt="KRC Resizer"></a>
+
+Crop, pad, resize and mask images with a live preview. Handles image batches, and can
+pass through or switch itself off.
+
 ## KRC Word Bank
 
 <a href="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/word_bank.webp"><img src="https://raw.githubusercontent.com/kapakahi/KRC-NodePack/main/docs/images/word_bank.webp" width="520" alt="KRC Word Bank"></a>
@@ -81,7 +88,6 @@ Drag cards from the Portal straight onto nodes.
 A companion pack with more nodes built on KRC NodePack:
 
 - **KRC RefMod Loadout:** a stack of MiniMax H3 RefMods, with presets and a token meter.
-- **KRC Resizer:** crop, pad and resize with a live preview.
 - **KRC Frame Router:** sends a single frame and a clip to different inputs.
 
 Get it at [KRC NodePack Extras](https://github.com/kapakahi/KRC-NodePack-Extras).

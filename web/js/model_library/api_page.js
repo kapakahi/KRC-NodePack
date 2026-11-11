@@ -6,13 +6,13 @@
  *
  *   Global     External API, Read only, write areas (shared/external_api_options.js):
  *              install-wide; a profile is allowed less, never more.
- *   Profiles   one row per API profile (name, Enabled / Disabled, Recently active · Last
- *              used · Never used), + New profile. Click a row to edit it below:
- *   Profile    name, enabled; its one key (…hint; Create / Regenerate, shown once with
- *              Copy; regenerating ends the old key at once); write areas;
- *              capabilities; file sources; resources per kind (All / Selected / None,
- *              read or write, may make new ones, the default for new things, the picked
- *              items); usage and the client's own (unverified) label; Delete profile.
+ *   Profiles   one row per API profile: name, rename, activity (Recently active · Last
+ *              used · Never used, plus the app's unverified label) on the left; its key's
+ *              hint, REGENERATE / CREATE KEY (shown once, with Copy), delete and the
+ *              enabled switch on the right. Then NEW PROFILE. Click a row to edit below:
+ *   Profile    write permissions; resource access per kind, grouped (All / Selected /
+ *              None, read or write, may create new, default destination, the picked items;
+ *              ComfyUI images with Media). Every profile may use every API feature.
  *
  * Every change is sent at once and the page redraws from the server's answer.
  */
@@ -31,7 +31,7 @@ const { fetchLora, postLoraJson } = makeNodeApi("/krc/ext-api");
 const MODE_OPTIONS = [["all", "All"], ["selected", "Selected"], ["none", "None"]];
 const LEVEL_OPTIONS = [["read", "Read"], ["write", "Read/Write"]];
 const ITEM_OPTIONS = [["", "No access"], ["read", "Read"], ["write", "Read/Write"]];
-const BOUNDARY = "A profile is whoever holds its key: it isn't a login. It limits what apps can do through the API, not the ComfyUI page, its other routes, files on disk or workflows that run. Keep ComfyUI where only people you trust can reach it; to keep people apart, let them reach KRC only through an app (such as KRC LegitComfy) that holds their key.";
+const BOUNDARY = "A profile is whoever holds its key. It limits apps using the API, not ComfyUI itself: keep ComfyUI where only people you trust can reach it.";
 
 async function getJson(path) {
   try {
@@ -106,6 +106,28 @@ function askName(node, title, value, placeholder) {
   });
 }
 
+// Icon buttons: a symmetric inline SVG drawn as a 12px block (never a text glyph).
+const GLYPHS = {
+  pencil: '<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+};
+
+function glyphButton(kind, title, onClick, extra = "") {
+  const button = el("button", `krc-api-glyph${extra ? ` ${extra}` : ""}`, { type: "button", title });
+  button.setAttribute("aria-label", title);
+  button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPHS[kind]}</svg>`;
+  button.addEventListener("click", (event) => { event.stopPropagation(); onClick(); });
+  return button;
+}
+
+// Resource access groups: related kinds side by side (Prompt Vault prompts with the presets
+// they link to; Media folders with Media presets). Each kind keeps its own access.
+const SCOPE_GROUPS = [
+  { label: "Prompts and loadouts", test: (name) => name === "prompts" || name === "presets.ll" || name.startsWith("presets.kit:") },
+  { label: "Media", test: (name) => name === "mediaFolders" || name === "presets.media" },
+  { label: "Models and other presets", test: () => true },
+];
+
 function sectionRow(label, ...controls) {
   const row = el("div", "krc-setting-head");
   row.append(el("span", "krc-setting-label", { textContent: label }), ...controls);
@@ -154,24 +176,57 @@ export const apiPageMethods = {
       return answer;
     };
 
+    // One row per profile: name, rename, activity on the left; its key's hint, REGENERATE
+    // (or CREATE KEY), delete and the enabled switch on the right. Click a row to edit its
+    // permissions below.
     const drawList = () => {
-      const add = el("button", "krc-options-reset", { type: "button", textContent: "New profile" });
+      const rows = profiles.map((profile) => {
+        const base = `/profiles/${encodeURIComponent(profile.id)}`;
+        const row = el("div", `krc-setting-head krc-api-profile-row${profile.id === selected ? " is-selected" : ""}${profile.enabled ? "" : " is-disabled"}`);
+        const rename = glyphButton("pencil", "Rename", async () => {
+          const name = await askName(node, "Rename API profile", profile.name, "Profile name");
+          if (name && name !== profile.name) await act("Rename", `${base}/update`, { name });
+        });
+        const label = profile.usage?.label ? ` · ${profile.usage.label}` : "";
+        const left = el("span", "krc-api-profile-left");
+        left.append(el("span", "krc-setting-label", { textContent: profile.name }), rename,
+          el("span", "krc-api-activity", { textContent: activityText(profile.usage) + label,
+            title: "Recently active = a request in the last 15 minutes. It doesn't mean an app is connected now. The app's label is unverified." }));
+        const makeKey = el("button", "krc-options-reset", { type: "button", textContent: profile.key ? "REGENERATE" : "CREATE KEY" });
+        makeKey.addEventListener("click", async (event) => {
+          event.stopPropagation();
+          if (profile.key) {
+            const ok = await openKrcConfirm({ title: "Regenerate key", danger: true, confirmLabel: "Regenerate",
+              message: `The current key of “${profile.name}” stops working at once, along with its file links. Give the app the new key.` });
+            if (!ok) return;
+          }
+          const answer = await act("Key", `${base}/key`, {});
+          if (answer?.key) showNewKey(node, answer.key);
+        });
+        const remove = glyphButton("trash", "Delete profile", async () => {
+          const ok = await openKrcConfirm({ title: "Delete API profile", danger: true, confirmLabel: "Delete",
+            message: `“${profile.name}” and its key stop working at once. Its prompts, presets and media stay.` });
+          if (ok) await act("Delete", `${base}/delete`, {});
+        }, "is-danger");
+        const toggle = switchToggle({ active: profile.enabled, title: profile.enabled ? "Enabled: click to disable (its key is refused at once)" : "Disabled: click to enable",
+          onClick: () => act("Enable", `${base}/update`, { enabled: !profile.enabled }) });
+        toggle.addEventListener("click", (event) => event.stopPropagation());
+        const right = el("span", "krc-api-profile-right");
+        right.append(...(profile.key ? [el("span", "krc-api-key-hint", { textContent: `••••${profile.key.hint}` })] : []), makeKey, remove, toggle);
+        row.append(left, right);
+        row.addEventListener("click", () => { selected = profile.id; this._apiSelected = selected; drawList(); drawEditor(); });
+        return row;
+      });
+      const add = el("button", "krc-options-reset", { type: "button", textContent: "NEW PROFILE" });
       add.addEventListener("click", async () => {
         const name = await askName(node, "New API profile", "", "e.g. Studio tablet");
         if (!name) return;
         const made = await act("New API profile", "/profiles/create", { name });
         if (made?.id) { selected = made.id; this._apiSelected = selected; await load(); }
       });
-      const rows = profiles.map((profile) => {
-        const row = el("button", `krc-setting-head krc-api-profile-row${profile.id === selected ? " is-selected" : ""}`, { type: "button" });
-        row.append(
-          el("span", "krc-setting-label", { textContent: profile.name }),
-          el("span", "krc-options-description", { textContent: `${profile.enabled ? "Enabled" : "Disabled"} · ${activityText(profile.usage)}` }),
-        );
-        row.addEventListener("click", () => { selected = profile.id; this._apiSelected = selected; drawList(); drawEditor(); });
-        return row;
-      });
-      list.replaceChildren(infoPageSection("API profiles", description(BOUNDARY), ...rows, add));
+      const addRow = el("div", "krc-setting-head krc-api-add-row");
+      addRow.append(add);
+      list.replaceChildren(infoPageSection("API profiles", description(BOUNDARY), ...rows, addRow));
     };
 
     const drawEditor = () => {
@@ -179,48 +234,11 @@ export const apiPageMethods = {
       if (!profile) { editor.replaceChildren(); return; }
       const base = `/profiles/${encodeURIComponent(profile.id)}`;
       const policy = profile.policy;
-      const savePolicy = (next) => act("Save the profile", `${base}/update`, { policy: next });
+      // Every profile may use every API feature (no per-feature list on this page); what it
+      // reaches is Write permissions and Resource access.
+      const savePolicy = (next) => act("Save the profile", `${base}/update`, { policy: { ...next, capabilities: "all" } });
 
-      // ---- name, enabled, delete
-      const rename = el("button", "krc-options-reset", { type: "button", textContent: "Rename" });
-      rename.addEventListener("click", async () => {
-        const name = await askName(node, "Rename API profile", profile.name, "Profile name");
-        if (name && name !== profile.name) await act("Rename", `${base}/update`, { name });
-      });
-      const enabled = switchToggle({ active: profile.enabled, title: "Enabled", onClick: () => act("Enable", `${base}/update`, { enabled: !profile.enabled }) });
-      const remove = el("button", "krc-options-reset is-danger", { type: "button", textContent: "Delete profile…" });
-      remove.addEventListener("click", async () => {
-        const ok = await openKrcConfirm({ title: "Delete API profile", danger: true, confirmLabel: "Delete",
-          message: `“${profile.name}” and its key stop working at once. Its prompts, presets and media stay.` });
-        if (ok) await act("Delete", `${base}/delete`, {});
-      });
-      const head = infoPageSection(profile.name,
-        sectionRow("Enabled", enabled),
-        description("Disabled: its key is refused at once; enabling the profile again brings it back."),
-        sectionRow(`Id ${profile.id}`, rename),
-        sectionRow(activityText(profile.usage), el("span", "krc-options-description", {
-          textContent: profile.usage?.label ? `Client says: “${profile.usage.label}” (unverified)` : "",
-        })),
-        description("Recently active = a request within the last 15 minutes. Shown from requests KRC accepted; it doesn't mean an app is connected now."),
-        remove);
-
-      // ---- its key (one per profile)
-      const makeKey = el("button", `krc-options-reset${profile.key ? " is-danger" : ""}`, { type: "button",
-        textContent: profile.key ? "Regenerate…" : "Create key" });
-      makeKey.addEventListener("click", async () => {
-        if (profile.key) {
-          const ok = await openKrcConfirm({ title: "Regenerate key", danger: true, confirmLabel: "Regenerate",
-            message: `The current key of “${profile.name}” stops working at once, along with its file links. Give the app the new key.` });
-          if (!ok) return;
-        }
-        const answer = await act("Key", `${base}/key`, {});
-        if (answer?.key) showNewKey(node, answer.key);
-      });
-      const keys = infoPageSection("Key",
-        sectionRow(profile.key ? `•••• ${profile.key.hint}` : "No key yet", makeKey),
-        description("Give this key to the app. KRC shows it once and keeps only a fingerprint of it."));
-
-      // ---- write areas, capabilities, file sources
+      // ---- write areas
       const areas = (resources?.writeAreas || []).map((area) => {
         const all = policy.writeAreas === "all";
         const on = all || policy.writeAreas.includes(area.id);
@@ -232,25 +250,10 @@ export const apiPageMethods = {
       const writes = infoPageSection("Write permissions",
         description("The areas this profile may write to. The global switches above apply first: while Read only is on, no writes are accepted."),
         ...areas);
-      const allCaps = policy.capabilities === "all";
-      const capRows = allCaps ? [] : (resources?.capabilities || []).map((cap) => {
-        const on = policy.capabilities.includes(cap);
-        return sectionRow(cap, switchToggle({ active: on, title: cap, onClick: () => savePolicy({ ...policy,
-          capabilities: on ? policy.capabilities.filter((id) => id !== cap) : [...policy.capabilities, cap] }) }));
-      });
-      const features = infoPageSection("Features",
-        sectionRow("Every feature", switchToggle({ active: allCaps, title: "Every feature", onClick: () => savePolicy({ ...policy,
-          capabilities: allCaps ? ["info"] : "all" }) })),
-        description("Off: only the features switched on below (by capability name). New features KRC adds later need switching on."),
-        ...capRows,
-        sectionRow("ComfyUI files by name", switchToggle({ active: Boolean(policy.fileSources), title: "ComfyUI files by name",
-          onClick: () => savePolicy({ ...policy, fileSources: !policy.fileSources }) })),
-        description("Lets the profile preview Load Image files by their name (input / output folders). Leave off to limit it to Media."));
-
       // ---- resources: one row per kind (its name and access side by side); a kind set to
       // Selected lists its picks, indented, under its row.
       const sub = (row) => { row.classList.add("krc-api-subrow"); return row; };
-      const scopeRows = (resources?.scopes || []).flatMap((scope) => {
+      const scopeRowsFor = (scope) => {
         const entry = policy.scopes[scope.name] || policy.scopes["*"] || { mode: "none", level: "read", items: {}, default: "", create: false };
         const save = (patch) => savePolicy({ ...policy, scopes: { ...policy.scopes, [scope.name]: { ...entry, ...patch } } });
         const controls = [menuSelect({ className: "krc-setting-select krc-api-select", title: scope.label, value: entry.mode,
@@ -278,11 +281,26 @@ export const apiPageMethods = {
             onChange: (value) => save({ default: value }) }))));
         }
         return rows;
+      };
+      const scopes = resources?.scopes || [];
+      const placed = new Set();
+      const scopeRows = SCOPE_GROUPS.flatMap((group) => {
+        const members = scopes.filter((scope) => !placed.has(scope.name) && group.test(scope.name));
+        members.forEach((scope) => placed.add(scope.name));
+        if (!members.length) return [];
+        const rows = [el("div", "krc-api-group", { textContent: group.label }), ...members.flatMap(scopeRowsFor)];
+        // ComfyUI images: Media's other source (Load Image files by name), so it sits with Media.
+        if (group.label === "Media") {
+          rows.push(sectionRow("ComfyUI images", switchToggle({ active: Boolean(policy.fileSources), title: "ComfyUI images",
+            onClick: () => savePolicy({ ...policy, fileSources: !policy.fileSources }) })),
+          description("Preview images from ComfyUI's input and output folders by file name, as a Load Image node does. Off: Media items only."));
+        }
+        return rows;
       });
       const scopeSections = [infoPageSection("Resource access",
         description("All: everything of that kind, including what's added later. Selected: only the picks below it, plus what this profile creates itself. None: nothing."),
         ...scopeRows)];
-      editor.replaceChildren(head, keys, writes, features, ...scopeSections);
+      editor.replaceChildren(writes, ...scopeSections);
     };
 
     body.append(infoPageSection("Global", globalApiSection({ onChange: () => { if (panel.isConnected) load(); } })), list, editor);

@@ -1,0 +1,429 @@
+.krc-resizer .krc-rz-chip {
+  min-width: 42px;
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  text-transform: none;
+}
+
+.krc-resizer .krc-rz-input {
+  height: 26px;
+  border: 1px solid var(--krc-border-edit) !important;
+  border-radius: 7px !important;
+  background: var(--krc-bg-element) !important;
+  color: var(--krc-text-primary) !important;
+  font: inherit !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 11px !important;
+  outline: none;
+}
+
+.krc-resizer .krc-rz-hidden-select {
+  display: none !important;
+}
+
+.krc-resizer .krc-rz-input {
+  padding: 0 7px !important;
+  text-align: right;
+}
+
+.krc-resizer .krc-rz-latch-button {
+  width: 34px;
+  flex: 0 0 34px;
+  padding: 0 !important;
+}
+
+.krc-resizer .krc-rz-output-size-row .krc-rz-input {
+  width: 56px !important;
+  flex: 0 0 56px;
+  padding: 0 6px !important;
+}
+
+.krc-resizer .krc-rz-output-x {
+  margin: 0 -3px;
+}
+
+.krc-resizer .krc-rz-res-lock-button {
+  width: 24px;
+  flex: 0 0 24px;
+  height: 26px;
+  min-height: 26px;
+  margin-left: -1px;
+  margin-right: 5px;
+  opacity: 0.45;
+  transform: scale(0.94);
+  transform-origin: center;
+}
+
+.krc-resizer .krc-rz-res-lock-button::before {
+  top: 11px;
+  width: 10px;
+  height: 7px;
+}
+
+.krc-resizer .krc-rz-res-lock-button::after {
+  top: 5px;
+  width: 7px;
+  height: 7px;
+}
+
+.krc-resizer .krc-rz-divisor-button {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 26px;
+  min-height: 26px;
+  flex: 0 0 30px;
+  padding: 0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  transform: scale(0.94);
+  transform-origin: center;
+}
+
+.krc-resizer .krc-rz-div-label {
+  flex: 0 0 auto;
+  color: var(--krc-text-muted) !important;
+  font-size: 7.5px !important;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.krc-resizer .krc-rz-output-size-row span {
+  flex: 0 0 auto;
+}
+
+.krc-resizer .krc-rz-padding-button {
+  width: 34px;
+  flex: 0 0 34px;
+  min-height: 22px;
+  padding: 0 !important;
+  font-size: 8px !important;
+  font-weight: 700;
+}
+
+.krc-resizer .krc-rz-color-chip {
+  min-width: 14px;
+  width: 14px;
+  height: 14px;
+  padding: 0 !important;
+  position: relative;
+  border-radius: 999px !important;
+}
+
+.krc-resizer .krc-rz-color-chip.is-gray {
+  background: rgb(115, 115, 115) !important;
+}
+
+.krc-resizer .krc-rz-color-chip.is-black {
+  background: rgb(0, 0, 0) !important;
+}
+
+.krc-resizer .krc-rz-color-chip.is-white {
+  background: rgb(255, 255, 255) !important;
+}
+
+.krc-resizer .krc-rz-color-chip.is-white.is-active {
+  border-color: var(--krc-accent-green) !important;
+}
+
+.krc-resizer .krc-rz-color-chip.is-active {
+  box-shadow: var(--krc-selection-ring) !important;
+}
+
+.krc-resizer .krc-rz-mp-selector {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+.krc-resizer .krc-rz-mp-unit {
+  margin-right: -4px;
+}
+
+.krc-resizer .krc-rz-mp-stepper {
+  display: grid;
+  grid-template-columns: 20px 42px 20px;
+  width: 82px;
+  min-width: 82px;
+  height: 26px;
+  min-height: 26px;
+  max-height: 26px;
+  overflow: hidden;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: 7px;
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  transform: scale(0.94);
+  transform-origin: center;
+}
+
+.krc-resizer .krc-rz-mp-step-button {
+  display: inline-grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  flex: 0 0 20px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  font-size: 15px !important;
+}
+
+.krc-resizer .krc-rz-mp-input {
+  width: 42px !important;
+  flex: 0 0 42px;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  border: 0 !important;
+  border-left: 1px solid rgba(var(--krc-white-rgb), 0.10) !important;
+  border-right: 1px solid rgba(var(--krc-white-rgb), 0.10) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 5px !important;
+  text-align: center;
+}
+
+.krc-resizer .krc-rz-output-size-row .krc-rz-mp-input {
+  width: 42px !important;
+  flex: 0 0 42px;
+}
+
+.krc-resizer .krc-rz-mp-input::-webkit-outer-spin-button,
+.krc-resizer .krc-rz-mp-input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.krc-resizer .krc-rz-mp-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* Custom numeric stepper for the W/H fields (crop + output). Native number
+   spinners render differently in every engine (Firefox's is bulky/off-theme),
+   so we remove them and overlay our own arrows at the field's right edge. The
+   field reserves right padding so the right-aligned digits never sit under the
+   arrows; width is unchanged (border-box), so the row layout doesn't move. */
+.krc-resizer .krc-rz-input--stepper::-webkit-outer-spin-button,
+.krc-resizer .krc-rz-input--stepper::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.krc-resizer .krc-rz-input--stepper {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.krc-resizer .krc-rz-num-stepper {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+}
+
+.krc-resizer .krc-rz-output-size-row .krc-rz-num-stepper {
+  transform: scale(0.94);
+  transform-origin: center;
+}
+
+.krc-resizer .krc-rz-output-size-row .krc-rz-num-stepper > input.krc-rz-input--stepper {
+  opacity: 0.55;
+}
+
+/* Reserve room for the overlaid strip. The `input` tag bump keeps this above
+   the row-specific padding rules (e.g. .krc-rz-fixed-input) regardless of file
+   load order; it only touches the right side, so each field keeps its own
+   left padding. */
+.krc-resizer .krc-rz-num-stepper > input.krc-rz-input--stepper {
+  padding-right: 15px !important;
+}
+
+/* Full-height strip at the field's right edge: a left separator + a mid divider
+   set it apart from the field background so it reads as a distinct control,
+   like the dropdown buttons — not arrows floating on the input. */
+/* display:flex !important defeats the range row's
+   `.krc-rz-frame-mode-group span:last-child { display:none }` (0,3,1) — the
+   arrows strip is the last child of the wrapper span, so it gets caught by
+   that rule in the FPS/SEC row. !important wins over the non-important
+   display:none regardless of specificity/load order, and leaves that rule's
+   original intent untouched. */
+.krc-resizer .krc-rz-num-stepper-arrows {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 13px;
+  display: flex !important;
+  flex-direction: column;
+  border-left: 1px solid rgba(var(--krc-white-rgb), 0.10);   /* subtle, matches the Feather dropdown separator */
+  background: transparent;
+  border-radius: 0 4px 4px 0;
+  overflow: hidden;
+  pointer-events: none;   /* the strip ignores clicks; the buttons re-enable */
+}
+
+.krc-resizer .krc-rz-num-stepper-arrows button {
+  pointer-events: auto;
+  flex: 1 1 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--krc-text-muted, #a5a5a5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+
+.krc-resizer .krc-rz-num-stepper-arrows button:first-child {
+  border-bottom: 1px solid rgba(var(--krc-white-rgb), 0.08);   /* faint divider between up/down */
+}
+
+.krc-resizer .krc-rz-num-stepper-arrows button:hover {
+  color: var(--krc-text-primary, #fff);
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.krc-resizer .krc-rz-num-stepper-glyph {
+  display: inline-block;
+}
+
+.krc-resizer .krc-rz-num-stepper-glyph.is-up {
+  transform: translate(-0.5px, 0); /* dialed in via glyph tuner */
+}
+
+.krc-resizer .krc-rz-num-stepper-glyph.is-down {
+  transform: translate(-0.5px, -2px); /* dialed in via glyph tuner */
+}
+
+.krc-resizer .krc-rz-num-stepper-arrows button:active {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.krc-resizer .krc-rz-options-row {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  flex: 0 0 26px;
+  justify-content: space-between;
+  gap: 8px;
+  height: 26px;
+  min-height: 26px;
+  max-height: 26px;
+  margin-top: 0;
+  overflow: hidden;
+}
+
+.krc-resizer .krc-rz-output-readout {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid rgba(var(--krc-white-rgb), 0.10);
+  border-radius: 7px;
+  background: rgba(var(--krc-bg-deeper-rgb), 0.34);
+  color: rgba(var(--krc-white-rgb), 0.72) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 26px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-resizer .krc-rz-options-button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  flex: 0 0 26px;
+  padding: 0 !important;
+  font-size: 13px !important;
+}
+
+.krc-resizer span {
+  color: var(--krc-text-muted) !important;
+}
+
+.krc-resizer .krc-rz-scrubber::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 20px;
+  border: 0;
+  background: transparent;
+}
+
+.krc-resizer .krc-rz-scrubber::-webkit-slider-thumb {
+  width: 4px;
+  height: 20px;
+  margin-top: 0;
+  border: 1px solid rgba(var(--krc-white-rgb), 0.82);
+  border-radius: 2px;
+  background: var(--krc-accent-purple-a);
+  box-shadow:
+    0 0 0 1px rgba(var(--krc-black-rgb), 0.22),
+    0 0 7px rgba(var(--krc-accent-purple-a-rgb), 0.42);
+  -webkit-appearance: none;
+}
+
+.krc-resizer .krc-rz-scrubber::-moz-range-track {
+  width: 100%;
+  height: 20px;
+  border: 0;
+  background: transparent;
+}
+
+.krc-resizer .krc-rz-scrubber::-moz-range-progress {
+  height: 20px;
+  background: transparent;
+}
+
+.krc-resizer .krc-rz-scrubber::-moz-range-thumb {
+  width: 4px;
+  height: 20px;
+  border: 1px solid rgba(var(--krc-white-rgb), 0.82);
+  border-radius: 2px;
+  background: var(--krc-accent-purple-a);
+  box-shadow:
+    0 0 0 1px rgba(var(--krc-black-rgb), 0.22),
+    0 0 7px rgba(var(--krc-accent-purple-a-rgb), 0.42);
+}
+
+.krc-resizer .krc-rz-mode-label,
+.krc-resizer .krc-rz-padding-label,
+.krc-resizer .krc-rz-div-label {
+  flex: 0 0 auto;
+  color: var(--krc-text-muted) !important;
+  font-size: 8px !important;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.krc-resizer .krc-rz-output-readout {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}

@@ -1,8 +1,8 @@
-"""The external API's KRC Resizer routes (KRC_EXTERNAL_API.md "KRC Resizer"): NodePack's half.
-NodePack owns the routes (behind the switch and key), the sources (ext_api_sources.py), the
-handles and their staleness, and the limits; the Resizer provider from KRC NodePack Extras
-(utils/resizer_provider.py there, registered through public API 2.10) owns everything about
-the node: the fingerprint, the preview frames it keeps, and crop_state.
+"""The external API's KRC Resizer routes (KRC_EXTERNAL_API.md "KRC Resizer"). These own the
+routes (behind the switch and key), the sources (ext_api_sources.py), the handles and their
+staleness, and the limits; utils/resizer_provider.py owns everything about the node: the
+fingerprint, the preview frames it keeps, and crop_state. The Resizer is part of NodePack
+(moved back from KRC NodePack Extras 2026-11-10), so the provider is called directly.
 
 All reads, by classification: preparing a preview only reads the source file and fills a
 bounded in-memory preview store that nothing else reads (no file, record, setting or
@@ -10,7 +10,6 @@ workflow is written), so it needs the switch and key and no write area.
 
 Each function returns (status, body); a frame answers JPEG bytes as its body.
 """
-PROVIDER = "resizer"
 MAX_SETTINGS_BYTES = 64 * 1024
 
 _SOURCE_STATUS = {"bad_request": 400, "not_found": 404, "unsupported": 422, "too_large": 413, "busy": 429}
@@ -21,18 +20,10 @@ def _error(status, code, message, **extra):
     return status, {"error": code, "message": message, **extra}
 
 
-def _provider(capability):
-    from .ext_api_providers import get_provider
+def _provider(_capability=""):
+    from .resizer_provider import PROVIDER
 
-    provider = get_provider(PROVIDER)
-    if provider is None or capability not in (getattr(provider, "CAPABILITIES", ()) or ()):
-        return None
-    return provider
-
-
-def _unavailable():
-    return _error(503, "provider_unavailable",
-                  "KRC Resizer previews need KRC NodePack Extras (with KRC Resizer) installed and loaded.")
+    return PROVIDER
 
 
 def _source_error(err):
@@ -88,8 +79,6 @@ def prepare(payload):
     from .ext_api_sources import SourceError, handle_for, identity, loading, normalize
 
     provider = _provider("resizer.previews")
-    if provider is None:
-        return _unavailable()
     if not isinstance(payload, dict) or set(payload) - {"source"}:
         return _error(400, "bad_request", "The body is {\"source\": {...}}")
     try:
@@ -120,8 +109,6 @@ def prepare(payload):
 def preview(handle):
     """GET /krc/ext/v1/resizer/previews/{handle}: a prepared preview, if still current."""
     provider = _provider("resizer.previews")
-    if provider is None:
-        return _unavailable()
     meta, error = _fresh(provider, handle)
     return error or (200, {"preview": _public(meta)})
 
@@ -129,8 +116,6 @@ def preview(handle):
 def frame(handle, index):
     """GET /krc/ext/v1/resizer/previews/{handle}/frames/{index}: one frame as JPEG."""
     provider = _provider("resizer.previews")
-    if provider is None:
-        return _unavailable()
     try:
         number = int(str(index))
     except ValueError:
@@ -152,8 +137,6 @@ def _identity(payload, required):
     handle, given = payload.get("handle"), payload.get("source")
     if handle is not None:
         provider = _provider("resizer.previews")
-        if provider is None:
-            return None, _unavailable()
         meta, error = _fresh(provider, handle)
         if error:
             return None, error
@@ -185,8 +168,6 @@ def inputs(payload):
     """POST /krc/ext/v1/resizer/inputs {handle | source, settings}: structured settings ->
     the node's inputs, stamped with this source's identity."""
     provider = _provider("resizer.settings")
-    if provider is None:
-        return _unavailable()
     error = _checked_body(payload, ("handle", "source", "settings"))
     if error:
         return error
@@ -204,8 +185,6 @@ def settings(payload):
     """POST /krc/ext/v1/resizer/settings {inputs, handle? | source?}: the node's inputs (from a
     workflow) -> structured settings, and whether they're stale for the source."""
     provider = _provider("resizer.settings")
-    if provider is None:
-        return _unavailable()
     error = _checked_body(payload, ("handle", "source", "inputs"))
     if error:
         return error

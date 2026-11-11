@@ -15,7 +15,7 @@ import { makeNodeSizing } from "../shared/node_limits.js";
 import { ensureStylesheet as ensureSharedStylesheet } from "../shared/stylesheets.js";
 import { HIDDEN_WIDGETS, MAX_NODE_HEIGHT, MAX_NODE_WIDTH, MINI_NODE_SIZE, MIN_NODE_SIZE } from "./constants.js";
 
-const STYLE_VERSION = "1.4.8-ui120-shared-1677";
+const STYLE_VERSION = "1.4.11-ui123-shared-1677";
 
 export function ensureStylesheet() {
   return ensureSharedStylesheet("krc-model-library-clone-css", "../krc_model_library.css", import.meta.url, { version: STYLE_VERSION, ready: true });

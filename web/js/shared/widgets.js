@@ -42,7 +42,7 @@ export function hideWidget(widget) {
   // (`customtext`) textareas, which `hidden = true` alone does NOT tear down.
   // `hidden = true` still suppresses canvas-drawn widgets, and `computeSize`
   // [0,-4] keeps the old canvas frontend collapsing the row. Mirrors the
-  // working KRC Resizer (now in KRC NodePack Extras: resizer/node_shell.js
+  // working KRC Resizer (resizer/node_shell.js
   // hideManagedWidgets). The widget
   // stays in node.widgets and still serializes / exposes .value as a hidden
   // data carrier.
@@ -66,7 +66,7 @@ export function hideWidget(widget) {
 // large empty band ("deadspace") above the UI. Floating the DOM widget to the
 // top and sinking the hidden ones removes it. Also drops any input slot that
 // belongs to a hidden backing widget so only the real I/O connectors remain.
-// Mirrors the working KRC Resizer (KRC NodePack Extras: resizer/node_shell.js
+// Mirrors the working KRC Resizer (resizer/node_shell.js
 // hideManagedWidgets).
 export function promoteDomWidget(node, domWidget) {
   if (!node?.widgets || !domWidget) return;

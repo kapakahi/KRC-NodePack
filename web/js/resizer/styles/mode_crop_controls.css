@@ -1,0 +1,118 @@
+.krc-resizer .krc-rz-chip-row {
+  display: flex;
+  gap: 4px !important;
+  flex: 0 0 24px;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  min-width: 0;
+  overflow: hidden !important;
+  padding-bottom: 0 !important;
+  scrollbar-width: thin;
+}
+
+.krc-resizer .krc-rz-ratio-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 0 0 45px;
+  height: 45px;
+  min-height: 45px;
+  max-height: 45px;
+  gap: 0 !important;
+  overflow: hidden !important;
+}
+
+.krc-resizer .krc-rz-ratio-strip .krc-rz-chip {
+  min-width: 0;
+  border-radius: 0 !important;
+  text-align: center;
+}
+
+.krc-resizer .krc-rz-ratio-strip .krc-rz-chip {
+  width: 100%;
+  max-width: none;
+  padding: 0 5px !important;
+}
+
+.krc-resizer .krc-rz-ratio-strip .krc-rz-chip:nth-child(1) {
+  border-radius: 7px 0 0 0 !important;
+}
+
+.krc-resizer .krc-rz-ratio-strip .krc-rz-chip:nth-child(4) {
+  border-radius: 0 7px 0 0 !important;
+}
+
+.krc-resizer .krc-rz-ratio-strip .krc-rz-chip:nth-child(5) {
+  border-radius: 0 0 0 7px !important;
+}
+
+.krc-resizer .krc-rz-ratio-strip .krc-rz-chip:nth-child(8) {
+  border-radius: 0 0 7px 0 !important;
+}
+
+.krc-resizer .krc-rz-mode-row,
+.krc-resizer .krc-rz-transform-row {
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+}
+
+.krc-resizer .krc-rz-mode-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr);
+  flex: 0 0 50px;
+  gap: 4px !important;
+  height: 50px;
+  min-height: 50px;
+  max-height: 50px;
+  padding-bottom: 0 !important;
+}
+
+.krc-resizer .krc-rz-mode-row .krc-rz-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 23px;
+  min-height: 23px;
+  max-height: 23px;
+  padding: 0 5px !important;
+  font-size: 9px !important;
+  border-radius: 7px !important;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+  text-transform: uppercase;
+}
+
+.krc-resizer .krc-rz-transform-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr);
+  flex: 0 0 24px;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  gap: 4px !important;
+}
+
+
+/* DISABLE (muted, ComfyUI's Never mode; resizer/disable_control.js): the preview says so,
+   and everything but the DISABLE chip dims. A filter, not opacity, so it composes with the
+   rows' own inline dimming. */
+.krc-resizer.is-node-disabled .krc-rz-preview::after {
+  content: "Disabled · muted (Ctrl+M)";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(var(--krc-black-rgb, 0, 0, 0), 0.58);
+  color: var(--krc-text-primary);
+  font: 650 11px/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.krc-resizer.is-node-disabled .krc-rz-controls > :not(.krc-rz-mode-row),
+.krc-resizer.is-node-disabled .krc-rz-mode-row > :not(.krc-rz-disable-button),
+.krc-resizer.is-node-disabled .krc-rz-frame-panel {
+  filter: grayscale(0.6) brightness(0.62);
+}

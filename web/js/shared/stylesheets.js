@@ -1,7 +1,7 @@
 // Single cache-busting token for the shared CSS files (design_tokens.css,
 // themes.css, components.css). Every reference — the ensureStylesheet callers
 // here AND the static `@import`s in krc_lora_loadout.css / krc_prompt_vault.css / krc_word_bank.css / krc_model_library.css / krc_config_switcher.css
-// (and KRC NodePack Extras' bundles, e.g. its krc_resizer.css)
+// (and the bundles that load them through ensureSharedStylesheets, e.g. krc_resizer.css)
 // — must use this exact string so the browser fetches each shared file once
 // instead of once per distinct URL. Bump it whenever a shared CSS file changes;
 // keep the hardcoded `?v=` in those @import bundles in sync (check_krc_api.py in the

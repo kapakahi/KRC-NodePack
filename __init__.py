@@ -99,6 +99,37 @@ try:
 except Exception as _media_routes_err:
     print(f"[KRC NodePack] Warning: Media routes failed to load: {_media_routes_err}")
 
+# KRC Resizer (image resizer / outpainter; moved back from KRC NodePack Extras 2026-11-10).
+try:
+    from .nodes.krc_resizer import NODE_CLASS_MAPPINGS as _rz_c, NODE_DISPLAY_NAME_MAPPINGS as _rz_d
+    NODE_CLASS_MAPPINGS.update(_rz_c)
+    NODE_DISPLAY_NAME_MAPPINGS.update(_rz_d)
+except Exception as _rz_err:
+    print(f"[KRC NodePack] Warning: Resizer failed to load: {_rz_err}")
+
+
+def _older_extras_resizer():
+    """An older KRC NodePack Extras still carries its own KRC Resizer: say so once."""
+    try:
+        import nodes as _comfy_nodes
+        found = _comfy_nodes.NODE_CLASS_MAPPINGS.get("KRC Resizer")
+        if found is not None and "krc_resizer" in found.__module__ and not found.__module__.startswith(__name__):
+            print("[KRC NodePack] Warning: an older KRC NodePack Extras also provides KRC Resizer. "
+                  "Update KRC NodePack Extras: the Resizer is part of KRC NodePack now.")
+    except Exception:  # noqa: BLE001 - outside ComfyUI
+        pass
+
+
+try:
+    from server import PromptServer as _RzServer
+
+    async def _check_older_extras(_app):
+        _older_extras_resizer()
+
+    _RzServer.instance.app.on_startup.append(_check_older_extras)
+except Exception:  # noqa: BLE001 - outside ComfyUI
+    pass
+
 # The route behind the public Card API's JS resolveCards.
 try:
     from .utils.card_api_routes import register_card_api_routes

@@ -38,7 +38,7 @@ then per area: Media (403 media_writes_disabled) and Loadout presets (403
 loadout_writes_disabled), each off by default.
 
     POST /krc/ext/v1/resizer/previews {source} -> {"preview", "prepared"}   (reads; ext_api_resizer.py,
-    GET  /krc/ext/v1/resizer/previews/{handle} -> {"preview"}               with the Extras provider)
+    GET  /krc/ext/v1/resizer/previews/{handle} -> {"preview"}               with utils/resizer_provider.py)
     GET  /krc/ext/v1/resizer/previews/{handle}/frames/{index} -> image/jpeg
     POST /krc/ext/v1/resizer/inputs {handle | source, settings} -> {"inputs", "settings", "source"}
     POST /krc/ext/v1/resizer/settings {inputs, handle? | source?} -> {"settings", "source", "stale"?, "fallback"?}
@@ -118,7 +118,7 @@ CAPABILITIES = ["info", "prompts.list", "prompts.fields", "prompts.byId", "promp
                 "prompts.profiles.meta", "prompts.profiles.changes",
                 "permissionAreas", "prompts.categories", "prompts.versions", "models.marksVersion",
                 "cards.marks.write", "prompts.categories.write", "prompts.write",
-                "workflows.standby", "apiProfiles", "files"]
+                "workflows.standby", "apiProfiles", "files", "resizer.previews", "resizer.settings"]
 MAX_DETAIL_IDS = 200
 SEARCH_LIMIT_DEFAULT = 50
 SEARCH_LIMIT_MAX = 500
@@ -1085,7 +1085,7 @@ def register_ext_api_routes():
     media_write_route("/krc/ext/v1/prompts/{id}/thumbnail/clear",
                       lambda m, p: _prompts().prompt_thumbnail(m["_profile"], m["id"], p, clear=True), gate=editing)
 
-    # ---- KRC Resizer (ext_api_resizer.py; the logic is the Extras provider's) -------------
+    # ---- KRC Resizer (ext_api_resizer.py; the node's logic is utils/resizer_provider.py) ---
 
     def _resizer():
         from . import ext_api_resizer as resizer

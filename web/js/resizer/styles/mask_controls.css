@@ -1,0 +1,168 @@
+.krc-resizer .krc-rz-mask-title {
+  margin-top: 0;
+}
+
+.krc-resizer .krc-rz-mask-mode-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr);
+  flex-wrap: nowrap !important;
+  flex: 0 0 22px;
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+  gap: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid var(--krc-border-subtle);
+  border-radius: 7px;
+  background: var(--krc-control-bg, var(--krc-bg-element));
+  transform: translateY(-1px);
+}
+
+.krc-resizer .krc-rz-mask-mode-row .krc-rz-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+  padding: 0 4px !important;
+  border: 0 !important;
+  border-left: 1px solid rgba(var(--krc-white-rgb), 0.10) !important;
+  border-radius: 0 !important;
+  font-size: 8px !important;
+}
+
+.krc-resizer .krc-rz-mask-mode-row .krc-rz-toggle:first-child {
+  border-left: 0 !important;
+  border-radius: 6px 0 0 6px !important;
+}
+
+.krc-resizer .krc-rz-mask-mode-row .krc-rz-toggle:last-child {
+  border-radius: 0 6px 6px 0 !important;
+}
+
+.krc-resizer .krc-rz-mask-adjust-row {
+  display: grid !important;
+  grid-template-columns: max-content max-content max-content;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 4px !important;
+  row-gap: 0 !important;
+}
+
+.krc-resizer .krc-rz-mask-adjust-group {
+  display: grid;
+  grid-template-columns: max-content 50px;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.krc-resizer .krc-rz-mask-label {
+  color: var(--krc-text-muted);
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.krc-resizer .krc-rz-mask-number-control {
+  display: grid;
+  grid-template-columns: 34px 16px;
+  width: 50px;
+  min-width: 50px;
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+  overflow: hidden;
+  border: 1px solid var(--krc-border-edit);
+  border-radius: 7px;
+  background: var(--krc-control-bg, var(--krc-bg-element));
+}
+
+.krc-resizer .krc-rz-mask-input {
+  width: 34px !important;
+  min-width: 34px;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  border: 0 !important;
+  border-radius: 6px 0 0 6px !important;
+  background: transparent !important;
+  padding: 0 4px !important;
+  text-align: center !important;
+}
+
+.krc-resizer .krc-rz-mask-menu-button {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  min-width: 16px;
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-left: 1px solid rgba(var(--krc-white-rgb), 0.10) !important;
+  border-radius: 0 6px 6px 0 !important;
+  background: transparent !important;
+  color: var(--krc-text-secondary);
+  font-size: 9px !important;
+  line-height: 1;
+}
+
+.krc-resizer .krc-rz-mask-menu-button {
+  text-indent: -1px;
+}
+
+.krc-resizer .krc-rz-mask-menu-button:hover,
+.krc-resizer .krc-rz-mask-menu-button:focus-visible {
+  background: rgba(var(--krc-white-rgb), 0.12) !important;
+  color: var(--krc-text-primary);
+  outline: none;
+}
+
+.krc-resizer .krc-rz-mask-input::-webkit-outer-spin-button,
+.krc-resizer .krc-rz-mask-input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.krc-resizer .krc-rz-mask-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.krc-resizer .krc-rz-mask-control:disabled,
+.krc-resizer .krc-rz-mask-input:disabled {
+  cursor: default;
+}
+
+.krc-resizer .krc-rz-mask-number-control {
+  border-color: var(--krc-border-subtle);
+  background: var(--krc-control-bg, var(--krc-bg-element));
+}
+
+.krc-resizer .krc-rz-mask-number-control > .krc-rz-mask-input.krc-rz-input {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  border: 0 !important;
+  border-radius: 6px 0 0 6px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 4px !important;
+  text-align: center !important;
+}
+
+.krc-resizer .krc-rz-mask-number-control > .krc-rz-mask-menu-button {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  border-left: 1px solid rgba(var(--krc-white-rgb), 0.10) !important;
+  border-radius: 0 6px 6px 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}

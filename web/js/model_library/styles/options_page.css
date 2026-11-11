@@ -226,14 +226,7 @@
 
 /* KRC Portal ▸ API: the profile list rows (a row button; the open one ringed). */
 .krc-api-profile-row {
-  width: 100%;
-  background: transparent;
-  border: 0;
   border-radius: 6px;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
 }
 
 .krc-api-profile-row:hover {
@@ -241,6 +234,7 @@
 }
 
 .krc-api-profile-row.is-selected {
+  --krc-selection-ring-width: 4px;
   box-shadow: var(--krc-selection-ring);
 }
 
@@ -263,4 +257,111 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* KRC Portal ▸ API: one row per profile (name, rename, activity | key hint, REGENERATE,
+   delete, enabled), the NEW PROFILE row, group labels in Resource access, glyph buttons. */
+.krc-model-library .krc-api-profile-row {
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+/* Every control in the row sits on its middle line (the shared button rule pins buttons to
+   the top). */
+.krc-model-library .krc-api-profile-row .krc-options-reset {
+  align-self: center;
+  min-width: 0;
+}
+
+.krc-model-library .krc-api-profile-row.is-disabled .krc-api-profile-left {
+  opacity: 0.55;
+}
+
+.krc-model-library .krc-api-profile-left,
+.krc-model-library .krc-api-profile-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.krc-model-library .krc-api-profile-left {
+  flex: 1 1 auto;
+}
+
+/* The name only as wide as its text, so rename and activity sit right after it (the Options
+   page's own rule stretches setting labels across the row). */
+.krc-model-library .krc-options-page .krc-api-profile-row .krc-api-profile-left > .krc-setting-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.krc-model-library .krc-api-profile-right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.krc-model-library .krc-api-activity,
+.krc-model-library .krc-api-key-hint {
+  color: var(--krc-text-muted, var(--krc-text-secondary));
+  font-size: var(--krc-font-2xs, 11px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.krc-model-library .krc-api-key-hint {
+  font-variant-numeric: tabular-nums;
+}
+
+.krc-model-library .krc-api-add-row {
+  justify-content: flex-end;
+}
+
+.krc-model-library .krc-api-group {
+  margin: 8px 0 2px;
+  color: var(--krc-text-muted, var(--krc-text-secondary));
+  font-size: var(--krc-font-2xs, 11px);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.krc-model-library .krc-api-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--krc-radius-md, 6px);
+  background: transparent;
+  color: var(--krc-text-secondary);
+  cursor: pointer;
+}
+
+.krc-model-library .krc-api-glyph:hover {
+  background: var(--krc-control-hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--krc-text-primary);
+}
+
+.krc-model-library .krc-api-glyph.is-danger:hover {
+  color: var(--krc-accent-red, #d96d6d);
+}
+
+.krc-model-library .krc-api-glyph svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+/* NEW PROFILE: as wide as its text, like the row buttons. */
+.krc-model-library .krc-api-add-row .krc-options-reset {
+  min-width: 0;
 }

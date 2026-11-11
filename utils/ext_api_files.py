@@ -4,7 +4,7 @@ The node's own file routes (/krc/media/file|thumb|download, the Prompt Vault, Lo
 and Model Library thumbnail routes) check no key: KRC Portal needs them. A client restricted
 by an API profile gets its files here instead, where the same policy as the listings applies:
 
-- **With the key** (``Authorization: Bearer``; for a server-side proxy such as KRC LC's):
+- **With the key** (``Authorization: Bearer``; for an app's server-side proxy):
   ``GET /krc/ext/v1/media/{id}/file`` (Range requests answered: video seeking works),
   ``/media/{id}/thumb[?w=]``, ``/media/{id}/download``, ``/prompts/{id}/thumbnail[?w=&kind=]``,
   ``/models/{id}/thumbnail[?w=&kind=]``.
