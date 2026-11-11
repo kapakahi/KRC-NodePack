@@ -70,6 +70,18 @@ WRITE_AREAS = {
         "description": "Make, edit and delete LoRA Loadout and Loadout Kit (e.g. RefMod) presets.",
         "capabilities": ["presets.loadout.write"],
     },
+    "configSwitcherPresets": {
+        "setting": "ext_api.cs_presets_writes", "flag": "configSwitcherPresetsWrites", "error": "area_disabled",
+        "label": "Config Switcher presets",
+        "description": "Change values and configs of existing Config Switcher presets (never their parameters).",
+        "capabilities": ["presets.cs.write"],
+    },
+    "wordBankPresets": {
+        "setting": "ext_api.wb_presets_writes", "flag": "wordBankPresetsWrites", "error": "area_disabled",
+        "label": "Word Bank presets",
+        "description": "Change row values and locks of existing Word Bank presets (never their rows).",
+        "capabilities": ["presets.wb.write"],
+    },
 }
 EXT_API_VERSION = 1
 

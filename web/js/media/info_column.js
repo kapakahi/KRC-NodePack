@@ -8,7 +8,7 @@
 import { installMediaDropTarget } from "./drag.js";
 import { mediaDownloadButton } from "./download.js";
 import { createCardColorButton, customBadgeActionButton, favoriteActionButton, nsfwActionButton, pinActionButton, switchToggle, teardownMedia, thumbnailBox } from "./krc.js";
-import { displayName, formatBytes, formatDuration, mediaApi, storedFormat } from "./api.js";
+import { displayName, formatBytes, formatDuration, formatRunTime, mediaApi, storedFormat } from "./api.js";
 import { SLOT_COUNT, allPresets, createPreset, deletePreset, presetButton, presetSlots, presetsLoaded, renamePreset, setPresetSlot, setPresetSlots } from "./presets.js";
 import { fpsChoices as fpsChoiceRow, mpChoices, renderBatchPage } from "./batch.js";
 import { mediaPreview } from "./preview.js";
@@ -271,6 +271,8 @@ function metaBox(item, presetsOf, folderName) {
     ] : [fact(item.oriented ? "fixed ↻" : "", "Its orientation was fixed on upload")]),
     fact(item.alpha ? "alpha" : "", "Transparent"),
     fact(formatBytes(item.bytes), "File size"),
+    // Media Output items: how long the run that made it took (filled in once the run ends).
+    fact(formatRunTime(item.runMs) ? `⏱ ${formatRunTime(item.runMs)}` : "", "Run time: how long the workflow run that made it took"),
   ];
   const inPresets = presetsOf(item.id);
   const placeLine = [

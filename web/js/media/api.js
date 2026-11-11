@@ -29,6 +29,17 @@ export function storedFormat(item) {
   return "Unknown";
 }
 
+// How long a run took (ms): "8.4 s", "2 m 05 s", "1 h 03 m"; "" when unknown.
+export function formatRunTime(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value) || value < 0 || ms === null || ms === undefined) return "";
+  const seconds = value / 1000;
+  if (seconds < 60) return `${seconds.toFixed(1)} s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} m ${String(Math.floor(seconds % 60)).padStart(2, "0")} s`;
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} m`;
+}
+
 export function formatBytes(bytes) {
   const value = Number(bytes) || 0;
   if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;

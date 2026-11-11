@@ -26,9 +26,12 @@ class KRCMediaOutput:
                    "for frames, put Create Video (or another video node) in front.")
 
     def save(self, output_data="{}", images=None, video=None, prompt=None, extra_pnginfo=None, filename=None):
+        from ..utils.media import run_time
         from ..utils.media.media_routes import _announce, _public
         records = save_outputs(output_data, images, video, prompt, extra_pnginfo, filename=filename)
         _announce("output")
+        # The run's time is known only once the whole prompt finishes: filled in afterwards.
+        run_time.watch(run_time.current_prompt_id(), [record["id"] for record in records])
         native = native_results(records) if settings(output_data, filename=filename)["native"] else {}
         return {"ui": {"krc_media_outputs": [_public(record) for record in records], **native}, "result": ()}
 

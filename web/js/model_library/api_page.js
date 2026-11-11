@@ -10,9 +10,11 @@
  *              used · Never used, plus the app's unverified label) on the left; its key's
  *              hint, REGENERATE / CREATE KEY (shown once, with Copy), delete and the
  *              enabled switch on the right. Then NEW PROFILE. Click a row to edit below:
- *   Profile    write permissions; resource access per kind, grouped (All / Selected /
- *              None, read or write, may create new, default destination, the picked items;
- *              ComfyUI images with Media). Every profile may use every API feature.
+ *   Profile    Access: one row per kind, grouped, one dropdown each (None / Read /
+ *              Read/Write; Prompt Vault profiles and Media folders also Selected, with their
+ *              picks and default destination under the row; ComfyUI images with Media).
+ *              Every profile may use every API feature; what it may write follows from
+ *              Read/Write.
  *
  * Every change is sent at once and the page redraws from the server's answer.
  */
@@ -28,8 +30,7 @@ import { infoPageSection } from "./info_page.js";
 export const API_PAGE = "api";
 const { fetchLora, postLoraJson } = makeNodeApi("/krc/ext-api");
 
-const MODE_OPTIONS = [["all", "All"], ["selected", "Selected"], ["none", "None"]];
-const LEVEL_OPTIONS = [["read", "Read"], ["write", "Read/Write"]];
+const ACCESS_OPTIONS = [["read", "Read"], ["write", "Read/Write"]];
 const ITEM_OPTIONS = [["", "No access"], ["read", "Read"], ["write", "Read/Write"]];
 const BOUNDARY = "A profile is whoever holds its key. It limits apps using the API, not ComfyUI itself: keep ComfyUI where only people you trust can reach it.";
 
@@ -229,78 +230,64 @@ export const apiPageMethods = {
       list.replaceChildren(infoPageSection("API profiles", description(BOUNDARY), ...rows, addRow));
     };
 
+    // The open profile's access: one row per kind with one dropdown (None / Read /
+    // Read/Write; Prompt Vault profiles and Media folders also Selected, which lists their
+    // picks under the row). What it may write follows from Read/Write here.
     const drawEditor = () => {
       const profile = profiles.find((entry) => entry.id === selected);
       if (!profile) { editor.replaceChildren(); return; }
       const base = `/profiles/${encodeURIComponent(profile.id)}`;
       const policy = profile.policy;
-      // Every profile may use every API feature (no per-feature list on this page); what it
-      // reaches is Write permissions and Resource access.
+      // Every profile may use every API feature (no per-feature list on this page).
       const savePolicy = (next) => act("Save the profile", `${base}/update`, { policy: { ...next, capabilities: "all" } });
-
-      // ---- write areas
-      const areas = (resources?.writeAreas || []).map((area) => {
-        const all = policy.writeAreas === "all";
-        const on = all || policy.writeAreas.includes(area.id);
-        return sectionRow(area.label, switchToggle({ active: on, title: area.label, onClick: () => {
-          const current = all ? (resources.writeAreas || []).map((entry) => entry.id) : [...policy.writeAreas];
-          savePolicy({ ...policy, writeAreas: on ? current.filter((id) => id !== area.id) : [...current, area.id] });
-        } }));
-      });
-      const writes = infoPageSection("Write permissions",
-        description("The areas this profile may write to. The global switches above apply first: while Read only is on, no writes are accepted."),
-        ...areas);
-      // ---- resources: one row per kind (its name and access side by side); a kind set to
-      // Selected lists its picks, indented, under its row.
       const sub = (row) => { row.classList.add("krc-api-subrow"); return row; };
+      const select = (title, value, options, onChange) => menuSelect({ className: "krc-setting-select krc-api-select", title, value,
+        options, align: "right", onChange });
       const scopeRowsFor = (scope) => {
-        const entry = policy.scopes[scope.name] || policy.scopes["*"] || { mode: "none", level: "read", items: {}, default: "", create: false };
+        const entry = policy.scopes[scope.name] || policy.scopes["*"] || { mode: "none", level: "read", items: {}, default: "" };
         const save = (patch) => savePolicy({ ...policy, scopes: { ...policy.scopes, [scope.name]: { ...entry, ...patch } } });
-        const controls = [menuSelect({ className: "krc-setting-select krc-api-select", title: scope.label, value: entry.mode,
-          options: MODE_OPTIONS, align: "right", onChange: (mode) => save({ mode }) })];
-        if (entry.mode === "all") {
-          controls.push(menuSelect({ className: "krc-setting-select krc-api-select", title: `${scope.label}: access level`, value: entry.level,
-            options: LEVEL_OPTIONS, align: "right", onChange: (level) => save({ level }) }));
-        }
-        const rows = [sectionRow(scope.label, ...controls)];
-        if (entry.mode === "selected") {
-          rows.push(sub(sectionRow("May create new", switchToggle({ active: Boolean(entry.create), title: "May create new",
-            onClick: () => save({ create: !entry.create }) }))));
-          for (const item of scope.items) {
-            rows.push(sub(sectionRow(item.label || item.id, menuSelect({ className: "krc-setting-select krc-api-select", title: item.label, value: entry.items[item.id] || "",
-              options: ITEM_OPTIONS, align: "right", onChange: (level) => {
-                const items = { ...entry.items };
-                if (level) items[item.id] = level; else delete items[item.id];
-                save({ items });
-              } }))));
+        const options = [["none", "None"], ...ACCESS_OPTIONS.filter(([level]) => (scope.levels || ["read", "write"]).includes(level)),
+          ...(scope.picks ? [["selected", "Selected"]] : [])];
+        const value = entry.mode === "all" ? (scope.levels?.includes(entry.level) ? entry.level : "read") : entry.mode;
+        const rows = [sectionRow(scope.label, select(scope.label, value, options, (next) => {
+          if (next === "none" || next === "selected") save({ mode: next });
+          else save({ mode: "all", level: next });
+        }))];
+        if (scope.picks && entry.mode === "selected") {
+          for (const item of scope.items || []) {
+            rows.push(sub(sectionRow(item.label || item.id, select(item.label, entry.items[item.id] || "", ITEM_OPTIONS, (level) => {
+              const items = { ...entry.items };
+              if (level) items[item.id] = level; else delete items[item.id];
+              save({ items });
+            }))));
           }
         }
-        if (entry.mode !== "none" && ["prompts", "mediaFolders"].includes(scope.name)) {
-          rows.push(sub(sectionRow("Default destination", menuSelect({ className: "krc-setting-select krc-api-select", title: "Default destination", value: entry.default || "",
-            options: [["", "(automatic)"], ...scope.items.map((item) => [item.id, item.label || item.id])], align: "right",
-            onChange: (value) => save({ default: value }) }))));
+        if (scope.picks && entry.mode !== "none") {
+          rows.push(sub(sectionRow("Default destination", select("Default destination", entry.default || "",
+            [["", "(automatic)"], ...(scope.items || []).filter((item) => item.canDefault !== false)
+              .map((item) => [item.id, item.label || item.id])],
+            (next) => save({ default: next })))));
         }
         return rows;
       };
       const scopes = resources?.scopes || [];
       const placed = new Set();
-      const scopeRows = SCOPE_GROUPS.flatMap((group) => {
+      const rows = SCOPE_GROUPS.flatMap((group) => {
         const members = scopes.filter((scope) => !placed.has(scope.name) && group.test(scope.name));
         members.forEach((scope) => placed.add(scope.name));
         if (!members.length) return [];
-        const rows = [el("div", "krc-api-group", { textContent: group.label }), ...members.flatMap(scopeRowsFor)];
+        const groupRows = [el("div", "krc-api-group", { textContent: group.label }), ...members.flatMap(scopeRowsFor)];
         // ComfyUI images: Media's other source (Load Image files by name), so it sits with Media.
         if (group.label === "Media") {
-          rows.push(sectionRow("ComfyUI images", switchToggle({ active: Boolean(policy.fileSources), title: "ComfyUI images",
+          groupRows.push(sectionRow("ComfyUI images", switchToggle({ active: Boolean(policy.fileSources), title: "ComfyUI images",
             onClick: () => savePolicy({ ...policy, fileSources: !policy.fileSources }) })),
           description("Preview images from ComfyUI's input and output folders by file name, as a Load Image node does. Off: Media items only."));
         }
-        return rows;
+        return groupRows;
       });
-      const scopeSections = [infoPageSection("Resource access",
-        description("All: everything of that kind, including what's added later. Selected: only the picks below it, plus what this profile creates itself. None: nothing."),
-        ...scopeRows)];
-      editor.replaceChildren(writes, ...scopeSections);
+      editor.replaceChildren(infoPageSection("Access",
+        description("Read/Write lets the profile change what it can read (the global switches above still apply first). Selected: only the picks under it, plus what this profile creates itself."),
+        ...rows));
     };
 
     body.append(infoPageSection("Global", globalApiSection({ onChange: () => { if (panel.isConnected) load(); } })), list, editor);

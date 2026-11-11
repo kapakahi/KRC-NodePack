@@ -118,7 +118,8 @@ CAPABILITIES = ["info", "prompts.list", "prompts.fields", "prompts.byId", "promp
                 "prompts.profiles.meta", "prompts.profiles.changes",
                 "permissionAreas", "prompts.categories", "prompts.versions", "models.marksVersion",
                 "cards.marks.write", "prompts.categories.write", "prompts.write",
-                "workflows.standby", "apiProfiles", "files", "resizer.previews", "resizer.settings"]
+                "workflows.standby", "apiProfiles", "files", "resizer.previews", "resizer.settings",
+                "presets.cs.write", "presets.wb.write"]
 MAX_DETAIL_IDS = 200
 SEARCH_LIMIT_DEFAULT = 50
 SEARCH_LIMIT_MAX = 500
@@ -175,8 +176,10 @@ HANDLER_CAPABILITY = {
     "ext_v1_media_folders": "media.folders.write", "ext_v1_media_folders_id_update": "media.folders.write",
     "ext_v1_media_folders_id_delete": "media.folders.write", "ext_v1_media_folders_id_purge": "media.folders.write",
     "ext_v1_kits": "kits.descriptors", "ext_v1_kit_descriptor": "kits.descriptors",
-    "ext_v1_presets_kind": "presets.loadout.write", "ext_v1_presets_kind_id_update": "presets.loadout.write",
-    "ext_v1_presets_kind_id_rename": "presets.loadout.write", "ext_v1_presets_kind_id_delete": "presets.loadout.write",
+    # The preset write routes serve several kinds: their gate checks the kind's capability
+    # and area (preset_write_gate).
+    "ext_v1_presets_kind": None, "ext_v1_presets_kind_id_update": None,
+    "ext_v1_presets_kind_id_rename": None, "ext_v1_presets_kind_id_delete": None,
     "ext_v1_prompt_categories": "prompts.categories",
     **{f"ext_v1_prompt_categories_{action}": "prompts.categories.write"
        for action in ("create", "update", "rename", "delete", "purge")},
@@ -258,49 +261,46 @@ def _profile_info(principal):
     }
 
 
-_SCOPE_LABELS = {"prompts": "Prompt Vault profiles", "mediaFolders": "Media folders", "models": "Model Library types",
+_SCOPE_LABELS = {"prompts": "Prompt Vault profiles", "mediaFolders": "Media folders", "models": "Model Library",
                  "presets.ll": "LoRA Loadout presets", "presets.cs": "Config Switcher presets",
                  "presets.wb": "Word Bank presets", "presets.media": "Media presets"}
 
 
 async def admin_resources():
-    """GET /krc/ext-api/resources (KRC Portal ▸ API only): {scopes: [{name, label, items:
-    [{id, label}]}], capabilities, writeAreas}. Names here are for the owner's own page."""
+    """GET /krc/ext-api/resources (KRC Portal ▸ API only): {scopes: [{name, label, picks,
+    levels, items?}], capabilities}. ``picks``: the kind's resources can be chosen one by one
+    (Prompt Vault profiles, Media folders; ``items`` lists them); every other kind is
+    all-or-nothing. ``levels``: the access it can have (Config Switcher and Word Bank
+    presets: read only). Names here are for the owner's own page."""
     from .ext_api_policy import UNSORTED_INPUT, UNSORTED_OUTPUT, scope_names
+    from .ext_api_profiles import PICK_SCOPES, READ_ONLY_SCOPES
+
+    kit_labels = {f"presets.kit:{kit['id']}": f"{kit['label']} presets" for kit in _kits()}
 
     def items_for(name):
         if name == "prompts":
             from .prompt_profiles import list_profiles
-            return [{"id": entry["id"], "label": entry["name"]} for entry in list_profiles()]
-        if name == "mediaFolders":
-            from .media import media_store as store
-            return ([{"id": UNSORTED_INPUT, "label": "Unsorted (Input)"}, {"id": UNSORTED_OUTPUT, "label": "Unsorted (Output)"}]
-                    + [{"id": folder["id"], "label": f"{folder['name']} ({'Output' if folder.get('storage') == 'output' else 'Input'})"}
-                       for folder in store.folders()])
-        if name.startswith("presets."):
-            store = _preset_stores().get(name[len("presets."):])
-            records = (store.load().get("presets") or []) if store else []
-            return [{"id": record.get("id", ""), "label": "/".join(part for part in (record.get("group"), record.get("name")) if part)}
-                    for record in records if isinstance(record, dict)]
-        return []
+            return [{"id": entry["id"], "label": entry["name"], "canDefault": True} for entry in list_profiles()]
+        from .media import media_store as store
+        # canDefault: may be the Default destination (uploads go to Input folders only).
+        return ([{"id": UNSORTED_INPUT, "label": "Unsorted (Input)", "canDefault": True},
+                 {"id": UNSORTED_OUTPUT, "label": "Unsorted (Output)", "canDefault": False}]
+                + [{"id": folder["id"], "label": f"{folder['name']} ({'Input' if store.folder_side(folder) == 'input' else 'Output'})",
+                    "canDefault": store.folder_side(folder) == "input"}
+                   for folder in store.folders()])
 
     def work():
-        return [{"name": name, "label": _SCOPE_LABELS.get(name, name.replace("presets.kit:", "Kit presets: ")),
-                 "items": items_for(name)} for name in scope_names()]
+        out = []
+        for name in scope_names():
+            entry = {"name": name, "label": _SCOPE_LABELS.get(name) or kit_labels.get(name) or name,
+                     "picks": name in PICK_SCOPES, "levels": ["read"] if name in READ_ONLY_SCOPES else ["read", "write"]}
+            if entry["picks"]:
+                entry["items"] = items_for(name)
+            out.append(entry)
+        return out
 
     scopes = await asyncio.to_thread(work)
-    try:
-        from .model_library.library_index import ModelLibraryIndex
-        index = await ModelLibraryIndex.loaded()
-        types = sorted({str(record.get("modelType") or "") for record in index.all()} - {""})
-    except Exception:  # noqa: BLE001
-        types = []
-    for entry in scopes:
-        if entry["name"] == "models":
-            entry["items"] = [{"id": "lora", "label": "LoRAs"}] + [{"id": kind, "label": kind} for kind in types if kind != "lora"]
-    return {"scopes": scopes, "capabilities": [*CAPABILITIES, *_provider_capabilities()],
-            "writeAreas": [{"id": area, "label": spec["label"]} for area, spec in ext_api.WRITE_AREAS.items()],
-            "recentSeconds": 15 * 60}
+    return {"scopes": scopes, "capabilities": [*CAPABILITIES, *_provider_capabilities()], "recentSeconds": 15 * 60}
 
 
 def _provider_capabilities():
@@ -560,6 +560,9 @@ def preset_list(kind="", full=False):
                     entry["payload"] = {key: value for key, value in record.items() if key not in _PRESET_HEAD}
                     if is_loadout_kind(name):
                         entry["payload"]["version"] = preset_version(name, record)
+                    elif name in ("cs", "wb"):
+                        from .ext_api_value_presets import value_preset_version
+                        entry["payload"]["version"] = value_preset_version(name, record)
                 presets.append(entry)
     return {"presets": presets, "revisions": revisions}
 
@@ -1023,15 +1026,49 @@ def register_ext_api_routes():
     async def ext_v1_kit_descriptor(request):
         return write_answer(lambda: _loadout().kit_descriptor(request.match_info.get("id", "")))
 
-    loadout_write = write_gate("loadoutPresets")
-    media_write_route("/krc/ext/v1/presets/{kind}", lambda m, p: _loadout().create_preset(m["kind"], p),
-                      status=201, gate=loadout_write)
-    media_write_route("/krc/ext/v1/presets/{kind}/{id}/update", lambda m, p: _loadout().update_preset(m["kind"], m["id"], p),
-                      gate=loadout_write)
-    media_write_route("/krc/ext/v1/presets/{kind}/{id}/rename", lambda m, p: _loadout().rename_preset(m["kind"], m["id"], p),
-                      gate=loadout_write)
-    media_write_route("/krc/ext/v1/presets/{kind}/{id}/delete", lambda m, p: _loadout().delete_preset(m["kind"], m["id"], p),
-                      gate=loadout_write)
+    # Preset writes by kind: ll / kit:<id> (ext_api_loadout.py, area loadoutPresets), cs and wb
+    # (ext_api_value_presets.py: values only, areas configSwitcherPresets / wordBankPresets).
+    PRESET_KIND_AREA = {"cs": ("configSwitcherPresets", "presets.cs.write"), "wb": ("wordBankPresets", "presets.wb.write")}
+
+    def preset_write_gate(handler):
+        """The kind's capability, then Read only / its area (global, then the profile)."""
+        @functools.wraps(handler)
+        async def wrapper(request):
+            kind = request.match_info.get("kind", "")
+            area, capability = PRESET_KIND_AREA.get(kind, ("loadoutPresets", "presets.loadout.write"))
+            principal = principal_of(request)
+            refused = ext_api_policy.capability_refusal(capability, principal) or ext_api_policy.write_refusal(area, principal)
+            if refused:
+                status, body = refused
+                return web.json_response(body, status=status, headers=_NO_STORE)
+            return await handler(request)
+        return wrapper
+
+    def _values():
+        from . import ext_api_value_presets as values
+        return values
+
+    def _preset_writer(kind):
+        return _values() if kind in PRESET_KIND_AREA else _loadout()
+
+    def _value_create(kind, payload):
+        if kind in PRESET_KIND_AREA:
+            raise _values().not_permitted(kind, "created")
+        return _loadout().create_preset(kind, payload)
+
+    def _value_delete(kind, preset_id, payload):
+        if kind in PRESET_KIND_AREA:
+            raise _values().not_permitted(kind, "deleted")
+        return _loadout().delete_preset(kind, preset_id, payload)
+
+    media_write_route("/krc/ext/v1/presets/{kind}", lambda m, p: _value_create(m["kind"], p),
+                      status=201, gate=preset_write_gate)
+    media_write_route("/krc/ext/v1/presets/{kind}/{id}/update",
+                      lambda m, p: _preset_writer(m["kind"]).update_preset(m["kind"], m["id"], p), gate=preset_write_gate)
+    media_write_route("/krc/ext/v1/presets/{kind}/{id}/rename",
+                      lambda m, p: _preset_writer(m["kind"]).rename_preset(m["kind"], m["id"], p), gate=preset_write_gate)
+    media_write_route("/krc/ext/v1/presets/{kind}/{id}/delete", lambda m, p: _value_delete(m["kind"], m["id"], p),
+                      gate=preset_write_gate)
 
     # ---- Prompt Vault and card marks (ext_api_prompts.py) ------------------------------
 

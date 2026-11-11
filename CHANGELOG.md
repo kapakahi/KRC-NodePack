@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-11-10 · Media Output items show how long their run took. API page: simpler access per profile (None / Read / Read/Write; picks only for Prompt Vault profiles and Media folders). Apps can edit values in existing Config Switcher and Word Bank presets.
 - 2026-11-10 · KRC Resizer is part of KRC NodePack again (update KRC NodePack Extras too). Simpler KRC Portal ▸ API page: one row per profile with its key, and grouped resource access.
 - 2026-11-10 · Media Loader: UPLOAD takes up to six files and fills the next slots. New KRC Portal ▸ API page: API profiles, each with its own key and its own access to prompts, Media folders, models and presets.
 - 2026-11-08 · More API upgrades: per-area permissions in Options ▸ Network (card marks, prompt categories, prompt editing), KRC Resizer support (with NodePack Extras), and disabled KRC Resizer branches can be turned back on in exported workflows.

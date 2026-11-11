@@ -4,23 +4,26 @@ Effective access is the intersection of three layers, and a profile never bypass
 restriction:
 
 1. **Global** (ext_api.py): the External API switch, Read only, and each write area's switch.
-2. **The API profile** (ext_api_profiles.py): enabled; its capabilities (``"all"`` or a list);
-   its write areas (``"all"`` or a list); whether stateless endpoints may read ComfyUI files
-   by name (``fileSources``).
+2. **The API profile** (ext_api_profiles.py): enabled; its capabilities (``"all"`` or a list;
+   KRC Portal sets "all"); whether the Resizer may read ComfyUI images by file name
+   (``fileSources``).
 3. **Its resources** (``policy.scopes``), per kind of resource:
 
    - ``mode: "all"`` -> every resource of that kind, present and future, at ``level``
      (read or write);
-   - ``mode: "selected"`` -> only the ids in ``items`` (each read or write). Things the
-     profile creates join its list (ext_api_profiles.grant_created); nothing anyone else
-     creates appears in it;
+   - ``mode: "selected"`` (``prompts`` and ``mediaFolders`` only) -> only the ids in
+     ``items`` (each read or write). Things the profile creates join its list
+     (ext_api_profiles.grant_created); nothing anyone else creates appears in it;
    - ``mode: "none"`` -> none.
 
    Scope names: ``prompts`` (Prompt Vault profile ids: a prompt is reachable through its
    profile), ``mediaFolders`` (Media folder ids, plus ``unsorted:input`` and
-   ``unsorted:output``; a Media item is reachable through its folder), ``models`` (Model
-   Library types, e.g. ``lora``, ``checkpoints``), ``presets.<kind>`` (preset ids of that
-   kind, e.g. ``presets.media``, ``presets.lora``). ``*`` covers kinds not listed.
+   ``unsorted:output``; a Media item is reachable through its folder), ``models`` (all
+   models), ``presets.<kind>`` (all presets of that kind, e.g. ``presets.media``,
+   ``presets.ll``, ``presets.kit:refmod_loadout``). ``*`` covers kinds not listed.
+
+   What a profile may write follows from Read/Write on its kinds (AREA_SCOPES): it may write
+   an area when it can change a kind that area covers, and each write checks the resource.
 
 A **Principal** is one authorized request's identity: its profile and key, read fresh for
 every request (no cache), so a change applies to the next request.
@@ -32,6 +35,17 @@ import json
 from . import ext_api
 from . import ext_api_profiles as profiles
 
+# Which kinds each write area changes: a profile may write an area when it has Read/Write
+# on any of them (each route then checks the very resource it touches).
+AREA_SCOPES = {
+    "media": ("mediaFolders", "presets.media"),
+    "cardMarks": ("prompts", "models"),
+    "promptCategories": ("prompts",),
+    "promptEditing": ("prompts",),
+    "loadoutPresets": ("presets.ll",),
+    "configSwitcherPresets": ("presets.cs",),
+    "wordBankPresets": ("presets.wb",),
+}
 UNSORTED_INPUT = "unsorted:input"
 UNSORTED_OUTPUT = "unsorted:output"
 _RANK = {None: 0, "read": 1, "write": 2}
@@ -52,10 +66,20 @@ class Principal:
         caps = self.policy["capabilities"]
         return caps == "all" or capability in caps
 
+    def writes_any(self, name):
+        """Whether the profile may change anything of this kind (All with Read/Write, or a
+        Read/Write pick)."""
+        entry = self.scope(name)
+        return (entry["mode"] == "all" and entry["level"] == "write") or (
+            entry["mode"] == "selected" and "write" in entry["items"].values())
+
     def area_permitted(self, area):
-        """The profile's own permission for a write area (not the global switch)."""
-        areas = self.policy["writeAreas"]
-        return areas == "all" or area in areas
+        """The profile's own permission for a write area (not the global switch): it follows
+        from Read/Write on the kinds that area changes (AREA_SCOPES)."""
+        names = list(AREA_SCOPES.get(area, ()))
+        if area == "loadoutPresets":
+            names += [name for name in self.policy["scopes"] if name.startswith("presets.kit:")] + ["*"]
+        return any(self.writes_any(name) for name in names)
 
     @property
     def file_sources(self):
@@ -357,9 +381,15 @@ def require_media_item(item, *, write=False):
 
 
 def upload_folder(requested, storage="input"):
-    """Where an upload goes. Given: it must be writable. Omitted: Unsorted for an unrestricted
-    caller (as before), else the policy's default folder if writable, else Unsorted if
-    writable; otherwise 403 (name a folder this profile may write)."""
+    """Where an upload goes. Given: it must be writable. Omitted ("automatic"):
+    1. Unsorted for a caller with every folder at Read/Write (as before profiles);
+    2. the policy's Default destination, when it's Unsorted (Input) or an Input folder it may
+       write (an Output folder never takes uploads, so one set there is skipped);
+    3. Unsorted (Input), when it may write it;
+    4. the first Input folder it may write, in the Media's folder order;
+    otherwise 403 no_access (it may write no Input folder)."""
+    from .media import media_store as store
+
     requested = str(requested or "")
     p = current()
     unsorted = UNSORTED_OUTPUT if storage == "output" else UNSORTED_INPUT
@@ -368,11 +398,17 @@ def upload_folder(requested, storage="input"):
         return requested
     if p is None or (p.unrestricted("mediaFolders") and p.can_write("mediaFolders", unsorted)):
         return ""
+    inputs = [folder["id"] for folder in store.folders() if store.folder_side(folder) == "input"]
     preferred = p.default("mediaFolders")
-    if preferred and p.can_write("mediaFolders", preferred):
-        return "" if preferred in (UNSORTED_INPUT, UNSORTED_OUTPUT) else preferred
+    if preferred == unsorted and p.can_write("mediaFolders", unsorted):
+        return ""
+    if preferred in inputs and p.can_write("mediaFolders", preferred):
+        return preferred
     if p.can_write("mediaFolders", unsorted):
         return ""
+    for folder_id in inputs:
+        if p.can_write("mediaFolders", folder_id):
+            return folder_id
     raise Denied(403, {"error": "no_access", "message": "This API profile has no Media folder to upload into. Name a folder it may write."})
 
 

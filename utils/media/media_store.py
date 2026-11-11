@@ -127,7 +127,8 @@ def media_path(item):
 def public_item(record):
     """Shared browser/job projection; private storage roots and paths never leave here."""
     keys = ("id", "kind", "name", "width", "height", "bytes", "alpha", "oriented", "created",
-            "storage", "favorite", "pinned", "color", "folder", "customBadge", "nsfw", "source", "frames", "fps", "duration", "audio", "outputKey")
+            "storage", "favorite", "pinned", "color", "folder", "customBadge", "nsfw", "source", "frames", "fps", "duration", "audio", "outputKey",
+            "runMs")
     result = {key: record.get(key) for key in keys if key in record}
     if record.get("storage") in ("input", "output"):
         result["filename"] = Path(record["relative_path"]).name
@@ -317,6 +318,23 @@ def update(item_id, fields, if_version=None):
         with _moving(doc, [record] if "folder" in changes else []):
             _write_doc(doc)
         return dict(record)
+
+
+def set_run_ms(item_ids, ms):
+    """How long the run that made these Media Output items took (run_time.py). Items that
+    are gone are skipped. -> whether anything was written."""
+    wanted = {str(item_id) for item_id in item_ids}
+    value = int(ms)
+    with locked():
+        doc = _read_doc()
+        changed = False
+        for record in doc["items"]:
+            if record["id"] in wanted and record.get("runMs") != value:
+                record["runMs"] = value
+                changed = True
+        if changed:
+            _write_doc(doc, "output")
+        return changed
 
 
 def bulk_attributes(payload):

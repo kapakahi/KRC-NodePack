@@ -70,15 +70,23 @@ class ProfileError(ValueError):
 
 def unrestricted_policy():
     """Everything the global switches allow (the migrated Default profile)."""
-    return {"capabilities": "all", "writeAreas": "all", "fileSources": True, "scopes": {"*": {"mode": "all", "level": "write"}}}
+    return {"capabilities": "all", "fileSources": True, "scopes": {"*": {"mode": "all", "level": "write"}}}
 
 
 def restricted_policy():
     """A new profile: nothing until the owner grants it."""
-    return {"capabilities": "all", "writeAreas": [], "fileSources": False, "scopes": {"*": {"mode": "none", "level": "read"}}}
+    return {"capabilities": "all", "fileSources": False, "scopes": {"*": {"mode": "none", "level": "read"}}}
 
 
-def _clean_scope(raw):
+# Kinds whose resources can be picked one by one (the workspaces that keep people apart).
+# Every other kind is all-or-nothing: None, Read or Read/Write for all of it.
+PICK_SCOPES = ("prompts", "mediaFolders")
+# Kinds the API can't change: Read at most (none today: Config Switcher and Word Bank presets
+# became writable 2026-11-10, values only).
+READ_ONLY_SCOPES = ()
+
+
+def _clean_scope(raw, name="*"):
     raw = raw if isinstance(raw, dict) else {}
     mode = raw.get("mode") if raw.get("mode") in MODES else "none"
     level = raw.get("level") if raw.get("level") in LEVELS else "read"
@@ -87,31 +95,37 @@ def _clean_scope(raw):
         if isinstance(key, str) and key and len(key) <= 200 and value in LEVELS:
             items[key] = value
     default = raw.get("default") if isinstance(raw.get("default"), str) else ""
-    # May make new ones (presets, folders); what it makes joins its own list. "all" + write
-    # always may.
-    create = raw.get("create") is True or (mode == "all" and level == "write")
+    if name not in PICK_SCOPES:
+        # All-or-nothing: a stored pick list becomes All at its highest level (None if empty).
+        if mode == "selected":
+            mode, level = ("all", "write" if "write" in items.values() else "read") if items else ("none", "read")
+        items, default = {}, ""
+    if name in READ_ONLY_SCOPES:
+        level = "read"
+    # May make new ones (Media folders; presets of the kind): with write access. What a
+    # Selected profile makes joins its own picks.
+    create = (mode == "all" and level == "write") or (mode == "selected" and "write" in items.values())
     return {"mode": mode, "level": level, "items": items, "default": default[:200], "create": create}
 
 
 def normalize_policy(raw):
-    """A policy as stored. ``capabilities``: "all" or a list (the read and write capabilities
-    the profile may use); ``writeAreas``: "all" or a list of ext_api.WRITE_AREAS ids;
-    ``fileSources``: whether stateless endpoints may read ComfyUI's input / output / temp
-    files by name (Load Image sources); ``scopes``: per resource kind (``prompts``,
-    ``mediaFolders``, ``models``, ``presets.<kind>``; ``*`` = any kind not listed) ->
-    {mode: all | selected | none, level (for all): read | write, items: {id: read | write},
-    default: an id new things go to, create: may make new ones (they join its items)}."""
+    """A policy as stored. ``capabilities``: "all" or a list (honoured by the server; KRC
+    Portal sets "all"); ``fileSources``: whether the Resizer may read ComfyUI images by file
+    name ("ComfyUI images"); ``scopes``: per resource kind -> {mode, level, items, default,
+    create}. ``prompts`` and ``mediaFolders`` may be ``selected`` (``items``: {id: read |
+    write}, ``default``: where new things go); every other kind (``models``,
+    ``presets.<kind>``; ``*`` = any kind not listed) is ``all`` (``level`` read | write) or
+    ``none``; Config Switcher and Word Bank presets are read at most. What a profile may write
+    follows from its scopes (ext_api_policy.Principal.area_permitted)."""
     raw = raw if isinstance(raw, dict) else {}
     caps = raw.get("capabilities")
     caps = "all" if caps == "all" else sorted({c for c in caps if isinstance(c, str)}) if isinstance(caps, list) else "all"
-    areas = raw.get("writeAreas")
-    areas = "all" if areas == "all" else sorted({a for a in areas if isinstance(a, str)}) if isinstance(areas, list) else []
     scopes = {}
     for key, value in (raw.get("scopes") or {}).items() if isinstance(raw.get("scopes"), dict) else ():
         if isinstance(key, str) and key and len(key) <= 80:
-            scopes[key] = _clean_scope(value)
-    scopes.setdefault("*", {"mode": "none", "level": "read", "items": {}, "default": "", "create": False})
-    return {"capabilities": caps, "writeAreas": areas, "fileSources": raw.get("fileSources") is True, "scopes": scopes}
+            scopes[key] = _clean_scope(value, key)
+    scopes.setdefault("*", _clean_scope({"mode": "none"}))
+    return {"capabilities": caps, "fileSources": raw.get("fileSources") is True, "scopes": scopes}
 
 
 # ---- the document --------------------------------------------------------------------------
